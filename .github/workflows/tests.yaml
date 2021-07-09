@@ -34,7 +34,7 @@ jobs:
         # we need to know the path anyway for caching purposes.  In fact, even
         # knowing that a named environment would go in $CONDA/envs/<name>,
         # the cache action fails to restore files there?
-        run: conda env create -p ./pyenv -f environment.yaml
+        run: conda env create -q -p ./pyenv -f environment.yaml
 
       - name: Activate environment
         # This is tricky, because "steps" are somewhat isolated in a way
@@ -59,6 +59,11 @@ jobs:
             <(echo "$old_path") <(echo "$PATH" | tr ':' '\n') \
             >> $GITHUB_PATH \
             || :
+          # Now display all the packages installed, for debugging
+          # Human-readable
+          conda list
+          # Machine-readable (for creating an exact copy of this environment)
+          conda list --explicit
 
       - name: Run pytest
         run: pytest --sampledir .sample-data
