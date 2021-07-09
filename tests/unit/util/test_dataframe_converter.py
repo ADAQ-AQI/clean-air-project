@@ -78,8 +78,8 @@ class TestMakeGeo:
 
     def test_data_order_3d(self, multidim_cube):
         x_coord, y_coord = get_xy_coords(multidim_cube)
-        expected_data = [3.60000, 3.5, 3.5, 3.5, 3.60000, 3.60000,
-                         3.60000, 3.5, 3.70000, 3.70000, 3.60000, 3.60000]
+        expected_data = [3.6, 3.5, 3.5, 3.5, 3.6, 3.6,
+                         3.6, 3.5, 3.7, 3.7, 3.6, 3.6]
         gdfs = dc._make_geo(multidim_cube, x_coord, y_coord)
-        rounded_data = np.round(gdfs[0].data.array, decimals=5)
-        assert np.all(rounded_data == expected_data)
+        result = gdfs[0].data.array
+        assert np.allclose(result, expected_data)
