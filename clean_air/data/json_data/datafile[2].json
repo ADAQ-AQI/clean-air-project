@@ -1,0 +1,11 @@
+{"index":"title","0":"Exeter Roadside Monitoring Site"}
+{"index":"description","0":"UK national air quality monitoring network"}
+{"index":"authors","0":[["firstname","Eleanor"],["surname","Smith"],["firstname2",null],["surname2",null]]}
+{"index":"bbox","0":[["north",50.725],["south",50.725],["east",-3.532],["west",-3.532]]}
+{"index":"chemical species","0":"Ozone (O3);Nitrogen Monoxide (NO);Nitrogen Dioxide (NO2);Nitrogen Oxides (NOx);Sulphur Dioxide (SO2);Carbon Monoxide (CO);"}
+{"index":"observation level\/model","0":"Surface Level Observations"}
+{"index":"data source","0":null}
+{"index":"time range","0":[["start",836265600000],["end",1614124800000]]}
+{"index":"lineage","0":null}
+{"index":"quality","0":"Data obtained from the Automatic Urban and Rural Network"}
+{"index":"docs","0":null}
