@@ -1,7 +1,10 @@
 """This converts xcel data files to JSON file types for processing."""
 import pandas as pd
 import openpyxl
-import numpy as np
+import json
+import datetime
+from json import JSONEncoder
+from collections import OrderedDict
 
 
 def read_excel_data(filepath):
@@ -39,44 +42,44 @@ def save_as_json(self):
         self.chemicals = row[1].values[46]
         self.obs_level = row[1].values[19]
         self.data_source = row[1].values[20]
-        # TODO: Fix time ranges - where are they?
         self.time_range_start = row[1].values[37]
         self.time_range_end = row[1].values[38]
         self.lineage = row[1].values[50]
         self.quality = row[1].values[51]
         self.docs = row[1].values[22]
 
-        # turn this into a dataframe or series first, then save to json:
-        new_file = pd.DataFrame.from_dict(data={
-            "title": self.title,
-            "description": self.description,
-            "authors":
-                [("firstname", self.firstname1),
-                 ("surname", self.surname1),
-                 ("firstname2", self.firstname2),
-                 ("surname2", self.surname2)],
-            "bbox":
-                [("north", self.north),
-                 ("south", self.south),
-                 ("east", self.east),
-                 ("west", self.west)],
-            "chemical species": self.chemicals,
-            "observation level/model": self.obs_level,
-            "data source": self.data_source,
-            "time range":
-                [("start", self.time_range_start),
-                 ("end", self.time_range_end)],
-            "lineage": self.lineage,
-            "quality": self.quality,
-            "docs": self.docs}, orient='index')
-        new_file.reset_index(inplace=True)
+        # turn this into an OrderedDict first, then save to json:
+        new_file = OrderedDict({"title": self.title,
+                                "description": self.description,
+                                "authors":
+                                    ["firstname", self.firstname1,
+                                     "surname", self.surname1,
+                                     "firstname2", self.firstname2,
+                                     "surname2", self.surname2],
+                                "bbox":
+                                    ["north", self.north,
+                                     "south", self.south,
+                                     "east", self.east,
+                                     "west", self.west],
+                                "chemical species": self.chemicals,
+                                "observation level/model": self.obs_level,
+                                "data source": self.data_source,
+                                "time range":
+                                    ["start", self.time_range_start,
+                                     "end", self.time_range_end],
+                                "lineage": self.lineage,
+                                "quality": self.quality,
+                                "docs": self.docs})
 
-        new_file.to_json(path_or_buf='../data/json_data/datafile' + str([r])
-                                     + '.json',
-                         orient='records', date_format=None,
-                         double_precision=10, force_ascii=False,
-                         date_unit='ms', default_handler=None,
-                         lines=True, compression='infer', index=True)
+        # subclass JSONEncoder
+        class DateTimeEncoder(JSONEncoder):
+            # Override default method so we can extract and encode datetimes:
+            def default(self, obj):
+                if isinstance(obj, (datetime.date, datetime.datetime)):
+                    return obj.isoformat()
+
+        with open('../data/json_data/dailydata' + str(r) + '.json', 'w') as fp:
+            json.dump(new_file, fp, indent=0, cls=DateTimeEncoder)
 
 
 path = "../../../cap-sample-data/test_data/metadata_form_responses.xlsx"
