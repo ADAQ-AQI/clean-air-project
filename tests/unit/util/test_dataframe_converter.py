@@ -82,4 +82,4 @@ class TestMakeGeo:
                          3.60000, 3.5, 3.70000, 3.70000, 3.60000, 3.60000]
         gdfs = dc._make_geo(multidim_cube, x_coord, y_coord)
         rounded_data = np.round(gdfs[0].data.array, decimals=5)
-        assert np.all(rounded_data == expected_data)
+        assert np.all(rounded_data == np.float32(expected_data))
