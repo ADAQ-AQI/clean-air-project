@@ -3,6 +3,7 @@ import pandas as pd
 import openpyxl
 import json
 import datetime
+import xarray as xr
 from json import JSONEncoder
 from collections import OrderedDict
 
@@ -13,8 +14,17 @@ def read_excel_data(filepath):
     pandas.DataFrame object.
     """
     temp_dataframe = pd.read_excel(filepath, engine='openpyxl')
-    print("reading today's data file and committing to memory...")
+    print("reading today's excel data file and committing to memory...")
     return pd.DataFrame(temp_dataframe)
+
+
+def read_netcdf_data(filepath):
+    """Reads in netcdf data from somewhere and holds in an xarray
+    something..."""
+    # TODO: Find details of ticket and complete the description of this function
+    temp_dataframe = xr.open_dataset(filepath)
+    print("reading today's netcdf data file and committing to memory...")
+    return xr.DataArray(temp_dataframe)
 
 
 def save_as_json(self):
@@ -24,7 +34,7 @@ def save_as_json(self):
     """
     # iterate through each row to split into separate dataframes and save in
     # clean_air/data/json_data/:
-    for r, row in enumerate(temp_df.iterrows()):
+    for r, row in enumerate(temp_xl_df.iterrows()):
         print('extracting data from row ', r, ' right now...')
 
         # obtain data from excel file:
@@ -82,7 +92,15 @@ def save_as_json(self):
             json.dump(new_file, fp, indent=0, cls=DateTimeEncoder)
 
 
-path = "../../../cap-sample-data/test_data/metadata_form_responses.xlsx"
-temp_df = read_excel_data(path)
-save_as_json(temp_df)
-print("all data should be saved in separate files now...")
+def save_as_txt(self):
+    """Uses data held in temporary pandas dataframe or xarray data array to
+    convert and save to txt format."""
+
+
+xl_path = "../../../cap-sample-data/test_data/metadata_form_responses.xlsx"
+temp_xl_df = read_excel_data(xl_path)
+save_as_json(temp_xl_df)
+print("all excel data should be saved in separate json files now...")
+
+netcdf_path = "...something"
+temp_netcdf_df = read_netcdf_data(netcdf_path)
