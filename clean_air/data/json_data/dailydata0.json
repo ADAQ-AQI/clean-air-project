@@ -1,36 +1,24 @@
 {
-"title": "UK Air Quality Reanalysis",
-"description": "This reanalysis has been produced  by the Atmospheric Dispersion and Air Quality Group at the Met Office using Air Quality in the Unified Model (AQUM). The reanalysis begins in January 2003 and will be maintained as a rolling 20 year archive. The data covers the UK at a horizontal resolution of 0.11 degree (~12 km), a vertical resolution of 63 model levels (model top ~40 km) and an hourly temporal resolution. The reanalysis dataset also contains bias corrected surface concentrations of some pollutants. Observations from the Automatic Urban and Rural Network (AURN), London Air Quality Network (LAQN) and additional UK local authority monitoring stations are used to produce the bias corrected surface concentrations.\n\nFurther information can be found at https://www.ukcleanair.org/storage/met-office-research/",
-"authors": [
-"firstname",
-"Eleanor",
-"surname",
-"Smith",
-"firstname2",
-NaN,
-"surname2",
-NaN
-],
-"bbox": [
-"north",
-11.55,
-"south",
--8.465,
-"east",
--7.105,
-"west",
-8.995
-],
-"chemical species": "Coarse Particulate Matter (PM10);Fine Particulate Matter (PM2.5);Isoprene (C5H8);Carbon Monoxide (CO);Sulphur Dioxide (SO2);Ozone (O3);Nitrogen Oxides (NOx);Nitrogen Dioxide (NO2);Nitrogen Monoxide (NO);",
-"observation level/model": "Model Data",
-"data source": "Air Quality in the Unified Model (AQUM)",
-"time range": [
-"start",
-"2003-01-01T00:00:00",
-"end",
-"2017-12-31T00:00:00"
-],
-"lineage": "Air quality modelling using the Met Office Unified Model (AQUM OS24-26): model description and initial evaluation, N. H. Savage, P. Agnew, L. S. Davis, C. Ord\u00f3\u00f1ez, R. Thorpe, C. E. Johnson, F. M. O'Connor and M. Dalvi, Geosci. Model Dev. 2013, 6, 353-372, https://doi.org/10.5194/gmd-6-353-2013\n\nApplication of a statistical post-processing technique to a gridded, operational, air quality forecast, L. S. Neal, P. Agnew, S. Moseley, C. Ord\u00f3\u00f1ez, N. H. Savage and M. Tilbee, Atmospheric Environment, 2014, 98, 385-393, https://doi.org/10.1016/j.atmosenv.2014.09.004",
-"quality": "The research leading to these results has been funded by the UKRI Clean Air (W1) programme which is led by NERC and the Met Office, with Innovate UK, EPSRC, ESRC, MRC, NPL & Defra as delivery partners",
-"docs": "https://www.metoffice.gov.uk/research/weather/atmospheric-dispersion/atmospheric-composition\n\nhttps://code.metoffice.gov.uk/trac/nwpscience/wiki/ModelInfo/aqeur"
+  "title": "UK Air Quality Reanalysis",
+  "description": "This reanalysis has been produced  by the Atmospheric Dispersion and Air Quality Group at the Met Office using Air Quality in the Unified Model (AQUM). The reanalysis begins in January 2003 and will be maintained as a rolling 20 year archive. The data covers the UK at a horizontal resolution of 0.11 degree (~12 km), a vertical resolution of 63 model levels (model top ~40 km) and an hourly temporal resolution. The reanalysis dataset also contains bias corrected surface concentrations of some pollutants. Observations from the Automatic Urban and Rural Network (AURN), London Air Quality Network (LAQN) and additional UK local authority monitoring stations are used to produce the bias corrected surface concentrations.\n\nFurther information can be found at https://www.ukcleanair.org/storage/met-office-research/",
+  "authors": {
+    "firstname": "Eleanor",
+    "surname": "Smith"
+  },
+  "bbox": {
+    "north": 11.55,
+    "south": -8.465,
+    "east": -7.105,
+    "west": 8.995
+  },
+  "chemical species": "Coarse Particulate Matter (PM10);Fine Particulate Matter (PM2.5);Isoprene (C5H8);Carbon Monoxide (CO);Sulphur Dioxide (SO2);Ozone (O3);Nitrogen Oxides (NOx);Nitrogen Dioxide (NO2);Nitrogen Monoxide (NO);",
+  "observation level/model": "Model Data",
+  "data source": "Air Quality in the Unified Model (AQUM)",
+  "time range": {
+    "start": "2003-01-01T00:00:00",
+    "end": "2017-12-31T00:00:00"
+  },
+  "lineage": "Air quality modelling using the Met Office Unified Model (AQUM OS24-26): model description and initial evaluation, N. H. Savage, P. Agnew, L. S. Davis, C. Ord\u00f3\u00f1ez, R. Thorpe, C. E. Johnson, F. M. O'Connor and M. Dalvi, Geosci. Model Dev. 2013, 6, 353-372, https://doi.org/10.5194/gmd-6-353-2013\n\nApplication of a statistical post-processing technique to a gridded, operational, air quality forecast, L. S. Neal, P. Agnew, S. Moseley, C. Ord\u00f3\u00f1ez, N. H. Savage and M. Tilbee, Atmospheric Environment, 2014, 98, 385-393, https://doi.org/10.1016/j.atmosenv.2014.09.004",
+  "quality": "The research leading to these results has been funded by the UKRI Clean Air (W1) programme which is led by NERC and the Met Office, with Innovate UK, EPSRC, ESRC, MRC, NPL & Defra as delivery partners",
+  "docs": "https://www.metoffice.gov.uk/research/weather/atmospheric-dispersion/atmospheric-composition\n\nhttps://code.metoffice.gov.uk/trac/nwpscience/wiki/ModelInfo/aqeur"
 }
