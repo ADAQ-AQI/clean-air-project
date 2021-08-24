@@ -41,31 +41,27 @@ def slice_data(dataframe):
         # iterate through each row to split into separate dataframes and save
         # all to appropriate location:
         print('extracting data from row ', r, ' now...')
-        form_name = pd.DataFrame
-        # TODO: FIX THIS!! Name these dataframes independently so that they
-        #  don't overwrite each other
-        form_name.title = row[1].values[16]  # title of model, not user.
-        form_name.description = row[1].values[17]  # model description.
-        form_name.firstname1 = row[1].values[6]
-        form_name.surname1 = row[1].Surname
-        form_name.firstname2 = row[1].values[11]
-        form_name.surname2 = row[1].values[12]
-        form_name.north = row[1].values[42]
-        form_name.south = row[1].values[41]
-        form_name.east = row[1].values[43]
-        form_name.west = row[1].values[44]
-        form_name.chemicals = row[1].values[46].split(';')
-        form_name.obs_level = row[1].values[19]
-        form_name.data_source = row[1].values[20]
-        form_name.time_range_start = row[1].values[37]
-        form_name.time_range_end = row[1].values[38]
-        form_name.lineage = row[1].values[50]
-        form_name.quality = row[1].values[51]
-        form_name.docs = row[1].values[22]
+        form_data = {'title': row[1].values[16],
+                     'description': row[1].values[17],
+                     'firstname1': row[1].values[6],
+                     'surname1': row[1].Surname,
+                     'firstname2': row[1].values[11],
+                     'surname2': row[1].values[12],
+                     'north': row[1].values[42],
+                     'south': row[1].values[41],
+                     'east': row[1].values[43],
+                     'west': row[1].values[44],
+                     'chemicals': row[1].values[46].split(';'),
+                     'obs_level': row[1].values[19],
+                     'data_source': row[1].values[20],
+                     'time_range_start': row[1].values[37],
+                     'time_range_end': row[1].values[38],
+                     'lineage': row[1].values[50],
+                     'quality': row[1].values[51],
+                     'docs': row[1].values[22]}
 
-        # form_responses.append([data_object, r])
-
-        form_responses.append([form_name, r])
+        form = pd.Series(data=form_data)
+        form_responses.append([form, r])
 
     return form_responses
 

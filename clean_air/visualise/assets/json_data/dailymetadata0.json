@@ -1,23 +1,23 @@
 {
   "pollutants": [
     {
-      "name": "Ozone (O3)",
-      "shortname": "O3",
+      "name": "Coarse Particulate Matter (PM10)",
+      "shortname": "PM10",
       "chart": "url/to/chart/image.(png|jpg|svg|etc)"
     },
     {
-      "name": "Nitrogen Monoxide (NO)",
-      "shortname": "NO",
+      "name": "Fine Particulate Matter (PM2.5)",
+      "shortname": "PM2.5",
       "chart": "url/to/chart/image.(png|jpg|svg|etc)"
     },
     {
-      "name": "Nitrogen Dioxide (NO2)",
-      "shortname": "NO2",
+      "name": "Isoprene (C5H8)",
+      "shortname": "C5H8",
       "chart": "url/to/chart/image.(png|jpg|svg|etc)"
     },
     {
-      "name": "Nitrogen Oxides (NOx)",
-      "shortname": "NOx",
+      "name": "Carbon Monoxide (CO)",
+      "shortname": "CO",
       "chart": "url/to/chart/image.(png|jpg|svg|etc)"
     },
     {
@@ -26,14 +26,29 @@
       "chart": "url/to/chart/image.(png|jpg|svg|etc)"
     },
     {
-      "name": "Carbon Monoxide (CO)",
-      "shortname": "CO",
+      "name": "Ozone (O3)",
+      "shortname": "O3",
+      "chart": "url/to/chart/image.(png|jpg|svg|etc)"
+    },
+    {
+      "name": "Nitrogen Oxides (NOx)",
+      "shortname": "NOx",
+      "chart": "url/to/chart/image.(png|jpg|svg|etc)"
+    },
+    {
+      "name": "Nitrogen Dioxide (NO2)",
+      "shortname": "NO2",
+      "chart": "url/to/chart/image.(png|jpg|svg|etc)"
+    },
+    {
+      "name": "Nitrogen Monoxide (NO)",
+      "shortname": "NO",
       "chart": "url/to/chart/image.(png|jpg|svg|etc)"
     }
   ],
-  "environmentType": "Surface Level Observations",
+  "environmentType": "Model Data",
   "dateRange": {
-    "startDate": "1996-07-02T00:00:00",
-    "endDate": "2021-02-24T00:00:00"
+    "startDate": "2003-01-01T00:00:00",
+    "endDate": "2017-12-31T00:00:00"
   }
 }
