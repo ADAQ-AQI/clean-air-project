@@ -9,13 +9,12 @@ bbox:
   east: -3.532
   west: -3.532
 chemical species:
-- Ozone (O3)
-- Nitrogen Monoxide (NO)
-- Nitrogen Dioxide (NO2)
-- Nitrogen Oxides (NOx)
-- Sulphur Dioxide (SO2)
-- Carbon Monoxide (CO)
-- ''
+- (O3)
+- (NO)
+- (NO2)
+- (NOx)
+- (SO2)
+- (CO)
 observation level/model: Surface Level Observations
 data source: .nan
 time range:

@@ -12,11 +12,10 @@ bbox:
   east: -4.28
   west: -1.65
 chemical species:
-- Nitrogen Dioxide (NO2)
-- Ozone (O3)
-- Sulphur Dioxide (SO2)
-- Fine Particulate Matter (PM2.5)
-- ''
+- (NO2)
+- (O3)
+- (SO2)
+- (PM2.5)
 observation level/model: Airborne Observations
 data source: .nan
 time range:

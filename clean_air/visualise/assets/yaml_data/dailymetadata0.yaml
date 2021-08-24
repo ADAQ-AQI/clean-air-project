@@ -20,16 +20,15 @@ bbox:
   east: -7.105
   west: 8.995
 chemical species:
-- Coarse Particulate Matter (PM10)
-- Fine Particulate Matter (PM2.5)
-- Isoprene (C5H8)
-- Carbon Monoxide (CO)
-- Sulphur Dioxide (SO2)
-- Ozone (O3)
-- Nitrogen Oxides (NOx)
-- Nitrogen Dioxide (NO2)
-- Nitrogen Monoxide (NO)
-- ''
+- (PM10)
+- (PM2.5)
+- (C5H8)
+- (CO)
+- (SO2)
+- (O3)
+- (NOx)
+- (NO2)
+- (NO)
 observation level/model: Model Data
 data source: Air Quality in the Unified Model (AQUM)
 time range:

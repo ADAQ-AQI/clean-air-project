@@ -98,6 +98,19 @@ def save_as_yaml(data_object, r, output_location):
     Uses data held in pandas DataFrame to enter into form template and
     save as yaml.
     """
+    # First extract the shortname only for chemical species:
+    chem_species = []
+    for chem in data_object.chemicals:
+        if chem != "":
+            chem_shortname = chem[chem.find("(") + 1:chem.find(")")]
+            # If we leave chemical species in this format something
+            # automatically adds inverticommas to 'NO' but nothing else, so
+            # add parentheses back on to standardise format for yaml:
+            chem_shortname = chem_shortname.replace(chem_shortname,
+                                                    "(" + chem_shortname + ")")
+            chem_species.append(chem_shortname)
+
+    # Now add all relevant data to a dictionary to save as yaml:
     new_file = {"title": data_object.title,
                 "description": data_object.description,
                 "authors":
@@ -110,7 +123,7 @@ def save_as_yaml(data_object, r, output_location):
                      "south": data_object.south,
                      "east": data_object.east,
                      "west": data_object.west},
-                "chemical species": data_object.chemicals,
+                "chemical species": chem_species,
                 "observation level/model": data_object.obs_level,
                 "data source": data_object.data_source,
                 "time range":
