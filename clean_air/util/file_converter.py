@@ -101,7 +101,7 @@ def save_as_yaml(data_object, r, output_location):
     for chem in data_object.chemicals:
         if chem != "":
             chem_shortname = chem[chem.find("(") + 1:chem.find(")")]
-            # If we leave chemical species in this format something
+            # If we leave chemical species in this format something (yaml?)
             # automatically adds inverticommas to 'NO' but nothing else, so
             # add parentheses back on to standardise format for yaml:
             chem_shortname = chem_shortname.replace(chem_shortname,

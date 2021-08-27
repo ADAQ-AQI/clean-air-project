@@ -17,55 +17,11 @@ def excel_filepath(sampledir):
 
 
 @pytest.fixture
-def pandas_dataframe():
-    dataframe = pd.DataFrame
-    dataframe.title = "UK Air Quality Reanalysis"
-    dataframe.description = "This reanalysis has been produced  by the " \
-                            "Atmospheric Dispersion and Air Quality Group " \
-                            "at the Met Office using Air Quality in the " \
-                            "Unified Model (AQUM). " \
-                            "The reanalysis begins in January 2003 and will " \
-                            "be maintained as a rolling 20 year archive. " \
-                            "The data covers the UK at a horizontal " \
-                            "resolution of 0.11 degree (~12 km), a vertical " \
-                            "resolution of 63 model levels (model top ~40 km) " \
-                            "and an hourly temporal resolution. " \
-                            "The reanalysis dataset also contains bias " \
-                            "corrected surface concentrations of some " \
-                            "pollutants. " \
-                            "Observations from the Automatic Urban and Rural " \
-                            "Network (AURN), London Air Quality Network " \
-                            "(LAQN) and additional UK local authority " \
-                            "monitoring stations are used to produce the bias " \
-                            "corrected surface concentrations.\n\nFurther " \
-                            "information can be found at " \
-                            "https://www.ukcleanair.org/storage/" \
-                            "met-office-research/",
-    dataframe.firstname1 = "Eleanor"
-    dataframe.surname1 = "Smith"
-    dataframe.north = 11.55
-    dataframe.south = -8.465
-    dataframe.east = -7.105
-    dataframe.west = 8.995
-    dataframe.chemicals = "Coarse Particulate Matter (PM10);" \
-                          "Fine Particulate Matter (PM2.5);" \
-                          "Isoprene (C5H8);" \
-                          "Carbon Monoxide (CO);" \
-                          "Sulphur Dioxide (SO2);" \
-                          "Ozone (O3);" \
-                          "Nitrogen Oxides (NOx);" \
-                          "Nitrogen Dioxide (NO2);" \
-                          "Nitrogen Monoxide (NO);",
-    dataframe.obs_level = "Model Data"
-    dataframe.data_source = "Air Quality in the Unified Model (AQUM)"
-    return dataframe
-
-
-@pytest.fixture
-def data_path():
-    root = pathlib.Path(__file__).parent
-    path = root.parent / "data/json_data"
-    return path
+def test_output_path(sampledir):
+    # Note: This path includes the first part of the filename (only omitting
+    # unit number).
+    test_output_path = os.path.join(sampledir, "test_data", "test_output")
+    return test_output_path
 
 
 def test_read_excel_data(excel_filepath):
@@ -75,9 +31,46 @@ def test_read_excel_data(excel_filepath):
     assert isinstance(temp_df, pd.DataFrame)
 
 
-def test_save_to_json(pandas_dataframe, data_path):
-    """Test that a simple pandas DataFrame can be converted successfully
-    to a JSON file"""
-    fc.save_as_json(data_object=pandas_dataframe)
-    json = os.path.join(data_path, "dailydata0.json")
-    # TODO: How do I test this?
+def test_slice_data(excel_filepath):
+    """Test that data from temporary dataframes (read from excel files) are
+    split into single dataframes for each row of data.  Test excel file has
+    three rows, so should be split into three separate files here."""
+    # First, read and slice the test file:
+    temp_df = fc.read_excel_data(filepath=excel_filepath)
+    sliced_data = fc.slice_data(temp_df)
+    # Now check that three separate files have been generated:
+    assert len(sliced_data) is 3
+
+
+# TODO: Fill in details of tests below:
+class SaveAsJSONTest(test_output_path):
+    def setUp(self):
+        # read and slice the test file then send to save_as_json():
+        self.temp_df = fc.read_excel_data(filepath=excel_filepath)
+        self.sliced_data = fc.slice_data(self.temp_df)
+        self.json_conversion = fc.save_as_json(data_object=self.sliced_data,
+                                               r=0,
+                                               output_location=
+                                               self.test_output_path)
+
+    def test_reformat_chemicals(self):
+        """Test that the single excel entry for each chemical is reformatted
+        into three seperate lines representing 'name', 'shortname' and
+        'chart' information."""
+
+    def test_new_file_structure(self):
+        """Test that new_file has index names; 'pollutants', environmentType'
+        and 'dateRange'."""
+
+    def test_date_range(self):
+        """Test that item 'dateRange' in new_file is a list containing two
+        entries."""
+
+    def test_date_format(self):
+        """Test that saved json file contains dates in isoformat."""
+
+# class SaveAsYAMLTest(test_output_path):
+#
+#     def setUp(self):
+#
+#     def test_...
