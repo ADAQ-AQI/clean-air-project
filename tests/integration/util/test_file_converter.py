@@ -1,66 +1,79 @@
 """Integration tests for file_converter.py"""
 import os
-
 import pytest
-import pandas as pd
-import pathlib
 
 from clean_air.util import file_converter as fc
-# TODO: Write tests to check end-to-end processing of file conversions
 
 
 @pytest.fixture
-def xl_input():
-    xl_data_path = os.path.join(pathlib.Path.root, "cap-sample-data",
-                                "test_data", "metadata_form_responses.xlsx")
+def xl_input_path(sampledir):
+    xl_data_path = os.path.join(sampledir, "test_data",
+                                "metadata_form_responses.xlsx")
     return xl_data_path
 
 
 @pytest.fixture
-def json_output():
-    json_data_path = os.path.join(pathlib.Path.root, "cap", "clean_air",
-                                  "visualise", "assets", "json_data")
-    return json_data_path
-
-
-# @pytest.fixture
-# def json_output_format():
-    # json_format = os.path.join(pathlib.Path.root,...)
-    # return json format
+def test_output_path(sampledir):
+    # Note: This path includes the first part of the filename (only omitting
+    # unit number).
+    test_output_path = os.path.join(sampledir, "test_data", "test_output")
+    return test_output_path
 
 
 @pytest.fixture
-def yaml_output_format():
-    yaml_format = os.path.join(pathlib.Path.root, "cap-sample-data",
-                               "test_data", "station_metadata.yaml")
-    return yaml_format
+def json_test_file(sampledir):
+    json_output = os.path.join(sampledir, "test_data",
+                               "test_output0.json")
+    return json_output
 
 
-def test_convert_excel_to_json(xl_input, json_output):
+@pytest.fixture
+def yaml_test_file(sampledir):
+    yaml_output = os.path.join(sampledir, "test_data",
+                               "test_output0.yaml")
+    return yaml_output
+
+
+def test_convert_excel_to_json(xl_input_path, test_output_path,
+                               json_test_file):
     """
     Test to check end-to-end processing of excel metadata form responses and
     their conversion to reformatted json files.
     """
-    temp_df = fc.read_excel_data(filepath=xl_input)
-    fc.save_as_json(data_object=temp_df)
-    # TODO: Find out how to check that this has saved
+    # First delete copied test file so that we can check that it has been
+    # replaced upon conversion of test file:
+    if os.path.isfile(json_test_file):
+        os.remove(json_test_file)
+    else:
+        pass
+
+    # Now run conversion and check for file:
+    fc.convert_excel_to_json(xl_input_path, test_output_path)
+    try:
+        with open(json_test_file) as file:
+            file.read()
+    except FileNotFoundError as fnf_error:
+        print(fnf_error)
 
 
-def test_json_output():
+def test_convert_excel_to_yaml(xl_input_path, test_output_path,
+                               yaml_test_file):
     """
-    Check that the output of the json file matches the output format required
-    for further processing.
+    Test to check end-to-end processing of excel metadata form responses and
+    their conversion to reformatted json files.
     """
-    # TODO: Create json input file that matches the exact format required
-    # TODO: Add this file to pytest fixtures
-    # TODO: Use this to match the output from file_converter to
+    # First delete copied test file so that we can check that it has been
+    # replaced upon conversion of test file:
+    if os.path.isfile(yaml_test_file):
+        os.remove(yaml_test_file)
+    else:
+        pass
+    # Now run conversion and check for file:
+    fc.convert_excel_to_yaml(xl_input_path, test_output_path)
+    try:
+        with open(yaml_test_file) as file:
+            file.read()
+    except FileNotFoundError as fnf_error:
+        print(fnf_error)
 
-
-# def test_convert_excel_to_yaml():
-
-# def test_convert_netcdf_to_csv():
-
-# TODO: Create 'assets' directory (see Catherine's branch) to put saved files
-#  in and then change all file outputs to accept a variable defining output
-#  location.
 

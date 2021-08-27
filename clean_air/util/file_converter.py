@@ -21,7 +21,6 @@ def read_excel_data(filepath):
     pandas.DataFrame object.
     """
     temp_dataframe = pd.read_excel(filepath, engine='openpyxl')
-    print("reading today's excel data file and committing to memory...")
     return pd.DataFrame(temp_dataframe)
 
 
@@ -40,7 +39,6 @@ def slice_data(dataframe):
     for r, row in enumerate(dataframe.iterrows()):
         # iterate through each row to split into separate dataframes and save
         # all to appropriate location:
-        print('extracting data from row ', r, ' now...')
         form_data = {'title': row[1].values[16],
                      'description': row[1].values[17],
                      'firstname1': row[1].values[6],
