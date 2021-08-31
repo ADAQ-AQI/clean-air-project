@@ -30,6 +30,12 @@ def saved_json(test_output_path):
     return saved_json
 
 
+@pytest.fixture()
+def saved_yaml(test_output_path):
+    saved_yaml = open(test_output_path + str(0) + '.yaml')
+    return saved_yaml
+
+
 def test_read_excel_data(excel_filepath):
     """Test that excel files are read and converted successfully to
     temporary dataframe objects"""
@@ -81,5 +87,38 @@ def test_json_date_format(saved_json):
             for date in entry:
                 assert date.format is 'isoformat'
 
-# TODO: set up all yaml tests required, then fill in test details.
+
+# TODO: fill in test details.
+def test_yaml_reformat_chemicals(saved_yaml):
+    """Test that all chemical entries are reformatted to contain their
+    shortname only (i.e. '(PM10)' as opposed to
+    'Course Particulate Matter (PM10)')."""
+
+
+def test_yaml_file_structure(saved_yaml):
+    """Test that yaml file structure contains all keys required for yaml
+    output."""
+    # NOTE: See test_json_file_structure for help with this one
+
+
+def test_yaml_authors_subset(saved_yaml):
+    """Test that all required keys are present in authors subset."""
+
+
+def test_yaml_bbox_subset(saved_yaml):
+    """Test that all required keys are present in bbox subset."""
+
+
+def test_yaml_timerange_subset(saved_yaml):
+    """Test that all required keys are present in time range subset."""
+
+
+def test_yaml_remove_nan_names(saved_yaml):
+    """Test that all names (of users), if NAN values, are removed from yaml
+    output (including keys)."""
+
+
+def test_yaml_datetime_format(saved_yaml):
+    """Test that saved yaml file contains dates in isoformat."""
+
 
