@@ -9,19 +9,25 @@ import pathlib
 from clean_air.util import file_converter as fc
 
 
-@pytest.fixture
+@pytest.fixture()
 def excel_filepath(sampledir):
     filepath = os.path.join(sampledir, "test_data",
                             "metadata_form_responses.xlsx")
     return filepath
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_output_path(sampledir):
     # Note: This path includes the first part of the filename (only omitting
     # unit number).
     test_output_path = os.path.join(sampledir, "test_data", "test_output")
     return test_output_path
+
+
+@pytest.fixture()
+def saved_json(test_output_path):
+    saved_json = open(test_output_path + str(0) + '.json')
+    return saved_json
 
 
 def test_read_excel_data(excel_filepath):
@@ -42,35 +48,38 @@ def test_slice_data(excel_filepath):
     assert len(sliced_data) is 3
 
 
-# TODO: Fill in details of tests below:
-class SaveAsJSONTest(test_output_path):
-    def setUp(self):
-        # read and slice the test file then send to save_as_json():
-        self.temp_df = fc.read_excel_data(filepath=excel_filepath)
-        self.sliced_data = fc.slice_data(self.temp_df)
-        self.json_conversion = fc.save_as_json(data_object=self.sliced_data,
-                                               r=0,
-                                               output_location=
-                                               self.test_output_path)
+def test_json_reformat_chemicals(saved_json):
+    """Test that the single excel entry for each chemical is reformatted
+    into three seperate lines representing 'name', 'shortname' and
+    'chart' information."""
+    for entry in saved_json:
+        if entry == 'pollutants':
+            assert len(entry) is 3
 
-    def test_reformat_chemicals(self):
-        """Test that the single excel entry for each chemical is reformatted
-        into three seperate lines representing 'name', 'shortname' and
-        'chart' information."""
 
-    def test_new_file_structure(self):
-        """Test that new_file has index names; 'pollutants', environmentType'
-        and 'dateRange'."""
+def test_json_file_structure(saved_json):
+    """Test that new_file has index names; 'pollutants', environmentType'
+    and 'dateRange'."""
+    keys_required = ['pollutants', 'environmentType', 'dateRange']
+    json_file = saved_json.read()
+    for key in keys_required:
+        assert key in json_file
 
-    def test_date_range(self):
-        """Test that item 'dateRange' in new_file is a list containing two
-        entries."""
 
-    def test_date_format(self):
-        """Test that saved json file contains dates in isoformat."""
+def test_json_date_range(saved_json):
+    """Test that item 'dateRange' in new_file is a list containing two
+    entries."""
+    for entry in saved_json:
+        if entry == 'dateRange':
+            assert len(entry) is 2
 
-# class SaveAsYAMLTest(test_output_path):
-#
-#     def setUp(self):
-#
-#     def test_...
+
+def test_json_date_format(saved_json):
+    """Test that saved json file contains dates in isoformat."""
+    for entry in saved_json:
+        if entry == 'dateRange':
+            for date in entry:
+                assert date.format is 'isoformat'
+
+# TODO: set up all yaml tests required, then fill in test details.
+
