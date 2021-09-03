@@ -88,37 +88,70 @@ def test_json_date_format(saved_json):
                 assert date.format is 'isoformat'
 
 
-# TODO: fill in test details.
 def test_yaml_reformat_chemicals(saved_yaml):
     """Test that all chemical entries are reformatted to contain their
     shortname only (i.e. '(PM10)' as opposed to
     'Course Particulate Matter (PM10)')."""
+    for entry in saved_yaml:
+        if entry == 'chemical species':
+            for chemical in entry:
+                assert chemical.startswith('(') and chemical.endswith(')')
 
 
 def test_yaml_file_structure(saved_yaml):
     """Test that yaml file structure contains all keys required for yaml
     output."""
     # NOTE: See test_json_file_structure for help with this one
+    keys_required = ['title', 'description', 'authors', 'bbox',
+                     'chemical species', 'observation level/model',
+                     'data source', 'time range', 'lineage', 'quality', 'docs']
+    yaml_file = saved_yaml.read()
+    for key in keys_required:
+        assert key in yaml_file
 
 
 def test_yaml_authors_subset(saved_yaml):
     """Test that all required keys are present in authors subset."""
+    keys_required = ['firstname', 'surname', 'firstname2', 'surname2']
+    for entry in saved_yaml:
+        if entry == 'authors':
+            for key in keys_required:
+                assert key in entry
 
 
 def test_yaml_bbox_subset(saved_yaml):
     """Test that all required keys are present in bbox subset."""
+    keys_required = ['north', 'south', 'east', 'west']
+    for entry in saved_yaml:
+        if entry == 'bbox':
+            for key in keys_required:
+                assert key in entry
 
 
 def test_yaml_timerange_subset(saved_yaml):
     """Test that all required keys are present in time range subset."""
+    keys_required = ['start', 'end']
+    for entry in saved_yaml:
+        if entry == 'time range':
+            for key in keys_required:
+                assert key in entry
 
 
 def test_yaml_remove_nan_names(saved_yaml):
     """Test that all names (of users), if NAN values, are removed from yaml
     output (including keys)."""
+    keys_not_required = ['firstname2', 'surname2']
+    for entry in saved_yaml:
+        if entry == 'authors':
+            for key in keys_not_required:
+                assert key not in entry
 
 
 def test_yaml_datetime_format(saved_yaml):
     """Test that saved yaml file contains dates in isoformat."""
+    for entry in saved_yaml:
+        if entry == 'time range':
+            for date in entry:
+                assert date.format is 'isoformat'
 
 

@@ -172,12 +172,3 @@ def convert_excel_to_yaml(filepath, output_location):
         save_as_yaml(data_object=df[0], r=df[1],
                      output_location=output_location)
 
-
-# # NOTE: The lines below are only for quick testing and can be removed as soon
-# # as I have all the data I need to complete the proper tests (and have
-# # completed them).
-# xl_path = "../../../cap-sample-data/test_data/metadata_form_responses.xlsx"
-# json_path = "../visualise/assets/json_data/dailymetadata"
-# yaml_path = "../visualise/assets/yaml_data/dailymetadata"
-# convert_excel_to_json(filepath=xl_path, output_location=json_path)
-# convert_excel_to_yaml(filepath=xl_path, output_location=yaml_path)
