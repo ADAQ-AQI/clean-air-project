@@ -42,7 +42,7 @@ def slice_data(dataframe):
         form_data = {'title': row[1].values[16],
                      'description': row[1].values[17],
                      'firstname1': row[1].values[6],
-                     'surname1': row[1].Surname,
+                     'surname1': row[1].values[7],
                      'firstname2': row[1].values[11],
                      'surname2': row[1].values[12],
                      'north': row[1].values[42],
@@ -84,71 +84,68 @@ def save_as_json(data_object, r, output_location):
                 "dateRange": {"startDate": data_object.time_range_start,
                               "endDate": data_object.time_range_end}}
 
-    # write the dictionary above (new_file) to a json in the cap-sample-data
-    # directory with the addition of a unit to indicate the number of the
-    # metadata form response.
-    with open(output_location + str(r) + '.json', 'w') as fp:
+    # write the dictionary above (new_file) to a json with the addition of
+    # a unit to indicate the number of the metadata form response.
+    filename = "form_response" + str(r) + ".json"
+    with open(os.path.join(output_location, filename), 'w') as fp:
         json.dump(new_file, fp, indent=2, cls=DateTimeEncoder)
 
 
 def save_as_yaml(data_object, r, output_location):
     """
     Uses data held in pandas DataFrame to enter into form template and
-    save as yaml.
+    save as yaml.  Each data object entered here should be a single
+    response from the previous form input section.
     """
     # First extract the shortname only for chemical species:
     chem_species = []
     for chem in data_object.chemicals:
         if chem != "":
             chem_shortname = chem[chem.find("(") + 1:chem.find(")")]
-            # If we leave chemical species in this format something (yaml?)
-            # automatically adds inverticommas to 'NO' but nothing else, so
-            # add parentheses back on to standardise format for yaml:
-            chem_shortname = chem_shortname.replace(chem_shortname,
-                                                    "(" + chem_shortname + ")")
             chem_species.append(chem_shortname)
+
+    authors = {}
+    for i in range(1, 3):
+        firstname = data_object.get(f"firstname{i}")
+        surname = data_object.get(f"surname{i}")
+        if firstname and surname:
+            if i == 1:
+                authors.update({"firstname": firstname,
+                                "surname": surname})
+            elif (firstname and surname) is not type(str):
+                pass
+            else:
+                authors.update({f"firstname{i}": firstname,
+                                f"surname{i}": surname})
+
+    bbox = {}
+    for way in ["north", "south", "east", "west"]:
+        direction = data_object.get(f"{way}")
+        bbox.update({f"{way}": direction})
+
+    time_range = {"start": data_object.get("time_range_start").isoformat(),
+                  "end": data_object.get("time_range_end").isoformat()}
 
     # Now add all relevant data to a dictionary to save as yaml:
     new_file = {"title": data_object.title,
                 "description": data_object.description,
-                "authors":
-                    {"firstname": data_object.firstname1,
-                     "surname": data_object.surname1,
-                     "firstname2": data_object.firstname2,
-                     "surname2": data_object.surname2},
-                "bbox":
-                    {"north": data_object.north,
-                     "south": data_object.south,
-                     "east": data_object.east,
-                     "west": data_object.west},
+                "authors": authors,
+                "bbox": bbox,
                 "chemical species": chem_species,
                 "observation level/model": data_object.obs_level,
                 "data source": data_object.data_source,
-                "time range":
-                    {"start": data_object.time_range_start,
-                     "end": data_object.time_range_end},
+                "time range": time_range,
                 "lineage": data_object.lineage,
                 "quality": data_object.quality,
                 "docs": data_object.docs}
 
-    # now remove names from dictionary if response is nan and convert
-    # datetimes to isoformat:
-    for key, value in new_file.items():
-        if isinstance(value, dict):
-            for k, v in value.copy().items():
-                # Check sub-dicts for nans and remove nan elements
-                if pd.isna(v):
-                    value.pop(k, None)
-                # Check sub-dicts for datetimes and convert to str(isoformat)
-                if isinstance(v, (datetime.date, datetime.datetime)):
-                    value[k] = v.isoformat()
-
     # write the dictionary above (new_file) to a yaml in the cap-sample-data
     # directory with the addition of a unit to indicate the number of the
     # metadata form response.
-    with open(output_location + str(r) + '.yaml', 'w') as fp:
-        yaml.dump(new_file, fp,
-                  indent=2, default_flow_style=False, sort_keys=False)
+    filename = "form_response" + str(r) + ".yaml"
+    with open(os.path.join(output_location, filename), 'w') as fp:
+        yaml.dump(new_file, fp, indent=2, default_flow_style=False,
+                  sort_keys=False)
 
 
 def convert_excel_to_json(filepath, output_location):
