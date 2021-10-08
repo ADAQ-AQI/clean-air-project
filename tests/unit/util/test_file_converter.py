@@ -64,16 +64,10 @@ def test_json_reformat_chemicals(saved_json):
     """Test that the single excel entry for each chemical is reformatted
     into three seperate lines representing 'name', 'shortname' and
     'chart' information."""
-    len_chems = len(saved_json["pollutants"])
-    for i in range(len_chems):
-        try:
-            assert saved_json["pollutants"][i]["name"] and \
-                   saved_json["pollutants"][i]["shortname"] and \
-                   saved_json["pollutants"][i]["chart"]
-        except KeyError:
-            with pytest.raises(Exception):
-                print("Could not find all three components of pollutants "
-                      "dictionary for pollutant " + str(i) + ".")
+    for chem in range(len(saved_json["pollutants"])):
+        assert saved_json["pollutants"][chem]["name"] and \
+               saved_json["pollutants"][chem]["shortname"] and \
+               saved_json["pollutants"][chem]["chart"]
 
 
 def test_json_file_structure(saved_json):
@@ -86,22 +80,14 @@ def test_json_file_structure(saved_json):
 
 def test_json_date_range(saved_json):
     """Test that item in new_file contains both start and end dates."""
-    try:
-        assert saved_json["dateRange"]["startDate"] and \
-               saved_json["dateRange"]["endDate"]
-    except KeyError:
-        with pytest.raises(Exception):
-            print("Date range does not contain both start and end dates.")
+    assert saved_json["dateRange"]["startDate"] and \
+        saved_json["dateRange"]["endDate"]
 
 
 def test_json_date_format(saved_json):
     """Test that saved json file contains dates in isoformat."""
-    try:
-        assert dt.datetime.fromisoformat(saved_json["dateRange"]["startDate"])
-        assert dt.datetime.fromisoformat(saved_json["dateRange"]["endDate"])
-    except ValueError:
-        with pytest.raises(Exception):
-            print("This date range doesn't seem to comply with isoformat.")
+    assert dt.datetime.fromisoformat(saved_json["dateRange"]["startDate"])
+    assert dt.datetime.fromisoformat(saved_json["dateRange"]["endDate"])
 
 
 def test_yaml_reformat_chemicals(saved_yaml):
@@ -155,11 +141,6 @@ def test_yaml_remove_nan_names(saved_yaml):
 
 def test_yaml_datetime_format(saved_yaml):
     """Test that saved yaml file contains dates in isoformat."""
-    try:
-        assert dt.datetime.fromisoformat(saved_yaml["time range"]["start"])
-        assert dt.datetime.fromisoformat(saved_yaml["time range"]["end"])
-    except AssertionError:
-        print("This date range doesn't seem to comply with isoformat.")
-
-
+    assert dt.datetime.fromisoformat(saved_yaml["time range"]["start"])
+    assert dt.datetime.fromisoformat(saved_yaml["time range"]["end"])
 

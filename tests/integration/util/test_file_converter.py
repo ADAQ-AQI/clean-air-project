@@ -43,8 +43,7 @@ def test_convert_excel_to_json(xl_input_path, tmp_output_path,
         with open(json_filename) as file:
             file.read()
     except FileNotFoundError as fnf_error:
-        print(fnf_error)
-        print("Unable to locate converted json file.")
+        raise(fnf_error)
 
 
 def test_convert_excel_to_yaml(xl_input_path, tmp_output_path,
