@@ -104,19 +104,16 @@ def save_as_yaml(data_object, r, output_location):
             chem_shortname = chem[chem.find("(") + 1:chem.find(")")]
             chem_species.append(chem_shortname)
 
-    authors = {}
+    authors = []
     for i in range(1, 3):
         firstname = data_object.get(f"firstname{i}")
         surname = data_object.get(f"surname{i}")
         if firstname and surname:
-            if i == 1:
-                authors.update({"firstname": firstname,
-                                "surname": surname})
-            elif (firstname and surname) is not type(str):
+            if not isinstance((firstname and surname), str):
                 pass
             else:
-                authors.update({f"firstname{i}": firstname,
-                                f"surname{i}": surname})
+                authors.append({"firstname": firstname,
+                                "surname": surname})
 
     bbox = {}
     for way in ["north", "south", "east", "west"]:

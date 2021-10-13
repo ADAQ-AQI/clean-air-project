@@ -112,7 +112,7 @@ def test_yaml_authors_subset(saved_yaml):
     """Test that all required keys are present in authors subset."""
     keys_required = ['firstname', 'surname']
     for key in keys_required:
-        assert key in saved_yaml['authors']
+        assert key in saved_yaml['authors'][0]
 
 
 def test_yaml_bbox_subset(saved_yaml):
