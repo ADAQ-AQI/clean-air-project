@@ -117,29 +117,6 @@ class MetadataHandler(DataFilterHandler):
             x = transformed_x[0]
             y = transformed_y[0]
 
-            # from util.crs.py   transform_points(xs, ys, source, target)
-            # [x],[y]
-
-            #Simple Pyproj transformation
-            # import pyproj
-            # from pyproj import Proj, transform
-            # inProj = Proj(init='epsg:3857')
-            # outProj = Proj(init='epsg:4326')
-            # x1, y1 = -11705274.6374, 4826473.6922
-            # x2, y2 = transform(inProj, outProj, x1, y1)
-
-            # Using
-            # pyproj >= 2.2
-            # .0
-            # import pyproj
-            # print(pyproj.__version__)  # 2.4.1
-            # print(pyproj.proj_version_str)  # 6.2.1
-            #
-            # proj = pyproj.Transformer.from_crs(3857, 4326, always_xy=True)
-            #
-            # x1, y1 = (-11705274.6374, 4826473.6922)
-            # x2, y2 = proj.transform(x1, y1)
-            # print((x2, y2))  # (-105.15027111593008, 39.72785727727918)
 
         # Check if point falls within bounding box
         # Make bounding box in shapley . NB. It follows pattern box( south, north, west, east) & point is Point ( Easting, Northing)
@@ -151,16 +128,10 @@ class MetadataHandler(DataFilterHandler):
 
         return answer
 
-    # def access_inner_dictionary(self):
-    #    for key, value in self.dfh.get_allfiles_dict().items():  # items() function gives back key value pair as tuple
-    #        print(key, 'main keys', value, 'value')
-    #        for inner_dict_value in value:
-    #           #if key[inner_dict_value] is type(dict):
-    #                print('  ', inner_dict_value, 'is', key[inner_dict_value])
 
     def __set_switch_outer(self, include: bool, variable: str):  # TODO: have one version of these for a single value and one for a list
         """ Accesses the outer loop of the all files dict to check the value given is contained in the metadata
-         and if so switches the to reverse of its previous value"""
+         . Switches On or Off dependant on the value given for the include variable True = On, False = Off """
 
         for outer_key in self.get_allfiles_dict():
             for inner_key in self.get_allfiles_dict()[outer_key]:  # Now we have a possible key/value pair (this enough for simple ones)
@@ -173,27 +144,6 @@ class MetadataHandler(DataFilterHandler):
 
     def __set_switch_inner(self, species_list: list):
         pass
-
-    # def print_inner_dict(self):
-    # #THINK THIS CRAZY BIT OF CODE ACTUALLY DOES WHAT I WANT :-)
-    # # PUT THE FILTER HANDLER , NOT HERE ..AND HAVE TWO VERSIONS SO CAN UPDATE THE FILTERS ( PLAIN & INNER VERSIONS)
-    #     # #KEEP  THIS IN TTHIS PRINT VERSION TOO SO CAN SEE WHAT HECK IS GOING ON !!
-    #     for outer_key in self.get_allfiles_dict():
-    #         print('Outer Key = ', outer_key)  #outer key is the yaml filename
-    #         for inner_key in self.get_allfiles_dict()[outer_key]: #Now we have a possible key/value pair (this enough for simple ones)
-    #             print('   ',
-    #                   'Inner Key', inner_key,
-    #                   'Inner Value', self.get_allfiles_dict()[outer_key][inner_key] ,
-    #                   'Inner Value Type', type(self.get_allfiles_dict()[outer_key][inner_key]))
-    #             #Now check to see if inner key is actually a list of key/value pairs
-    #             if type(self.get_allfiles_dict()[outer_key][inner_key]) is list:
-    #                for goal in self.get_allfiles_dict()[outer_key][inner_key]:
-    #                    print('      ', type(self.get_allfiles_dict()[outer_key][inner_key]) , goal, type(goal))
-    #                    #Now get the values in these mini dictionaries
-    #                    if type(goal) is dict:
-    #                       for key, value in goal.items():
-    #                           print('         ', type(goal), str(key) + " => " + str(value))
-
 
 
 

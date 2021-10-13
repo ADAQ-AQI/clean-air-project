@@ -8,7 +8,7 @@ from clean_air.visualise.assets import data
 
 AURN_SITES = '/net/home/h05/clucas/CAF_Example_Data_Files/AURN_Observations/AURN_Site_Information.csv'
 
-def get_aurn__sites_map():
+def get_aurn__sites_map() -> map:
     """This function returns a map object with all the AURN sites plotted on it.
 
     call display(map) to show this map in a Jupyter notebook
@@ -60,7 +60,8 @@ def get_aurn__sites_map():
     return map
 
 
-def get_aircraft_track_map(aircraft_track_coords:str):
+
+def get_aircraft_track_map(aircraft_track_coords:str) -> map:
 
     m5 = folium.Map(location=[50.72039, -1.88092], zoom_start=8)
 
@@ -80,5 +81,5 @@ def get_aircraft_track_map(aircraft_track_coords:str):
     return m5
 
 
-get_aurn__sites_map()
-get_aircraft_track_map(data.get_coords1())
+#get_aurn__sites_map()
+#get_aircraft_track_map(data.get_coords1())
