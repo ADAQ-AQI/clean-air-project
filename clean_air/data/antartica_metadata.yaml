@@ -1,0 +1,31 @@
+title: "Penlee Point Atmospheric Observatory: Meteorological and chemical observations 2014-2017"
+description: " The Penlee Point Atmospheric Observatory (PPAO) was established by the Plymouth Marine Laboratory in May 2014"
+authors:
+  - firstname: "Sam"
+    surname: "Smith"
+  - firstname: "Joe"
+    surname: "Bloggs"
+cs: "EPSG:3031"
+bbox:
+  north: 51.6918741
+  south: 51.2867602
+  east:  0.3340155
+  west: -0.5103751
+chemical_species:
+  - no2
+  - o3
+  - so2
+  - pm2.5
+  - pm10
+observation_level: "ground"
+data_source: "air_quality"
+time_range:
+  - start: "2014-05-02 00:00:00"
+    end: "2014-31-12 23:00:00"
+lineage: "Data were collected by Plymouth Marine Laboratory and deposited at the Centre for Environmental Data Analysis (CEDA) for archiving.\n\n"
+quality: "Data are as given by the data provider, no quality control has been performed by the Centre for Environmental Data Analysis (CEDA)..\n\n"
+docs:
+  - title: "Penlee Point Observatory"
+    url: "http://www.westernchannelobservatory.org.uk/penlee/"
+  - title: "PML Penlee Point Observatory"
+    url: "http://www.pml.ac.uk/Facilities/Atmospheric_Observatory"

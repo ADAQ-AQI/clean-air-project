@@ -1,0 +1,31 @@
+title: "Penlee Point Atmospheric Observatory: 2021"
+description: " The Penlee Point Atmospheric Observatory Test2"
+authors:
+  - firstname: "Sam"
+    surname: "Smith"
+  - firstname: "Joe"
+    surname: "Bloggs"
+
+cs: "EPSG:4326"
+bbox:
+  north: 50.3600
+  south: 30.3600
+  east: -4.3500
+  west: -1.3500
+chemical_species:
+  - "no2"
+  - "o3"
+  - "pm10"
+
+observation_level: "ground"
+data_source: "health"
+time_range:
+  - start: "2014-05-02 00:00:00"
+    end: "2014-31-12 23:00:00"
+lineage: "Data were collected by Plymouth Marine Laboratory and deposited at the Centre for Environmental Data Analysis (CEDA) for archiving.\n\n"
+quality: "Data are as given by the data provider, no quality control has been performed by the Centre for Environmental Data Analysis (CEDA)..\n\n"
+docs:
+  - title: "Penlee Point Observatory"
+    url: "http://www.westernchannelobservatory.org.uk/penlee/"
+  - title: "PML Penlee Point Observatory"
+    url: "http://www.pml.ac.uk/Facilities/Atmospheric_Observatory"
