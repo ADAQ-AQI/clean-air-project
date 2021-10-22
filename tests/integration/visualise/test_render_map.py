@@ -23,6 +23,7 @@ def aircraft_filepath(sampledir):
 @pytest.fixture()
 def aircraft_track(aircraft_filepath):
     aircraft_track = fc.generate_dataframe(aircraft_filepath)
+    return aircraft_track
 
 
 @pytest.fixture()
@@ -37,8 +38,8 @@ def test_make_AURN_maps(site_data):
     make_maps.get_aurn__sites_map(site_data)
 
 
-def test_make_aircraft_track_map(aircraft_filepath):
-    make_maps.get_aircraft_track_map(aircraft_filepath)
+def test_make_aircraft_track_map(aircraft_track):
+    make_maps.get_aircraft_track_map(aircraft_track)
 
 
 # get_aircraft_track_map(data.get_coords1())
