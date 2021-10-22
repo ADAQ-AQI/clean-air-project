@@ -9,6 +9,9 @@ from clean_air.visualise.assets import data
 AURN_SITES = '/net/home/h05/clucas/CAF_Example_Data_Files/AURN_Observations/' \
              'AURN_Site_Information.csv'
 
+AIRCRAFT_TRACK = '/net/home/h06/cbosley/Projects/adaq-aqi/cap-sample-data/' \
+                 'aircraft/MOCCA_M251_20190903.nc'
+
 
 def get_aurn__sites_site_map() -> map:
     """This function returns a site_map object with all the AURN sites plotted 
@@ -63,7 +66,7 @@ def get_aurn__sites_site_map() -> map:
     return site_map
 
 
-def get_aircraft_track_map(aircraft_track_coords: str) -> map:
+def get_aircraft_track_map(aircraft_track_coords=AIRCRAFT_TRACK) -> map:
     m5 = folium.Map(location=[50.72039, -1.88092], zoom_start=8)
 
     # Creating feature groups
