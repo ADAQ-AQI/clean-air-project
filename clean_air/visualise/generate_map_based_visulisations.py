@@ -3,14 +3,13 @@ import pandas as pd
 from shapely.geometry import Point  # Shapely for converting lat/lon to geometry
 import geopandas as gpd  # To create GeodataFrame
 import folium
+import os
 
 from clean_air.visualise.assets import data
+from conftest import sampledir
 
 AURN_SITES = '/net/home/h05/clucas/CAF_Example_Data_Files/AURN_Observations/' \
              'AURN_Site_Information.csv'
-
-AIRCRAFT_TRACK = '/net/home/h06/cbosley/Projects/adaq-aqi/cap-sample-data/' \
-                 'aircraft/MOCCA_M251_20190903.nc'
 
 
 def get_aurn__sites_site_map() -> map:
@@ -66,7 +65,7 @@ def get_aurn__sites_site_map() -> map:
     return site_map
 
 
-def get_aircraft_track_map(aircraft_track_coords=AIRCRAFT_TRACK) -> map:
+def get_aircraft_track_map(aircraft_track_coords: str) -> map:
     m5 = folium.Map(location=[50.72039, -1.88092], zoom_start=8)
 
     # Creating feature groups
@@ -86,5 +85,8 @@ def get_aircraft_track_map(aircraft_track_coords=AIRCRAFT_TRACK) -> map:
 
     return m5
 
+
 # get_aurn__sites_map()
 # get_aircraft_track_map(data.get_coords1())
+# get_aircraft_track_map(AIRCRAFT_TRACK)
+
