@@ -15,12 +15,6 @@ def aircraft_filepath(sampledir):
     return aircraft_filepath
 
 
-# @pytest.fixture()
-# def aircraft_track(aircraft_filepath):
-#     aircraft_track = fc.generate_dataframe(aircraft_filepath)
-#     return aircraft_track
-
-
 @pytest.fixture()
 def AURN_filepath():
     AURN_filepath = os.path.join("net", "home", "h05", "clucas",
@@ -29,8 +23,8 @@ def AURN_filepath():
     return AURN_filepath
 
 
-def test_make_AURN_maps(site_data):
-    make_maps.get_aurn__sites_map(site_data)
+def test_make_AURN_maps():
+    make_maps.get_aurn__sites_site_map()
 
 
 def test_make_aircraft_track_map(aircraft_filepath):

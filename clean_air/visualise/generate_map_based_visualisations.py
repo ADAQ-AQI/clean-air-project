@@ -4,14 +4,13 @@ from shapely.geometry import Point  # Shapely for converting lat/lon to geometry
 import geopandas as gpd  # To create GeodataFrame
 import folium
 import os
-import pathlib
 
-from clean_air.visualise.assets import data
 from clean_air.util import file_converter as fc
-from clean_air.data import data_subset as ds
+
 
 AURN_SITES = '/net/home/h05/clucas/CAF_Example_Data_Files/AURN_Observations/' \
              'AURN_Site_Information.csv'
+PKG_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_aurn__sites_site_map() -> map:
@@ -62,7 +61,8 @@ def get_aurn__sites_site_map() -> map:
 
     folium.LayerControl().add_to(site_map)
 
-    site_map.save("assets/AURN.html")  # Save my completed site_map
+    save_path = os.path.join(PKG_DIR, 'assets/AURN.html')
+    site_map.save(save_path)  # Save my completed site_map
 
     return site_map
 
@@ -110,8 +110,7 @@ def get_aircraft_track_map(aircraft_track_coords) -> map:
     # Save my completed map
     # NOTE: I'm not hugely happy about this next bit, I am open to suggestions
     # about how to more easily specify this path:
-    package_dir = os.path.dirname(os.path.abspath(__file__))
-    save_path = os.path.join(package_dir, 'assets/AircraftTrack.html')
+    save_path = os.path.join(PKG_DIR, 'assets/AircraftTrack.html')
     m5.save(save_path)
 
     return m5
