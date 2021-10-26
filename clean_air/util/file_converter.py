@@ -1,9 +1,20 @@
-"""This converts xcel data files to JSON file types for processing."""
+"""
+This converts input metadata files to selected file types for processing,
+for example:
+convert_excel(filepath, output_location)
+convert_netcdf(filepath, output_location)
+
+You can also use this module to access a pandas.DataFrame extracted from
+either an excel or netcdf input file, for example:
+generate_dataframe(filepath)
+"""
+
 import os
 import pandas as pd
 import json
 import yaml
 import datetime
+import xarray as xr
 from json import JSONEncoder
 
 
@@ -15,12 +26,20 @@ class DateTimeEncoder(JSONEncoder):
             return obj.isoformat()
 
 
-def read_excel_data(filepath):
+def generate_dataframe(filepath):
     """
     Reads in data from excel spreadsheets and holds as temporary
     pandas.DataFrame object.
     """
-    temp_dataframe = pd.read_excel(filepath, engine='openpyxl')
+    if filepath.endswith(".xlsx"):
+        temp_dataframe = pd.read_excel(filepath, engine='openpyxl')
+    elif filepath.endswith(".nc"):
+        # NOTE: We need to use xarray to open the netcdf dataset, then turn
+        # that into a pandas dataframe.
+        temp_dataset = xr.open_dataset(filepath)
+        temp_dataframe = temp_dataset.to_dataframe()
+    else:
+        raise ValueError("No reader configured yet for this input format.")
     return pd.DataFrame(temp_dataframe)
 
 
@@ -145,24 +164,41 @@ def save_as_yaml(data_object, r, output_location):
                   sort_keys=False)
 
 
-def convert_excel_to_json(filepath, output_location):
+def save_as_csv(data_object, output_location):
     """
-    Convert excel metadata files to required json output format.
+    Convert pandas.DataFrame object to csv file and save in specified
+    location.  Filename must be included as part of output_location.
     """
-    temp_dataframe = read_excel_data(filepath)
-    sliced_dataframes = slice_data(temp_dataframe)
-    for df in sliced_dataframes:
-        save_as_json(data_object=df[0], r=df[1],
-                     output_location=output_location)
+    data_object.to_csv(output_location, index=False)
 
 
-def convert_excel_to_yaml(filepath, output_location):
+def convert_excel(filepath, output_location):
     """
-    Convert excel metadata files to required yaml output format.
+    Convert excel metadata files to required output format.  Filename must be
+    included in the output_location parameter with a valid file extension of
+    either 'json', 'yml' or 'yaml'.
     """
-    temp_dataframe = read_excel_data(filepath)
+    temp_dataframe = generate_dataframe(filepath)
     sliced_dataframes = slice_data(temp_dataframe)
+    output_dir = os.path.split(output_location)[0]
+    filetype = os.path.splitext(output_location)[1]
     for df in sliced_dataframes:
-        save_as_yaml(data_object=df[0], r=df[1],
-                     output_location=output_location)
+        if filetype == '.json':
+            save_as_json(data_object=df[0], r=df[1],
+                         output_location=output_dir)
+        elif filetype == '.yaml' or filetype == '.yml':
+            save_as_yaml(data_object=df[0], r=df[1],
+                         output_location=output_dir)
+        else:
+            raise ValueError("Filetype not recognized.  Please specify output "
+                             "type as either 'json', 'yml' or 'yaml'.")
+
+
+def convert_netcdf(filepath, output_location):
+    """
+    Convert netcdf files to required csv output format.  Output filename must
+    be included in output location.
+    """
+    temp_dataframe = generate_dataframe(filepath)
+    save_as_csv(temp_dataframe, output_location)
 
