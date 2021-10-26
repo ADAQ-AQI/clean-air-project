@@ -1,10 +1,13 @@
 name: Run tests
 
 on:
-  # Run on any push
-  - push
+  # Run on pushes to master
+  push:
+    branches: [master]
+  # Run on pull requests (specifically on open, reopen, or push)
+  pull_request:
   # Run manually (from actions tab)
-  - workflow_dispatch
+  workflow_dispatch:
 
 jobs:
   setup-and-run:
