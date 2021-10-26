@@ -3,7 +3,10 @@ __pycache__
 *.pyc
 
 # Python package info
-*.egg-info
+*.egg*/
+build/
+dist/
+sdist/
 
 # Protect against temporary/user-specific artefacts
 .idea

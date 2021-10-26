@@ -8,7 +8,7 @@ We will be using cutting edge technology and software to engineer a fully-functi
 Dependencies are intended to be installed using `conda`:
 
 ```
-conda env create -f environment.yaml
+conda env create -f environment.yml
 ```
 
 Then, install the `clean_air` package to this environment using `pip`:

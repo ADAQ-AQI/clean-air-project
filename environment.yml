@@ -3,6 +3,8 @@ channels:
   - conda-forge
 dependencies:
   - python=3.8
+  - ipykernel
+  - pip
 
   # Main data handling
   - iris
@@ -21,4 +23,3 @@ dependencies:
   # Dev
   - pytest
   - flake8
-  - pip
