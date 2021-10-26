@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+
+testpaths = "tests"
+
+filterwarnings = [
+    # Ignore deprecation warnings from 3rd party packages
+    "ignore::DeprecationWarning",
+    "default::DeprecationWarning:clean_air",
+    "ignore::PendingDeprecationWarning",
+    "default::PendingDeprecationWarning:clean_air",
+    # Not important to tests
+    "ignore:You will likely lose important projection information",
+]
