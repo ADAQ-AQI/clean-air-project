@@ -5,15 +5,11 @@ import geopandas as gpd  # To create GeodataFrame
 import folium
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import branca.colormap as cm
 import os
-import pathlib
 
 from clean_air.util import file_converter as fc
 
-# TODO: Find a way to set directories here, specifically to set the save
-#  location.  This method doesn't work except locally.
-ROOT_DIR = pathlib.Path(__file__).parent.parent.parent
+
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
