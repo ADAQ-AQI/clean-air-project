@@ -2,24 +2,41 @@
 Configuration for pytest - this file is automatically executed on startup.
 """
 
-import pathlib
+from pathlib import Path
 
 import pytest
 
 
+# Hooks
+
 def pytest_addoption(parser):
-    # Add command-line argument `sampledir`, which should point to a
-    # checkout of https://github.com/ADAQ-AQI/cap-sample-data
-    # By default assume it exists, with the default name, as a sibling
-    # directory of this repo
-    root = pathlib.Path(__file__).parent
+    """
+    Register custom command-line arguments that can be passed to `pytest`
+    """
+    root = Path(__file__).parent
     default = root.parent / "cap-sample-data"
-    parser.addoption("--sampledir", default=default)
+    parser.addoption(
+        "--sampledir",
+        default=default,
+        type=Path,
+        help="checkout of ADAQ-AQI/cap-sample-data.\n"
+        "Default: `cap-sample-data` as a sibling of this repository."
+    )
 
 
-@pytest.fixture(scope="package")
+def pytest_report_header(config):
+    """
+    Add extra information to the report header
+    """
+    sampledir = config.getoption("sampledir")
+    return f"--sampledir: {sampledir.absolute()}"
+
+
+# Fixtures
+
+@pytest.fixture(scope="session")
 def sampledir(pytestconfig):
     """
-    Fixture to conveniently access the sample data directory.
+    Fixture to conveniently access the sample data directory
     """
-    return pathlib.Path(pytestconfig.getoption("sampledir"))
+    return pytestconfig.getoption("sampledir")

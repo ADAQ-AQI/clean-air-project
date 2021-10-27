@@ -45,8 +45,8 @@ def generate_dataframe(filepath):
 
 def slice_data(dataframe):
     """
-    This function iterates through rows of a multiple-response dataframe and 
-    creates a more organised dataframe for each response.  This is a necessary 
+    This function iterates through rows of a multiple-response dataframe and
+    creates a more organised dataframe for each response.  This is a necessary
     step in the conversion between xlsx and json/yaml as it allows access to
     some variables which are otherwise inaccessible due to the structure of the
     original multi-level dataframe.
@@ -201,4 +201,3 @@ def convert_netcdf(filepath, output_location):
     """
     temp_dataframe = generate_dataframe(filepath)
     save_as_csv(temp_dataframe, output_location)
-
