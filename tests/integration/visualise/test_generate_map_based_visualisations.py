@@ -16,20 +16,16 @@ def aircraft_filepath(sampledir):
 
 
 @pytest.fixture()
-def AURN_filepath():
-    AURN_filepath = os.path.join("net", "home", "h05", "clucas",
-                                 "CAF_Example_Data_Files", "AURN_Observations",
-                                 "AURN_Site_Information.csv")
+def AURN_filepath(sampledir):
+    AURN_filepath = os.path.join(sampledir, "AURN", "AURN_Site_Information.csv")
     return AURN_filepath
 
 
-def test_make_AURN_maps():
-    make_maps.get_aurn__sites_site_map()
+def test_make_AURN_maps(AURN_filepath):
+    make_maps.get_aurn__sites_site_map(AURN_filepath)
 
 
 def test_make_aircraft_track_map(aircraft_filepath):
     make_maps.get_aircraft_track_map(aircraft_filepath)
 
-
-# get_aircraft_track_map(data.get_coords1())
 
