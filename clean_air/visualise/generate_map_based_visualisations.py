@@ -13,7 +13,7 @@ from clean_air.util import file_converter as fc
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def get_aurn__sites_site_map(site_data) -> map:
+def get_aurn__sites_site_map(site_data, output_path) -> map:
     """This function returns a site_map object with all the AURN sites plotted 
     on it.
 
@@ -60,13 +60,12 @@ def get_aurn__sites_site_map(site_data) -> map:
 
     folium.LayerControl().add_to(site_map)
 
-    save_path = os.path.join(THIS_DIR, 'assets/AURN.html')
-    site_map.save(save_path)  # Save my completed site_map
+    site_map.save(output_path)  # Save my completed site_map
 
     return site_map
 
 
-def get_aircraft_track_map(aircraft_track_coords) -> map:
+def get_aircraft_track_map(aircraft_track_coords, output_path) -> map:
     """
     Create a standard base map, read and convert aircraft track files
     into lat/lon pairs, then plot these locations on the map and draw lines
@@ -123,10 +122,7 @@ def get_aircraft_track_map(aircraft_track_coords) -> map:
     folium.LayerControl().add_to(m5)
 
     # Save my completed map
-    # NOTE: I'm not hugely happy about this next bit, I am open to suggestions
-    # about how to more easily specify this path:
-    save_path = os.path.join(THIS_DIR, 'assets/AircraftTrack.html')
-    m5.save(save_path)
+    m5.save(output_path)
 
     return m5
 
