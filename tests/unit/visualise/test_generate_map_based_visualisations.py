@@ -76,13 +76,3 @@ def test_aircraft_track_map_has_children(aircraft_track):
     # Again, this input file is fixed and static so the output should always
     # produce three children.
     assert len(aircraft_track._children) == 275
-
-
-# Tests for get_line_colour:
-def test_colour_is_hex():
-    """Test that 'colour' is in hex format, i.e. a string of length 7 starting
-    with a hashtag."""
-    colour = make_maps.get_line_colour(float(110))
-    assert isinstance(colour, str)
-    assert len(colour) == 7
-    assert colour.startswith('#')

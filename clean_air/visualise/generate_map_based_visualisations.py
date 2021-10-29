@@ -1,10 +1,8 @@
 import webbrowser
 import pandas as pd
-from shapely.geometry import Point  # Shapely for converting lat/lon to geometry
 import geopandas as gpd  # To create GeodataFrame
 import folium
-import matplotlib as mpl
-import matplotlib.pyplot as plt
+import branca.colormap as cm
 import os
 
 from clean_air.util import file_converter as fc
@@ -49,8 +47,6 @@ def get_aurn__sites_site_map(site_data, output_path) -> map:
         # now place the markers with the popup labels and data
         site_map.add_child(folium.Marker(location=coordinates,
                                          popup=
-                                         # "Year: " + str(gdf.Year[i]) + 
-                                         # '<br>' +
                                          "Name: " + str(gdf.Name[i]) + '<br>' +
                                          "Type: " + str(gdf.Type[i]) + '<br>' +
                                          "Coordinates: " + str(geo_df_list[i]),
@@ -80,40 +76,17 @@ def get_aircraft_track_map(aircraft_track_coords, output_path) -> map:
     filetype = os.path.splitext(aircraft_track_coords)[1]
     if filetype == '.nc':
         tmp_aircraft_df = fc.generate_dataframe(aircraft_track_coords)
-        # tmp_aircraft_track needs to be the start and end of each line, so
-        # must contain a point from the end of the last location and one from
-        # the current location:
-        tmp_aircraft_track = []
-        for row in tmp_aircraft_df.iterrows():
-            # Altitude will be that of the previous row, so stash it before
-            # replacing it:
-            try:
-                altitude = alt
-            except UnboundLocalError:
-                pass
-            # Now get next lats, lons and alts:
-            lat = row[1]['Latitude']
-            lon = row[1]['Longitude']
-            alt = row[1]['Altitude']
-            if len(tmp_aircraft_track) == 0:
-                tmp_aircraft_track.append([lat, lon])
-                # Don't try and construct a line after adding the point if it
-                # is the only point in the list.
-            elif len(tmp_aircraft_track) == 1:
-                tmp_aircraft_track.append([lat, lon])
-                # List now contains two points, so we can plot a line:
-                lc = get_line_colour(altitude)
-                line = folium.vector_layers.PolyLine(tmp_aircraft_track,
-                                                     popup=
-                                                     '<b>Path of Aircraft</b>',
-                                                     tooltip='Aircraft',
-                                                     color=lc, weight=5)
-                line.add_to(f1)
-                # Now replace list of two points with just last point (this
-                # will become the first point in the next list, connecting the
-                # lines together):
-                tmp_aircraft_track = [tmp_aircraft_track[1]]
-
+        lats = tmp_aircraft_df['Latitude']
+        lons = tmp_aircraft_df['Longitude']
+        tmp_aircraft_track = pd.concat([lats, lons], axis=1)
+        altitudes = tmp_aircraft_df['Altitude'][:-1]
+        cmap = cm.LinearColormap(['blue', 'red'], vmin=100, vmax=800)
+        colour_line = folium.features.ColorLine(positions=tmp_aircraft_track,
+                                                colors=altitudes,
+                                                colormap=cmap,
+                                                nb_steps=50,
+                                                weight=5)
+        colour_line.add_to(f1)
     else:
         raise ValueError("Aircraft track filetype not recognised.  Please "
                          "ensure this is netCDF (i.e. '.nc').")
@@ -125,17 +98,3 @@ def get_aircraft_track_map(aircraft_track_coords, output_path) -> map:
     m5.save(output_path)
 
     return m5
-
-
-def get_line_colour(altitude):
-    """Function to assign a specific colour to a specific altitude in a
-    folium.vector_layers.PolyLine object."""
-    cmap = plt.cm.get_cmap('brg')
-    # NOTE: matplotlib colormaps map to rgba values between 0 and 1, so we
-    # must normalize to min and max values to be able to set colours to values
-    # in our own dataset:
-    norm = mpl.colors.Normalize(vmin=100, vmax=1000)
-    rgba = cmap(norm(altitude), bytes=False)
-    colour = mpl.colors.to_hex(rgba)
-
-    return colour
