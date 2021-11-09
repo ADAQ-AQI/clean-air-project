@@ -1,18 +1,17 @@
 import webbrowser
 import pandas as pd
-from shapely.geometry import Point  # Shapely for converting lat/lon to geometry
 import geopandas as gpd  # To create GeodataFrame
 import folium
+import branca.colormap as cm
 import os
 
-from clean_air.visualise.assets import data
-from conftest import sampledir
-
-AURN_SITES = '/net/home/h05/clucas/CAF_Example_Data_Files/AURN_Observations/' \
-             'AURN_Site_Information.csv'
+from clean_air.util import file_converter as fc
 
 
-def get_aurn__sites_site_map() -> map:
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def get_aurn__sites_site_map(site_data, output_path) -> map:
     """This function returns a site_map object with all the AURN sites plotted 
     on it.
 
@@ -21,7 +20,7 @@ def get_aurn__sites_site_map() -> map:
 
     site_map = folium.Map(location=[50.72039, -1.88092], zoom_start=7)
 
-    data_file = AURN_SITES
+    data_file = site_data
     df = pd.read_csv(data_file, skiprows=0, na_values=['no info', '.'])
 
     # Add geometry and convert to geopanda
@@ -48,45 +47,54 @@ def get_aurn__sites_site_map() -> map:
         # now place the markers with the popup labels and data
         site_map.add_child(folium.Marker(location=coordinates,
                                          popup=
-                                         # "Year: " + str(gdf.Year[i]) + 
-                                         # '<br>' +
                                          "Name: " + str(gdf.Name[i]) + '<br>' +
-                                         "Type: " + str(gdf.Type[i]) + '<br>' + 
+                                         "Type: " + str(gdf.Type[i]) + '<br>' +
                                          "Coordinates: " + str(geo_df_list[i]),
                                          icon=folium.Icon(
                                              color="%s" % type_color)))
-        # TODO: Remove trailing '+' from L.50 ("Type") if necessary.
         i = i + 1
 
     folium.LayerControl().add_to(site_map)
 
-    site_map.save("assets/AURN.html")  # Save my completed site_map
+    site_map.save(output_path)  # Save my completed site_map
 
     return site_map
 
 
-def get_aircraft_track_map(aircraft_track_coords: str) -> map:
+def get_aircraft_track_map(aircraft_track_coords, output_path) -> map:
+    """
+    Create a standard base map, read and convert aircraft track files
+    into lat/lon pairs, then plot these locations on the map and draw lines
+    between them (and colour them by altitude?).
+    """
+    # Create base map
     m5 = folium.Map(location=[50.72039, -1.88092], zoom_start=8)
-
     # Creating feature groups
     f1 = folium.FeatureGroup("Aircraft track 1")
 
-    # Adding lines to the different feature groups
-    line_1 = folium.vector_layers.PolyLine(aircraft_track_coords,
-                                           popup='<b>Path of Aircraft</b>',
-                                           tooltip='Aircraft',
-                                           color='blue', weight=5).add_to(f1)
+    # Extract lat-lon pairs from input file (after checking valid filetype):
+    filetype = os.path.splitext(aircraft_track_coords)[1]
+    if filetype == '.nc':
+        tmp_aircraft_df = fc.generate_dataframe(aircraft_track_coords)
+        lats = tmp_aircraft_df['Latitude']
+        lons = tmp_aircraft_df['Longitude']
+        tmp_aircraft_track = pd.concat([lats, lons], axis=1)
+        altitudes = tmp_aircraft_df['Altitude'][:-1]
+        cmap = cm.LinearColormap(['blue', 'red'], vmin=100, vmax=800)
+        colour_line = folium.features.ColorLine(positions=tmp_aircraft_track,
+                                                colors=altitudes,
+                                                colormap=cmap,
+                                                nb_steps=50,
+                                                weight=5)
+        colour_line.add_to(f1)
+    else:
+        raise ValueError("Aircraft track filetype not recognised.  Please "
+                         "ensure this is netCDF (i.e. '.nc').")
 
     f1.add_to(m5)
-
     folium.LayerControl().add_to(m5)
 
-    m5.save("assets/AircraftTrack.html")  # Save my completed map
+    # Save my completed map
+    m5.save(output_path)
 
     return m5
-
-
-# get_aurn__sites_map()
-# get_aircraft_track_map(data.get_coords1())
-# get_aircraft_track_map(AIRCRAFT_TRACK)
-
