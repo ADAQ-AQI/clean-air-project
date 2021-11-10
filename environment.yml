@@ -6,6 +6,7 @@ dependencies:
   - ipykernel
   - pip
 
+  - boto3
   # Main data handling
   - iris
   - xarray
@@ -21,3 +22,6 @@ dependencies:
   # Dev
   - pytest
   - flake8
+  - boto3-stubs-essential
+  - pip:
+    - moto>=2.2.16
