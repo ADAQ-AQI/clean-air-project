@@ -19,6 +19,7 @@ dependencies:
   - geoviews
   - datashader
   - panel
+  - folium
 
   # Dev
   - pytest
