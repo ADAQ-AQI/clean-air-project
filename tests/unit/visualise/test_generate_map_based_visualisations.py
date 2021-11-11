@@ -28,7 +28,7 @@ def aircraft_filepath(sampledir):
 @pytest.fixture()
 def AURN_site_map(AURN_filepath, tmp_output_path):
     save_path = os.path.join(tmp_output_path, "AURN.html")
-    site_map = make_maps.get_aurn__sites_site_map(AURN_filepath, save_path)
+    site_map = make_maps.get_aurn_sites_site_map(AURN_filepath, save_path)
     return site_map
 
 

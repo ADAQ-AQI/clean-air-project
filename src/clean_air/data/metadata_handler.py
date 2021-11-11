@@ -1,3 +1,5 @@
+#WIP . Need to add Chemical Species filters
+
 import pyproj
 from shapely.geometry import box, Point
 
@@ -63,8 +65,10 @@ class MetadataHandler(DataFilterHandler):
     def set_location_filter(self, point_lat:float, point_long:float):
         """Function to check metadata yaml files and set the filter using data source eg: lat/lon falls within bbox with N/S/E/W co-ordinates"""
 
+        #TODO:  Searches for point location within DATASET using metadata. Needs to be expanded to search at file level too.
+
         for outer_key in self.get_allfiles_dict():
-            print('Outer Key = ', outer_key)
+            #print('Outer Key = ', outer_key)
 
             # reset values for bounding box
             north = None
@@ -146,127 +150,153 @@ class MetadataHandler(DataFilterHandler):
         pass
 
 
+import pyproj
+from shapely.geometry import box, Point
 
-    def test(self):
-        print('METADATA HANDLER')
-        # print yaml all file dict
-        dict_printer(self.yaml_allfiles_dict)
-        dict_printer(self.filters_dict)
+from clean_air.data.data_filter_handler import DataFilterHandler, dict_printer
+from clean_air.util.crs import transform_points
 
-        # now check if a filter is on:
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/music.yaml')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/dance.yaml')
+CHEMICAL_SPECIES = 'chemical_species'
+CRS_LATLONG = "EPSG:4326"
+CRS_CONST = 'cs'
+BBOX_CONST = 'bbox'
 
-        # Turn a filter off
-        self.turn_filter_off('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/fruits.yaml')
-        self.turn_filter_off('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/veggies.yaml')
+#TODO: Should I keep a record of what has been turned on / off for each file ? Would Have be held within filters dictionary
+#TODO: OR maybe I never want to turn the filters on ? , Only off or reset all ??
 
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/fruits.yaml')
-        dict_printer(self.filters_dict)
+class MetadataHandler(DataFilterHandler):
+    """This class manages the metadata. Inherits from DataFilterHandler
+    It gets its values from the appropriate metadata yaml files and uses the data filter handler to switch filters on and off for each dataset as appropriate.
+    Currently all metadata is handled at file level"""
 
-        self.turn_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/fruits.yaml')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/fruits.yaml')
-        dict_printer(self.filters_dict)
+    def __init__(self, filepath='.'):
+        super().__init__(filepath)
+        self.filepath = filepath
+        # self.dfh = DataFilterHandler(self.filepath)  #NB: I have changed this to inherit & broken my code !!. Put back if not using inheritance !!
 
-        # self.dfh.turn_filter_off_contains('filetype','ground')
-        # self.dfh.turn_filter_on_contains('sweet_potato','2')
+    def set_observation_level_filter(self, include: bool, obs_level: str):
+        """Function to check metadata yaml files and set the filter using observation level eg: model, ground, airbourne
+        pass include:True if you want dataset included, false if you want dataset excluded.
+        eg: include:true, obs_level: ground would include all ground data sets
+        include:false, obs_level ground would exclude all ground data sets"""
 
-        self.get_filtered_data_subsets()
+        self.__set_switch_outer(include, obs_level)
 
-        # print('ACCESS INNER DICTIONARY')
-        # self.access_inner_dictionary(self.dfh.filters_dict)  #This not working !
+    def set_data_source_filter(self, include: bool, data_source: str):
+        """Function to check metadata yaml files and set the filter using data source eg: air_quality, health"""
+        self.__set_switch_outer(include, data_source)
 
-    def test2(self):
-        print('ACCESS INNER DICTIONARY')
-        # self.access_inner_dictionary()#self.dfh.filters_dict)  # This not working !
-        # self.access_inner_dict()
-        self.print_access_inner_dict()
+    def set_time_range_filter(self, min_time, max_time):
+        """Function to check metadata yaml files and set the filter using time
+        Any files within given time values are switched on
+        Any files outside given time values are switched off"""
 
-        print('METEDATA ONE TEST', )
-        # now check if a filter is on:
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+        # GO through the big old loop to set a time start & time end variable in a standard time format.
+        # Then do this
 
-        print('     Obs Level:ground')
-        # Turn a filter off using obs level
-        self.set_observation_level_filter(False, 'ground')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+        # if min_time >= dataset_time_start & max time <= dataset_time_end:
+        #     self.dfh.turn_filter_on()
+        # else:
+        #     self.dfh.turn_filter_off()
 
-        # Turn a filter on using obs level
-        self.set_observation_level_filter(True, 'ground')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+        # TODO: Standardise time format !
+        pass
 
-        print('     Data Source:health')
-        # Turn a filter off using data_source
-        self.set_data_source_filter(False, 'air_quality')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+    def set_chemical_species_filter(self, species_list: list):
+        """Function to check metadata yaml files and set the filter using chemical species .
+         eg: no2, o3, so2, pm2.5, pm10 :
 
-        # Turn a filter on using data_source
-        self.set_data_source_filter(True, 'air_quality')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+         Any values within given list of chemical species ar switched on
+         Any values not withing given list of chemical species are switched off"""
 
-        print('     Chemical Species: no2, pm2.5')
-        # Turn a filter off using data_source
-        self.set_chemical_species_filter(['no2', 'pm2.5'])
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+        self.__set_switch_inner(species_list, CHEMICAL_SPECIES)
 
-        print('     Chemical Species: pm10')
-        # Turn a filter off using data_source
-        self.set_chemical_species_filter(['pm10'])
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
 
-        print('     Chemical Species: []')
-        # Turn a filter on using data_source
-        #self.set_chemical_species_filter({})
-        #self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+    def set_location_filter(self, point_lat:float, point_long:float):
+        """Function to check metadata yaml files and set the filter using data source eg: lat/lon falls within bbox with N/S/E/W co-ordinates"""
 
-    def test3(self):
-        print('ACCESS INNER DICTIONARY')
-        # self.access_inner_dictionary()#self.dfh.filters_dict)  # This not working !
-        # self.access_inner_dict()
-        self.print_access_inner_dict()
+        #TODO:  Searches for point location within DATASET using metadata. Needs to be expanded to search at file level too.
 
-    def test_obs_level(self):
-        """This test demos all working filters ! """
-        print('METADATA TEST', 'Build list of all metadata files and turn filters to on by default \n')
-        dict_printer(self.filters_dict)
+        for outer_key in self.get_allfiles_dict():
+            #print('Outer Key = ', outer_key)
 
-        # now check if a filter is on:
-        #self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+            # reset values for bounding box
+            north = None
+            south = None
+            east = None
+            west = None
+            cs = None
+            latlong_dict = None
 
-        #print("\033[1;32m This text is Bright Green  \n")
-        #print("\033[1;31m This text is Bright Red  \n")
+            for inner_key in self.get_allfiles_dict()[outer_key]:
+                if inner_key == CRS_CONST:
+                    cs = self.get_allfiles_dict()[outer_key][inner_key]
+                    print(f'Coord ref system {inner_key} , {cs}')
 
-        print('\n  \033[1;30m    Obs Level:GROUND', ' Turn off all datasets containing Ground')
-        # Turn a filter off using obs level
-        self.set_observation_level_filter(False, 'ground')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+                if inner_key == BBOX_CONST:
+                    latlong_dict = (self.get_allfiles_dict()[outer_key][inner_key])
 
-        # Turn a filter on using obs level
-        print('\033[1;30m     Obs Level:GROUND', ' Turn on all datasets containing Ground')
-        self.set_observation_level_filter(True, 'ground')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+                    #get values from dictionary
+                    north = latlong_dict.get('north')
+                    south = latlong_dict.get('south')
+                    east  = latlong_dict.get('east')
+                    west  = latlong_dict.get('west')
 
-        print(' \033[1;30m    Data Source:AIR_QUALITY', ' Turn off all datasets containing Air Quality' )
-        # Turn a filter off using data_source
-        self.set_data_source_filter(False, 'air_quality')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+            if (north != None and cs !=None):
+                print(f'North {north}, South{south}, East{east}, West{west}/n')
 
-        # Turn a filter on using data_source
-        print(' \033[1;30m    Data Source:AIR_QUALITY', ' Turn on all datasets containing Air Quality')
-        self.set_data_source_filter(True, 'air_quality')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
+                #Evaluate if co-ordinates in box and update result accordingly
+                if(self.__evaluate_coordinates_in_box(cs, east, north, south, west, point_lat, point_long)):
+                    self.turn_filter_on(outer_key)
+                else:
+                    self.turn_filter_off(outer_key)
+            else:
+                pass
+                # Either this file doesnt contain bbox at all or its missing its CRS info
+                # If later , it needs incomplete metadata error throwing here
 
-    def test_location(self):
-    # Test the location filter ( add test for antartica in polar steriographic projection)
-        self.set_location_filter(0.0984, 51.5138)
+    def __evaluate_coordinates_in_box(self, cs, east, north, south, west, point_lat, point_long)->bool:
+        """ Returns True if coordinates are in bounding box, otherwise returns false"""
 
-m = MetadataHandler()
-# m.test()
+        # Check CRS
+        if cs == CRS_LATLONG:  # (NB THE assumption in that the POINT being compared to this bbox is always a lat/long
+            # this is fine
+            x = point_long
+            y = point_lat
+        else:
+            source_crs = pyproj.CRS(CRS_LATLONG)
+            target_crs = pyproj.CRS(cs)  # create crs object
 
-#m.test2()
+            transformed_x, transformed_y = transform_points([point_long], [point_lat], source_crs, target_crs)
+            x = transformed_x[0]
+            y = transformed_y[0]
 
-#m.test3()
 
-#m.test4()
+        # Check if point falls within bounding box
+        # Make bounding box in shapley . NB. It follows pattern box( south, north, west, east) & point is Point ( Easting, Northing)
+        bbox = box(south, north, west, east)
+        # pnt = Point(point_lat, point_long)
+        pnt = Point(y, x)
+        answer = bbox.contains(pnt)
+        print(f'is point in poly {answer}')
 
-m.test_location()
+        return answer
+
+
+    def __set_switch_outer(self, include: bool, variable: str):  # TODO: have one version of these for a single value and one for a list
+        """ Accesses the outer loop of the all files dict to check the value given is contained in the metadata
+         . Switches On or Off dependant on the value given for the include variable True = On, False = Off """
+
+        for outer_key in self.get_allfiles_dict():
+            for inner_key in self.get_allfiles_dict()[outer_key]:  # Now we have a possible key/value pair (this enough for simple ones)
+                # print('   ', 'Inner Key', inner_key, 'Inner Value', self.get_allfiles_dict()[outer_key][inner_key])
+                if str(self.get_allfiles_dict()[outer_key][inner_key]) == variable:
+                    if include:
+                        self.turn_filter_on(outer_key)
+                    else:
+                        self.turn_filter_off(outer_key)
+
+    def __set_switch_inner(self, species_list: list):
+        pass
+
+
