@@ -7,7 +7,7 @@ import iris
 import shapely.geometry
 import shapely.ops
 
-from clean_air import util
+from .. import util
 
 
 class DataSubset:
