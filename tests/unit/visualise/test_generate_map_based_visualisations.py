@@ -33,10 +33,10 @@ def AURN_site_map(AURN_filepath, tmp_output_path):
 
 
 @pytest.fixture()
-def aircraft_track(AURN_filepath, tmp_output_path):
+def aircraft_track(aircraft_filepath, tmp_output_path):
     save_path = os.path.join(tmp_output_path, "AircraftTrack.html")
-    aircraft_track = make_maps.get_aurn__sites_site_map(AURN_filepath,
-                                                        save_path)
+    aircraft_track = make_maps.get_aircraft_track_map(aircraft_filepath,
+                                                      save_path)
     return aircraft_track
 
 
@@ -75,4 +75,4 @@ def test_aircraft_track_map_has_children(aircraft_track):
     site_map object."""
     # Again, this input file is fixed and static so the output should always
     # produce three children.
-    assert len(aircraft_track._children) == 275
+    assert len(aircraft_track._children) == 3
