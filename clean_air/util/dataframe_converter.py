@@ -2,7 +2,7 @@
 This module contains functions to convert between dataframe types.
 """
 
-from clean_air.util.cubes import get_xy_coords
+from .cubes import get_xy_coords
 from iris.pandas import _assert_shared, _as_pandas_coord
 import numpy as np
 import pandas as pd

@@ -5,7 +5,7 @@ Top-level module for rendering datasets.
 import geopandas
 import iris
 import xarray
-from clean_air.visualise import render_map, render_plot
+from . import render_map, render_plot
 
 
 class DatasetRenderer:
