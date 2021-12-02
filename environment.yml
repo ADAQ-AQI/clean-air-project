@@ -7,6 +7,7 @@ dependencies:
   - pip
 
   - boto3
+  - s3fs
   # Main data handling
   - iris
   - xarray

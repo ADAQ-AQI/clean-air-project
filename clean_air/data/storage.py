@@ -1,19 +1,28 @@
 """Data access code for stored data"""
 import csv
+import logging
+import shutil
+import tempfile
+import weakref
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, date
 from decimal import Decimal
-from typing import TypeVar, Generic, Iterable, Callable, List, Optional
+from pathlib import Path
+from typing import TypeVar, Generic, Iterable, Callable, List, Optional, Union
 
 import boto3
 import botocore.exceptions
 from botocore import UNSIGNED
 from botocore.config import Config
 from mypy_boto3_s3.service_resource import Object
+from s3fs import S3FileSystem
 
 from ..exceptions import CleanAirFrameworkException
+from ..models import DataSet, MetaData
+from ..serialisation import MetaDataYamlSerialiser, MetaDataSerialiser
 
+LOGGER = logging.getLogger(__name__)
 T = TypeVar('T')
 
 
@@ -171,7 +180,8 @@ class AURNSiteDataStore(AbstractDataStore[AURNSite]):
                             latitude=Decimal(row["Latitude"]),
                             longitude=Decimal(row["Longitude"]),
                             opened=datetime.strptime(row["Date_Opened"], "%Y%m%d").date(),
-                            closed=datetime.strptime(row["Date_Closed"], "%Y%m%d").date() if int(row["Date_Closed"]) else None,
+                            closed=datetime.strptime(
+                                row["Date_Closed"], "%Y%m%d").date() if int(row["Date_Closed"]) else None,
                             species=row["Species"].split(",")
                         )
                     )
@@ -198,3 +208,97 @@ class AURNSiteDataStore(AbstractDataStore[AURNSite]):
 
     def put_batch(self, items: Iterable[AURNSite]) -> None:
         raise NotImplementedError()
+
+
+def create_dataset_store(storage_bucket_name="caf-data", local_storage_path: Optional[Path] = None,
+                         endpoint_url=JasminEndpointUrls.EXTERNAL, anon=True) -> "S3FSDataSetStore":
+    """
+    Return an AURNSiteDatastore instance configured with the given information
+
+    :param storage_bucket_name: Name of the bucket where datasets are stored
+    :param local_storage_path: Path to a writeable directory to store local copies of dataset files
+    :param endpoint_url: the object store service endpoint URL. Changes depending on whether accessing data from inside
+        or outside JASMIN, or using data stored on another AWS S3 compatible object store
+    :param anon: Whether to use anonymous access or credentials. anon=True is required for write access
+    """
+
+    client_kwargs = {"endpoint_url": endpoint_url}
+    fs = S3FileSystem(anon=anon, client_kwargs=client_kwargs)
+    return S3FSDataSetStore(fs, storage_bucket_name, cache_dir=local_storage_path)
+
+
+class S3FSDataSetStore:
+    """Encapsulates access to stored data sets"""
+
+    def __init__(self, fs: S3FileSystem, storage_bucket_name: str = "caf-data", cache_dir: Optional[Path] = None,
+                 metadata_serialiser: Optional[MetaDataSerialiser] = None):
+        self._storage_bucket_name = storage_bucket_name
+        self._fs = fs
+        self._metadata_serialiser = metadata_serialiser if metadata_serialiser else MetaDataYamlSerialiser()
+
+        if cache_dir:
+            self._cache_dir = Path(cache_dir)
+            # For now, our "cache" is just a directory where we download files too.
+            # There's no upper limit on disk usage, so just ensure it's cleaned up on exit
+            weakref.finalize(self._cache_dir, shutil.rmtree, self._cache_dir)
+        else:
+            # We don't need to access this, just need to stop it being garbage collected before the DataStore instance,
+            # so ensure we hold a reference to it
+            self.__tmp_dir = tempfile.TemporaryDirectory()
+            self._cache_dir = Path(self.__tmp_dir.name)
+
+    @staticmethod
+    def _get_file_paths(path: Path, include_datafiles=True, include_metadata=False, recurse=True) -> List[Path]:
+        """
+        Recursively gets file paths. Can include/exclude datafiles and metadata files using optional args.
+        Assumes anything that's not a metadata file is a data file
+        """
+        datafile_paths = []
+        for p in path.iterdir():
+            if recurse and p.is_dir():
+                datafile_paths.extend(S3FSDataSetStore._get_file_paths(p))
+            else:
+                is_metadata_file = bool(p.suffix == ".metadata")
+                if (is_metadata_file and include_metadata) or (not is_metadata_file and include_datafiles):
+                    datafile_paths.append(p)
+        return datafile_paths
+
+    def _generate_s3_key(self, obj: Union[DataSet, MetaData]) -> str:
+        if isinstance(obj, MetaData):
+            return f"{self._storage_bucket_name}/{obj.dataset_name}/{obj.dataset_name}.metadata"
+        if isinstance(obj, DataSet):
+            return f"{self._storage_bucket_name}/{obj.metadata.dataset_name}/"
+
+    def available_datasets(self) -> List[str]:
+        """Returns a list of dataset names that are available"""
+        return [s.split("/", 1)[1] for s in self._fs.ls(self._storage_bucket_name, detail=False)]
+
+    def get(self, dataset_id: str) -> DataSet:
+        # TODO don't redownload if in cache? maybe add refresh/reload option
+        # TODO, lazy loading, some kind of closure or DataSet subclass (LazyLoadingS3DataSet?)?
+        s3_key = f"{self._storage_bucket_name}/{dataset_id}"
+        cache_dir = (self._cache_dir / Path(dataset_id)).absolute()
+        self._fs.get(s3_key, str(cache_dir), recursive=True)
+
+        datafile_paths = self._get_file_paths(cache_dir)
+
+        # Load Metadata
+        metadata_path = self._get_file_paths(
+            cache_dir, include_datafiles=False, include_metadata=True, recurse=False)[0]  # we only expect 1 file
+        with metadata_path.open() as md_file:
+            metadata = self._metadata_serialiser.deserialise(md_file.read())
+
+        return DataSet(files=datafile_paths, metadata=metadata)
+
+    def put(self, item: DataSet) -> None:
+        for filename in item.files:
+            key = self._generate_s3_key(item) + filename.name
+            LOGGER.debug(f"Uploading datafile: {filename} to {key}")
+            self._fs.put(str(filename), key)
+
+        with tempfile.NamedTemporaryFile() as tmp_metadata:
+            tmp_metadata.write(self._metadata_serialiser.serialise(item.metadata).encode("utf-8"))
+            tmp_metadata.flush()
+            key = self._generate_s3_key(item.metadata)
+            LOGGER.debug(f"Uploading metadata to {key}")
+            self._fs.put(tmp_metadata.name, key)
