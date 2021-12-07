@@ -47,13 +47,36 @@ def antartica_filepath(sampledir):
     filepath = os.path.join(sampledir, "test_data", "antartica_metadata.yaml")
     return filepath
 
+def checkFiltersDictForFilename(dict, filepath):
+    found = False
+    for key in dict.keys():
+        keysplit = key.rsplit('/', 1)[1]
+        #print("Key:", keysplit)
+
+        filepathsplit = filepath.rsplit('/', 1)[1]
+        #print ("File:", filepathsplit)
+        if keysplit == filepathsplit:
+            found = True
+    assert found == True # Filename must be in dictionary
+    return found
+
+#try:
+#    checkFiltersDictForFilename(filepath)
+#except AssertionError as msg:
+#    print(msg)
+
 #TEST 1: 
 def test_build_filters(station_metadata_filepath, metaone_filepath, antartica_filepath, mh):
     #Make sure all set to true at start.
     #print('station_metadata_filepath',station_metadata_filepath)
     #print (mh.filters_dict.keys())
 
-    assert station_metadata_filepath in mh.filters_dict
+    #assert station_metadata_filepath in mh.filters_dict
+    #for key in mh.filters_dict.keys():
+    #    print("Key:", key.rsplit('/', 1)[1])
+    #    print ("File:", station_metadata_filepath.rsplit('/', 1)[1])
+
+    checkFiltersDictForFilename(mh.filters_dict, station_metadata_filepath)
     assert metaone_filepath in mh.filters_dict
     assert antartica_filepath in mh.filters_dict
 
