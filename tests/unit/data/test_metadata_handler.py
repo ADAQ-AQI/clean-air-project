@@ -58,6 +58,17 @@ def checkFiltersDictForFilename(dict, filepath):
     assert found == True # Filename must be in dictionary
     return found
 
+def getFiltersDictValueOfGivenFilename(dict, filepath):
+
+    for key in dict.keys():
+        keysplit = key.rsplit('/', 1)[1]
+
+        filepathsplit = filepath.rsplit('/', 1)[1]
+        if keysplit == filepathsplit:
+            print("Key:", key, " Keysplit:", keysplit, " Filepathsplit:", filepathsplit)
+            value = dict.get(key)
+    return value
+
 #try:
 #    checkFiltersDictForFilename(filepath)
 #except AssertionError as msg:
@@ -74,9 +85,11 @@ def test_build_filters(station_metadata_filepath, metaone_filepath, antartica_fi
 
 def test_all_filters_true(station_metadata_filepath, metaone_filepath, mh):
     
-    assert mh.filters_dict.get(station_metadata_filepath) == True
-    assert mh.filters_dict.get(metaone_filepath) == True
+    #assert mh.filters_dict.get(station_metadata_filepath) == True
+    #assert mh.filters_dict.get(metaone_filepath) == True
 
+    assert getFiltersDictValueOfGivenFilename(mh.filters_dict, station_metadata_filepath) == True
+    assert getFiltersDictValueOfGivenFilename(mh.filters_dict, metaone_filepath) == True
 
 def test_turn_off_obs_level_ground(station_metadata_filepath, mh):
     #TEST 2: Obs Level:GROUND', ' Turn off all datasets containing Ground')
