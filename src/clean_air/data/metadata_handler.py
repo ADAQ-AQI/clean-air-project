@@ -98,10 +98,8 @@ class MetadataHandler(DataFilterHandler):
                 #Evaluate if co-ordinates in box and update result accordingly
                 if(self.__evaluate_coordinates_in_box(cs, east, north, south, west, point_lat, point_long)):
                     self.turn_filter_on(outer_key)
-                    print("Turning Location filter on for ", outer_key)
                 else:
                     self.turn_filter_off(outer_key)
-                    print("Turning Location filter on for ", outer_key)
             else:
                 pass
                 # Either this file doesnt contain bbox at all or its missing its CRS info

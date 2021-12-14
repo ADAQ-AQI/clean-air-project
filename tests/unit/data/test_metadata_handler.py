@@ -82,6 +82,17 @@ def checkSetForFilename(this_set, filepath):
     assert found == True # Filename must be in dictionary
     return found
 
+def is_filter_on(dict, key)->bool:
+        """Checks if filter is turned on for this dataset.
+        where the <yaml_filename> is the key"""
+
+        if key in dict.keys():
+            if dict[key]:
+                return True
+            else:
+                return False
+        else:
+            return False
 
 #try:
 #    checkFiltersDictForFilename(filepath)
@@ -136,6 +147,8 @@ def test_filtered_dataset_list_contents(station_metadata_filepath, metaone_filep
 
 def test_filter_by_point_location(station_metadata_filepath, metaone_filepath, mh):
     #Test 7: Filter files by a given point location
+
     mh.set_location_filter(0.0984, 51.5138)
-    assert mh.is_filter_on(metaone_filepath) == False
-    assert mh.is_filter_on(station_metadata_filepath) == True
+
+    assert is_filter_on(mh.filters_dict, metaone_filepath) == False
+    assert is_filter_on(mh.filters_dict, station_metadata_filepath) == True
