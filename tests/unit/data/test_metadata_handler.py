@@ -2,7 +2,6 @@ import os
 import pytest
 
 from clean_air.data.metadata_handler import MetadataHandler, dict_printer
-from clean_air.data.data_filter_handler import print_yaml_file
 
 #NB: These tests use the test data :
 # station_metadata.yaml
@@ -95,10 +94,6 @@ def is_filter_on(dict, filepath)->bool:
 
     return ret_type
 
-#try:
-#    checkFiltersDictForFilename(filepath)
-#except AssertionError as msg:
-#    print(msg)
 
 #TEST 1: 
 def test_build_filters(station_metadata_filepath, metaone_filepath, antartica_filepath, mh):
@@ -143,8 +138,6 @@ def test_filtered_dataset_list_contents(station_metadata_filepath, metaone_filep
 
     checkSetForFilename(mh.get_filtered_data_subsets(), metaone_filepath)
     checkSetForFilename(mh.get_filtered_data_subsets(), station_metadata_filepath)
-
-    #print(mh.filters_dict.keys())
 
 def test_filter_by_point_location(station_metadata_filepath, metaone_filepath, mh):
     #Test 7: Filter files by a given point location
