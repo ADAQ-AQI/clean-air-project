@@ -82,17 +82,19 @@ def checkSetForFilename(this_set, filepath):
     assert found == True # Filename must be in dictionary
     return found
 
-def is_filter_on(dict, key)->bool:
-        """Checks if filter is turned on for this dataset.
-        where the <yaml_filename> is the key"""
+def is_filter_on(dict, filepath)->bool:
+    ret_type = False
+    for key in dict.keys():
+        keysplit = key.rsplit('/', 1)[1]
 
-        if key in dict.keys():
-            if dict[key]:
-                return True
-            else:
-                return False
+        filepathsplit = filepath.rsplit('/', 1)[1]
+        if keysplit == filepathsplit:
+            print("Is Filter On :""Key:", key, " Keysplit:", keysplit, " Filepathsplit:", filepathsplit, "Value:",dict.get(key))
+            ret_type = dict.get(key)
         else:
-            return False
+            ret_type = False
+
+    return ret_type
 
 #try:
 #    checkFiltersDictForFilename(filepath)
