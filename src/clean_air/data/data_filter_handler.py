@@ -46,8 +46,6 @@ class DataFilterHandler:
             with open(filename, 'r') as file:
                 self.yaml_allfiles_dict[str(os.path.abspath(filename))] = yaml.safe_load(file)
 
-        # print("ALL FILES DICTIONARY\n")
-        # print(self.yaml_allfiles_dict)
         return self.yaml_allfiles_dict
 
     def yaml_extractor(self, yaml_filename):
