@@ -90,11 +90,9 @@ def is_filter_on(dict, filepath)->bool:
 
         filepathsplit = filepath.rsplit('/', 1)[1]
         if (keysplit == filepathsplit) and (found == False):
-            print("Is Filter On :""Key:", key, " Keysplit:", keysplit, " Filepathsplit:", filepathsplit, "Value:",dict.get(key))
             found = True
             ret_type = dict.get(key)
 
-    print ("Returning:", ret_type, "Found in list: ", found)
     return ret_type
 
 #try:
