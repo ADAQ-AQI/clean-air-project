@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, date
 from decimal import Decimal
 from pathlib import Path
-from typing import TypeVar, Generic, Iterable, Callable, List, Optional, Union
+from typing import TypeVar, Generic, Iterable, Callable, List, Optional
 
 import boto3
 import botocore.exceptions
@@ -19,8 +19,8 @@ from mypy_boto3_s3.service_resource import Object
 from s3fs import S3FileSystem
 
 from ..exceptions import CleanAirFrameworkException
-from ..models import DataSet, MetaData
-from ..serialisation import MetaDataYamlSerialiser, MetaDataSerialiser
+from ..models import DataSet, Metadata
+from ..serialisation import MetadataYamlSerialiser, MetadataSerialiser
 
 LOGGER = logging.getLogger(__name__)
 T = TypeVar('T')
@@ -97,33 +97,6 @@ class AURNSite:
     species: List[str]  # The chemical species recorded at the site
 
 
-def create_aurn_datastore(bucket_name="aurn", data_file_path="AURN_Site_Information.csv",
-                          endpoint_url=JasminEndpointUrls.EXTERNAL, anon=True):
-    """
-    Return an AURNSiteDatastore instance configured with the given information
-
-    :param bucket_name: Name of the bucket storing the AURN site data CSV file
-    :param data_file_path: Object key of the AURN site data CSV file
-    :param endpoint_url: the object store service endpoint URL. Changes depending on whether accessing data from inside
-        or outside JASMIN, or using data stored on another AWS S3 compatible object store
-    :param anon: Whether to use anonymous access or credentials. anon=True is required for write access
-    """
-
-    if anon:
-        s3 = boto3.resource("s3", endpoint_url=endpoint_url, config=Config(signature_version=UNSIGNED))
-    else:
-        s3 = boto3.resource("s3", endpoint_url=endpoint_url)
-    bucket = s3.Bucket(bucket_name)
-    data_file_obj = bucket.Object(data_file_path)
-    try:
-        s3.meta.client.head_bucket(Bucket=bucket.name)
-        # data_file_obj.load()  # This fails, not clear why, permissions? It uses Head Object API call under the hood
-    except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as ex:
-        raise AURNSiteDataStoreException(
-            "Unable to create AURNSiteDataStore. Error when accessing object store") from ex
-    return AURNSiteDataStore(data_file_obj)
-
-
 class AURNSiteDataStore(AbstractDataStore[AURNSite]):
     """
     Encapsulates storage and access of Automatic Urban and Rural Network (AURN) site data.
@@ -194,7 +167,7 @@ class AURNSiteDataStore(AbstractDataStore[AURNSite]):
 
         return self._cached_data
 
-    def filter(self, filter_expr: Callable[[AURNSite], bool]) -> Iterable[AURNSite]:
+    def filter(self, filter_func: Callable[[AURNSite], bool]) -> Iterable[AURNSite]:
         raise NotImplementedError()
 
     def get(self, item_id) -> AURNSite:
@@ -210,31 +183,12 @@ class AURNSiteDataStore(AbstractDataStore[AURNSite]):
         raise NotImplementedError()
 
 
-def create_dataset_store(storage_bucket_name="caf-data", local_storage_path: Optional[Path] = None,
-                         endpoint_url=JasminEndpointUrls.EXTERNAL, anon=True) -> "S3FSDataSetStore":
-    """
-    Return an AURNSiteDatastore instance configured with the given information
+class BaseS3FSDataStore:
+    """Common functionality for S3FS-based datastores"""
 
-    :param storage_bucket_name: Name of the bucket where datasets are stored
-    :param local_storage_path: Path to a writeable directory to store local copies of dataset files
-    :param endpoint_url: the object store service endpoint URL. Changes depending on whether accessing data from inside
-        or outside JASMIN, or using data stored on another AWS S3 compatible object store
-    :param anon: Whether to use anonymous access or credentials. anon=True is required for write access
-    """
-
-    client_kwargs = {"endpoint_url": endpoint_url}
-    fs = S3FileSystem(anon=anon, client_kwargs=client_kwargs)
-    return S3FSDataSetStore(fs, storage_bucket_name, cache_dir=local_storage_path)
-
-
-class S3FSDataSetStore:
-    """Encapsulates access to stored data sets"""
-
-    def __init__(self, fs: S3FileSystem, storage_bucket_name: str = "caf-data", cache_dir: Optional[Path] = None,
-                 metadata_serialiser: Optional[MetaDataSerialiser] = None):
+    def __init__(self, fs: S3FileSystem, storage_bucket_name: str = "caf-data", cache_dir: Optional[Path] = None):
         self._storage_bucket_name = storage_bucket_name
         self._fs = fs
-        self._metadata_serialiser = metadata_serialiser if metadata_serialiser else MetaDataYamlSerialiser()
 
         if cache_dir:
             self._cache_dir = Path(cache_dir)
@@ -247,58 +201,191 @@ class S3FSDataSetStore:
             self.__tmp_dir = tempfile.TemporaryDirectory()
             self._cache_dir = Path(self.__tmp_dir.name)
 
-    @staticmethod
-    def _get_file_paths(path: Path, include_datafiles=True, include_metadata=False, recurse=True) -> List[Path]:
-        """
-        Recursively gets file paths. Can include/exclude datafiles and metadata files using optional args.
-        Assumes anything that's not a metadata file is a data file
-        """
-        datafile_paths = []
-        for p in path.iterdir():
-            if recurse and p.is_dir():
-                datafile_paths.extend(S3FSDataSetStore._get_file_paths(p))
-            else:
-                is_metadata_file = bool(p.suffix == ".metadata")
-                if (is_metadata_file and include_metadata) or (not is_metadata_file and include_datafiles):
-                    datafile_paths.append(p)
-        return datafile_paths
-
-    def _generate_s3_key(self, obj: Union[DataSet, MetaData]) -> str:
-        if isinstance(obj, MetaData):
-            return f"{self._storage_bucket_name}/{obj.dataset_name}/{obj.dataset_name}.metadata"
-        if isinstance(obj, DataSet):
-            return f"{self._storage_bucket_name}/{obj.metadata.dataset_name}/"
-
     def available_datasets(self) -> List[str]:
         """Returns a list of dataset names that are available"""
         return [s.split("/", 1)[1] for s in self._fs.ls(self._storage_bucket_name, detail=False)]
 
+
+class S3FSDataSetStore(BaseS3FSDataStore):
+    """Encapsulates access to stored data sets"""
+
+    # TODO? Some ideas for enhancements
+    # - Lazy loading of data
+
+    def __init__(self, fs: S3FileSystem, metadata_store: "S3FSMetadataStore", storage_bucket_name: str = "caf-data",
+                 cache_dir: Optional[Path] = None):
+
+        self._metadata_store = metadata_store
+        super().__init__(fs=fs, storage_bucket_name=storage_bucket_name, cache_dir=cache_dir)
+
+    @staticmethod
+    def _get_datafile_paths(path: Path, recurse=True) -> List[Path]:
+        """
+
+        """
+        datafile_paths = []
+        for p in path.iterdir():
+            if p.is_file() and p.suffix != ".metadata":
+                datafile_paths.append(p)
+            elif p.is_dir() and recurse:
+                datafile_paths.extend(S3FSDataSetStore._get_datafile_paths(p))
+
+        return datafile_paths
+
+    def _generate_s3_key(self, dataset_id: str) -> str:
+        return f"{self._storage_bucket_name}/{dataset_id}/"
+
+    def _generate_cache_dir_path(self, dataset_id: str) -> Path:
+        return (self._cache_dir / Path(dataset_id)).absolute()
+
     def get(self, dataset_id: str) -> DataSet:
         # TODO don't redownload if in cache? maybe add refresh/reload option
         # TODO, lazy loading, some kind of closure or DataSet subclass (LazyLoadingS3DataSet?)?
-        s3_key = f"{self._storage_bucket_name}/{dataset_id}"
-        cache_dir = (self._cache_dir / Path(dataset_id)).absolute()
-        self._fs.get(s3_key, str(cache_dir), recursive=True)
+        s3_key = self._generate_s3_key(dataset_id)
+        cache_dir_path = self._generate_cache_dir_path(dataset_id)
 
-        datafile_paths = self._get_file_paths(cache_dir)
+        try:
+            metadata = self._metadata_store.get(dataset_id)
+            self._fs.get(s3_key, str(cache_dir_path), recursive=True)
+        except PermissionError:
+            msg = f"PermissionError when accessing {s3_key}."
+            msg += " Object may not exist, or you may have incorrect/misconfigured credentials"
+            raise DataStoreException(msg)
+        datafile_paths = self._get_datafile_paths(cache_dir_path)
 
         # Load Metadata
-        metadata_path = self._get_file_paths(
-            cache_dir, include_datafiles=False, include_metadata=True, recurse=False)[0]  # we only expect 1 file
-        with metadata_path.open() as md_file:
-            metadata = self._metadata_serialiser.deserialise(md_file.read())
-
         return DataSet(files=datafile_paths, metadata=metadata)
 
     def put(self, item: DataSet) -> None:
+        if self._fs.anon:
+            raise DataStoreException("Cannot perform write operations in anonymous mode. "
+                                     "Please provide credentials with write permissions")
+
+        if not item.metadata:
+            raise DataStoreException("metadata is required in order to persist datasets")
+
+        self._metadata_store.put(item.metadata)
+
         for filename in item.files:
-            key = self._generate_s3_key(item) + filename.name
+            key = self._generate_s3_key(item.id) + filename.name
             LOGGER.debug(f"Uploading datafile: {filename} to {key}")
-            self._fs.put(str(filename), key)
+            try:
+                self._fs.put(str(filename), key)
+            except PermissionError:
+                raise DataStoreException(
+                    f"You do not have permission to upload to s3://{key}."
+                    " Please check your credentials are correct or contact the system administrator")
+
+
+class S3FSMetadataStore(BaseS3FSDataStore):
+    """Encapsulates access to stored metadata"""
+
+    def __init__(self, fs: S3FileSystem, storage_bucket_name: str = "caf-data", cache_dir: Optional[Path] = None,
+                 metadata_serialiser: Optional[MetadataSerialiser] = None):
+        self._metadata_serialiser = metadata_serialiser if metadata_serialiser else MetadataYamlSerialiser()
+        super().__init__(fs=fs, storage_bucket_name=storage_bucket_name, cache_dir=cache_dir)
+
+    def _to_s3_key(self, dataset_id: str) -> str:
+        return f"{self._storage_bucket_name}/{dataset_id}/{dataset_id}.metadata"
+
+    def _to_cached_file_path(self, dataset_id: str) -> Path:
+        return (self._cache_dir / Path(dataset_id) / Path(f"{dataset_id}.metadata")).absolute()
+
+    def get(self, dataset_id: str) -> Metadata:
+        metadata_key = self._to_s3_key(dataset_id)
+        cached_metadata_file = self._to_cached_file_path(dataset_id)
+
+        try:
+            self._fs.get(metadata_key, str(cached_metadata_file))
+        except PermissionError:
+            msg = f"PermissionError when accessing {metadata_key}."
+            msg += " Object may not exist, or you may have incorrect/misconfigured credentials"
+            raise DataStoreException(msg)
+
+        # Load Metadata
+        with cached_metadata_file.open() as md_file:
+            return self._metadata_serialiser.deserialise(md_file.read())
+
+    def put(self, item: Metadata) -> None:
+        if self._fs.anon:
+            raise DataStoreException("Cannot perform write operations in anonymous mode. "
+                                     "Please provide credentials with write permissions")
 
         with tempfile.NamedTemporaryFile() as tmp_metadata:
-            tmp_metadata.write(self._metadata_serialiser.serialise(item.metadata).encode("utf-8"))
+            tmp_metadata.write(self._metadata_serialiser.serialise(item).encode("utf-8"))
             tmp_metadata.flush()
-            key = self._generate_s3_key(item.metadata)
-            LOGGER.debug(f"Uploading metadata to {key}")
-            self._fs.put(tmp_metadata.name, key)
+            key = self._to_s3_key(item.id)
+            LOGGER.debug(f"Uploading metadata from {tmp_metadata.name} to {key}")
+            try:
+                self._fs.put(tmp_metadata.name, key)
+            except PermissionError:
+                raise DataStoreException(
+                    f"You do not have permission to upload to s3://{key}."
+                    " Please check your credentials are correct or contact the system administrator")
+
+
+def create_aurn_datastore(
+        bucket_name: str = "aurn", data_file_path: str = "AURN_Site_Information.csv",
+        endpoint_url: str = JasminEndpointUrls.EXTERNAL,
+        anon: bool = True) -> AURNSiteDataStore:
+    """
+    Return an AURNSiteDatastore instance configured with the given information
+
+    :param bucket_name: Name of the bucket storing the AURN site data CSV file
+    :param data_file_path: Object key of the AURN site data CSV file
+    :param endpoint_url: the object store service endpoint URL. Changes depending on whether accessing data from inside
+        or outside JASMIN, or using data stored on another AWS S3 compatible object store
+    :param anon: Whether to use anonymous access or credentials. anon=True is required for write access
+    """
+
+    s3_args = {"endpoint_url": endpoint_url}
+    if anon:
+        s3_args["config"] = Config(signature_version=UNSIGNED)
+
+    s3 = boto3.resource("s3", **s3_args)
+    bucket = s3.Bucket(bucket_name)
+    data_file_obj = bucket.Object(data_file_path)
+    try:
+        s3.meta.client.head_bucket(Bucket=bucket.name)
+        # data_file_obj.load()  # This fails, not clear why, permissions? It uses Head Object API call under the hood
+    except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as ex:
+        raise AURNSiteDataStoreException(
+            "Unable to create AURNSiteDataStore. Error when accessing object store") from ex
+    return AURNSiteDataStore(data_file_obj)
+
+
+def create_dataset_store(
+        storage_bucket_name="caf-data", local_storage_path: Optional[Path] = None,
+        endpoint_url: str = JasminEndpointUrls.EXTERNAL,
+        anon: bool = True) -> S3FSDataSetStore:
+    """
+    Return an `S3FSDataSetStore` instance configured with the given information
+
+    :param storage_bucket_name: Name of the bucket where datasets are stored
+    :param local_storage_path: Path to a writeable directory to store local copies of dataset files
+    :param endpoint_url: the object store service endpoint URL. Changes depending on whether accessing data from inside
+        or outside JASMIN, or using data stored on another AWS S3 compatible object store
+    :param anon: Whether to use anonymous access or credentials. anon=True is required for write access
+    """
+
+    client_kwargs = {"endpoint_url": endpoint_url}
+    fs = S3FileSystem(anon=anon, client_kwargs=client_kwargs)
+    meta_store = create_metadata_store(storage_bucket_name, local_storage_path, endpoint_url, anon)
+    return S3FSDataSetStore(fs, meta_store, storage_bucket_name, cache_dir=local_storage_path)
+
+
+def create_metadata_store(
+        storage_bucket_name="caf-data", local_storage_path: Optional[Path] = None,
+        endpoint_url: str = JasminEndpointUrls.EXTERNAL,
+        anon: bool = True) -> S3FSMetadataStore:
+    """
+    Return an `S3FSDataSetStore` instance configured with the given information
+
+    :param storage_bucket_name: Name of the bucket where datasets are stored
+    :param local_storage_path: Path to a writeable directory to store local copies of dataset files
+    :param endpoint_url: the object store service endpoint URL. Changes depending on whether accessing data from inside
+        or outside JASMIN, or using data stored on another AWS S3 compatible object store
+    :param anon: Whether to use anonymous access or credentials. anon=True is required for write access
+    """
+    fs = S3FileSystem(anon=anon, client_kwargs={"endpoint_url": endpoint_url})
+    return S3FSMetadataStore(fs, storage_bucket_name, cache_dir=local_storage_path)

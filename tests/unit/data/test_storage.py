@@ -3,19 +3,25 @@ import os
 import unittest
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 from unittest import mock
+from unittest.mock import Mock
 
 import boto3
 import botocore
 from botocore.exceptions import ClientError, BotoCoreError
 from moto import mock_s3
 from mypy_boto3_s3.service_resource import Object
+from s3fs import S3FileSystem
+from shapely.geometry import box
 
 from clean_air.data.storage import AURNSiteDataStoreException, DataStoreException, AURNSite, AURNSiteDataStore, \
-    create_aurn_datastore
+    create_aurn_datastore, S3FSMetadataStore, S3FSDataSetStore
 from clean_air.exceptions import CleanAirFrameworkException
-
 # Used by moto to correctly mock object store requests
+from clean_air.models import Metadata, DataSet
+from clean_air.serialisation import MetadataYamlSerialiser
+
 os.environ["MOTO_S3_CUSTOM_ENDPOINTS"] = "https://caf-o.s3-ext.jc.rl.ac.uk"
 
 
@@ -42,7 +48,8 @@ class BaseAURNSiteDataStoreTest(unittest.TestCase):
 
     TEST_AURN_DATA = "\n".join([
         'Code,Name,Type,Latitude,Longitude,Date_Opened,Date_Closed,Species',
-        'ABD,Aberdeen,URBAN_BACKGROUND,57.15736000,-2.094278000,19990918,0,"CO,NO,NO2,NOx,O3,PM10,PM2p5,SO2,nvPM10,nvPM2p5,vPM10,vPM2p5"',  # nopep8 - wrapping would ruin readability
+        'ABD,Aberdeen,URBAN_BACKGROUND,57.15736000,-2.094278000,19990918,0,"CO,NO,NO2,NOx,O3,PM10,PM2p5,SO2,nvPM10,nvPM2p5,vPM10,vPM2p5"',
+        # nopep8 - wrapping would ruin readability
         'ABD7,Aberdeen_Union_St_Roadside,URBAN_TRAFFIC,57.14455500,-2.106472000,20080101,0,"NO,NO2,NOx"',
         'ABD8,Aberdeen_Wellington_Road,URBAN_TRAFFIC,57.13388800,-2.094198000,20160209,0,"NO,NO2,NOx"',
     ])
@@ -278,3 +285,204 @@ class AURNSiteDataStoreTest(BaseAURNSiteDataStoreTest):
 
         # noinspection PyUnresolvedReferences
         ds.data_file.get.assert_called_once()
+
+
+class DataSetStoreTest(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.mock_fs = Mock(spec=S3FileSystem)
+        self.mock_fs.anon = False
+        self.mock_storage_bucket_name = "test_bucket"
+
+        test_metadata = Metadata("test dataset", box(-2, -2, 2, 2))
+
+        self.mock_metadata_store = Mock(spec=S3FSMetadataStore)
+        self.mock_metadata_store.get.return_value = test_metadata
+
+        self.dataset_store = S3FSDataSetStore(self.mock_fs, self.mock_metadata_store, self.mock_storage_bucket_name)
+
+        # This is a little bit circular, but makes it easier to set up tests for download operations
+        # later, since the paths will match
+        data_dir = Path(self.dataset_store._cache_dir) / Path(test_metadata.id)
+        data_files = [data_dir / p for p in [Path("test-file.csv")]]
+        self.test_dataset = DataSet(data_files, test_metadata)
+
+    def test_available_datasets(self):
+        """
+        WHEN available_datasets is called
+        THEN a list of datasets that exist in the storage bucket is returned
+        """
+        expected_datasets = ["dataset1", "dataset2", "dataset3"]
+        self.mock_fs.ls.return_value = [f"{self.mock_storage_bucket_name}/{ds}" for ds in expected_datasets]
+
+        actual_datasets = self.dataset_store.available_datasets()
+        self.assertEqual(expected_datasets, actual_datasets)
+
+    def test_get(self):
+        """
+        GIVEN a valid ID for a dataset that exists on the object store
+        WHEN get is called
+        THEN that dataset is returned
+        """
+
+        def mock_get(_s3_key: str, local_dir: str, **_kwargs):
+            local_dir = Path(local_dir)
+            local_dir.mkdir(parents=True, exist_ok=True)
+            for datafile in self.test_dataset.files:
+                (local_dir / Path(datafile)).touch()
+
+        self.mock_fs.get.side_effect = mock_get
+
+        self.mock_metadata_store.get.return_value = self.test_dataset.metadata
+
+        actual = self.dataset_store.get(self.test_dataset.id)
+
+        self.assertEqual(self.test_dataset, actual)
+        self.mock_metadata_store.get.assert_called_with(self.test_dataset.id)
+        self.mock_fs.get.assert_called_with(
+            f"{self.mock_storage_bucket_name}/{self.test_dataset.id}/",
+            f"{self.dataset_store._cache_dir}/{self.test_dataset.id}",
+            recursive=True
+        )
+
+    def test_get_invalid_id(self):
+        """
+        GIVEN a dataset ID that doesn't exist
+        WHEN get is called with that ID
+        THEN a DataStoreException is raised
+        """
+        self.mock_fs.get.side_effect = PermissionError
+        self.assertRaises(DataStoreException, self.dataset_store.get, self.test_dataset.id)
+
+    def test_put(self):
+        """
+        GIVEN a valid Metadata instance
+        WHEN it is passed to put
+        THEN S3FileSystem.put is called with the path to a temporary file
+        AND the temporary file contains the correctly serialised form of the Metadata
+        AND the s3 key is correct
+        """
+        base_s3_key = f"{self.mock_storage_bucket_name}/{self.test_dataset.id}/"
+        expected_uploads = [
+            unittest.mock.call(str(datafile), base_s3_key + datafile.name)
+            for datafile in self.test_dataset.files
+        ]
+
+        self.dataset_store.put(self.test_dataset)
+
+        self.mock_metadata_store.put.assert_called_once_with(self.test_dataset.metadata)
+        self.assertEqual(expected_uploads, self.mock_fs.put.mock_calls)
+
+    def test_put_readonly_credentials(self):
+        """
+        GIVEN the credentials in use are read only
+        WHEN put is called
+        THEN a DataStoreException is raised
+        """
+        self.mock_fs.put.side_effect = PermissionError
+        self.assertRaises(DataStoreException, self.dataset_store.put, self.test_dataset)
+
+    def test_put_anonymous(self):
+        """
+        GIVEN the underlying S3FileSystem was created in anonymous mode
+        WHEN put is called
+        THEN a DataStoreException is raised
+        """
+        self.mock_fs.anon = True
+        self.assertRaises(DataStoreException, self.dataset_store.put, self.test_dataset)
+
+
+class MetadataStoreTest(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.mock_fs = Mock(spec=S3FileSystem)
+        self.mock_fs.anon = False
+        self.mock_storage_bucket_name = "test_bucket"
+        self.test_metadata = Metadata("Test", box(-1, -1, 1, 1))
+
+        self.metadata_store = S3FSMetadataStore(self.mock_fs, self.mock_storage_bucket_name)
+
+    def test_available_datasets(self):
+        """
+        WHEN available_datasets is called
+        THEN a list of datasets that exist in the storage bucket is returned
+        """
+        expected_datasets = ["dataset1", "dataset2", "dataset3"]
+        self.mock_fs.ls.return_value = [f"{self.mock_storage_bucket_name}/{ds}" for ds in expected_datasets]
+
+        actual_datasets = self.metadata_store.available_datasets()
+        self.assertEqual(expected_datasets, actual_datasets)
+
+    def test_get(self):
+        """
+        GIVEN a valid ID for a dataset that exists on the object store
+        WHEN get is called
+        THEN the metadata for that dataset is returned
+        """
+        serialiser = MetadataYamlSerialiser()
+
+        def mock_get(_s3_key: str, download_path: str, _recursive=False):
+            download_path = Path(download_path)
+            download_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(download_path, "w") as f:
+                f.write(serialiser.serialise(self.test_metadata))
+
+        self.mock_fs.get.side_effect = mock_get
+
+        actual = self.metadata_store.get(self.test_metadata.id)
+
+        self.assertEqual(self.test_metadata, actual)
+
+    def test_get_invalid_id(self):
+        """
+        GIVEN a dataset ID that doesn't exist
+        WHEN get is called with that ID
+        THEN a DataStoreException is raised
+        """
+        self.mock_fs.get.side_effect = PermissionError
+        self.assertRaises(DataStoreException, self.metadata_store.get, self.test_metadata.id)
+
+    def test_put(self):
+        """
+        GIVEN a valid Metadata instance
+        WHEN it is passed to put
+        THEN S3FileSystem.put is called with the path to a temporary file
+        AND the temporary file contains the correctly serialised form of the Metadata
+        AND the s3 key is correct
+        """
+        serialiser = MetadataYamlSerialiser()
+        expected_upload = serialiser.serialise(self.test_metadata)
+        expected_s3_key = f"{self.mock_storage_bucket_name}/{self.test_metadata.id}/{self.test_metadata.id}.metadata"
+
+        actual_upload = None
+
+        def mock_put(file_path: str, _s3_key: str, _recursive=False):
+            nonlocal actual_upload
+            file_path = Path(file_path)
+            with open(file_path) as f:
+                actual_upload = f.read()
+
+        self.mock_fs.put.side_effect = mock_put
+
+        self.metadata_store.put(self.test_metadata)
+
+        self.assertEqual(expected_upload, actual_upload)
+        self.mock_fs.put.assert_called_with(mock.ANY, expected_s3_key)
+
+    def test_put_readonly_credentials(self):
+        """
+        GIVEN the credentials in use are read only
+        WHEN put is called
+        THEN a DataStoreException is raised
+        """
+        self.mock_fs.put.side_effect = PermissionError
+        self.assertRaises(DataStoreException, self.metadata_store.put, self.test_metadata)
+
+    def test_put_anonymous(self):
+        """
+        GIVEN the underlying S3FileSystem was created in anonymous mode
+        WHEN put is called
+        THEN a DataStoreException is raised
+        """
+        self.mock_fs.anon = True
+        self.assertRaises(DataStoreException, self.metadata_store.put, self.test_metadata)
