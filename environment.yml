@@ -6,7 +6,6 @@ dependencies:
   - ipykernel
   - pip
 
-  - boto3
   - s3fs
   # Main data handling
   - iris
@@ -25,4 +24,4 @@ dependencies:
   - pip:
     - tox<4.0.0 # The conda package didn't install correctly, but using the pip package did
     - moto>=2.2.16
-    - -e .  # Install the source code in development mode. The argument is the path to the folder containing teh setup.cfg
+    - -e .  # Install the source code in development mode. The argument is the path to the folder containing the setup.cfg
