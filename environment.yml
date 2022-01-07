@@ -6,7 +6,7 @@ dependencies:
   - ipykernel
   - pip
 
-  - s3fs
+
   # Main data handling
   - iris
   - xarray
