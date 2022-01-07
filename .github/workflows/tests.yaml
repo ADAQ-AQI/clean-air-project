@@ -21,7 +21,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: ADAQ-AQI/cap-sample-data
-          path: .sample-data
+          path: ./cap-sample-data
+      - run: mv ./cap-sample-data ../cap-sample-data
 
       - name: Check cached environment
         id: cache
@@ -68,5 +69,5 @@ jobs:
           # Machine-readable (for creating an exact copy of this environment)
           conda list --explicit
 
-      - name: Run pytest
-        run: pytest --sampledir .sample-data
+      - name: Run unit tests using tox
+        run: tox
