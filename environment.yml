@@ -6,22 +6,22 @@ dependencies:
   - ipykernel
   - pip
 
-  - boto3
+
   # Main data handling
   - iris
   - xarray
   - pandas
   - geopandas
-  - openpyxl
 
   # Plotting
   - hvplot
   - panel
-  - folium
 
   # Dev
   - pytest
   - flake8
   - boto3-stubs-essential
   - pip:
+    - tox<4.0.0 # The conda package didn't install correctly, but using the pip package did
     - moto>=2.2.16
+    - -e .  # Install the source code in development mode. The argument is the path to the folder containing the setup.cfg
