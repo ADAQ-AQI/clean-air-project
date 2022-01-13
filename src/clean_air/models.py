@@ -37,7 +37,15 @@ class Metadata:
 
     @property
     def id(self):
-        return self.dataset_name.lower().replace(string.punctuation, "_")
+        id_str = self.dataset_name
+        for c in string.punctuation.replace("_", ""):
+            if c in id_str:
+                id_str = id_str.replace(c, "")
+        for c in string.whitespace:
+            if c in id_str:
+                id_str = id_str.replace(c, "_")
+        return id_str.lower()
+
 
 
 # Assume 1 metadata file for whole dataset, and metadata is consistent across files
