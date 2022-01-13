@@ -244,6 +244,7 @@ class S3FSDataSetStore(BaseS3FSDataStore):
         s3_key = self._generate_s3_key(dataset_id)
         cache_dir_path = self._generate_cache_dir_path(dataset_id)
 
+        cache_dir_path.mkdir(parents=True, exist_ok=True)
         try:
             metadata = self._metadata_store.get(dataset_id)
             self._fs.get(s3_key, str(cache_dir_path), recursive=True)
@@ -295,6 +296,7 @@ class S3FSMetadataStore(BaseS3FSDataStore):
         metadata_key = self._to_s3_key(dataset_id)
         cached_metadata_file = self._to_cached_file_path(dataset_id)
 
+        cached_metadata_file.parent.mkdir(parents=True, exist_ok=True)
         try:
             self._fs.get(metadata_key, str(cached_metadata_file))
         except PermissionError:
