@@ -28,7 +28,7 @@ class ContactDetails:
 
 @dataclass
 class Metadata:
-    dataset_name: str
+    name: str
     extent: shapely.geometry.Polygon
     crs: pyproj.CRS = pyproj.CRS("EPSG:4326")
     description: str = ""
@@ -37,7 +37,7 @@ class Metadata:
 
     @property
     def id(self):
-        id_str = self.dataset_name
+        id_str = self.name
         for c in string.punctuation.replace("_", ""):
             if c in id_str:
                 id_str = id_str.replace(c, "")
@@ -60,7 +60,7 @@ class DataSet:
 
     @property
     def name(self):
-        return self.metadata.dataset_name if self.metadata else ""
+        return self.metadata.name if self.metadata else ""
 
     @property
     def id(self):
