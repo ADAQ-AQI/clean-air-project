@@ -1,6 +1,7 @@
 """
 Objects representing data subsets
 """
+import os.path
 
 import numpy as np
 import iris
@@ -48,7 +49,10 @@ class DataSubset:
                 time=lambda cell: cell.point < self.end_time
             )
 
-        cube = iris.load_cube(self.metadata["files"], constraints)
+        try:
+            cube = iris.load_cube(self.metadata.metadata['files'], constraints)
+        except AttributeError:
+            cube = iris.load_cube(self.metadata['files'], constraints)
 
         self._cube = cube
         return self._cube

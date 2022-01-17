@@ -9,10 +9,20 @@ from . import render_map, render_plot
 
 
 class DatasetRenderer:
-    def __init__(self, dataset_path):
-        # Use iris to read in dataset as lazy array here:
-        self.path = dataset_path
-        self.dataset = iris.load_cube(dataset_path)
+    """This class is for preparing datasets for the plotting process.
+
+    Args:
+        * dataset: this can be either an iris cube or a dataset path.
+        """
+    def __init__(self, dataset):
+        if isinstance(dataset, str):
+            # Use iris to read in dataset as lazy array here:
+            self.path = dataset
+            self.dataset = iris.load_cube(dataset)
+        elif isinstance(dataset, iris.cube.Cube):
+            # Iris cube is already loaded so no advantage from loading lazily
+            # here:
+            self.dataset = dataset
         self.dims = self.dataset.dim_coords
 
         # Guess all possible dim coords here using iris object before loading
@@ -34,20 +44,20 @@ class DatasetRenderer:
     def render(self):
         """
         Analyses the dimensionality of the dataset and then sends to
-        appropriate renderer in test_render_plot.py or test_render_map.py.
+        appropriate renderer in render_plot.py or render_map.py.
         """
         coords = (self.x_coord, self.y_coord, self.z_coord, self.t_coord)
 
         # If we have both an x-coord and y-coord then we can draw a map:
         if self.x_coord is not None and self.y_coord is not None:
             self.img_type = 'map'
-            self.dataframe = geopandas.read_file(self.path)
-            render_map.Map(self.dataframe).render(*coords)
+            # self.dataframe = geopandas.read_file(self.path)
+            render_map.Map(self.dataset).render(*coords)
         # If we have just a time coord then we can make a timeseries:
         elif self.x_coord is None and self.y_coord is None:
             self.img_type = 'timeseries'
-            self.dataframe = xarray.open_dataset(self.path)
-            render_plot.Plot(self.dataframe).render_timeseries()
+            # self.dataframe = xarray.open_dataset(self.path)
+            render_plot.Plot(self.dataset).render_timeseries()
         # If we don't have any coords then something's gone wrong and we can't
         # plot anything:
         elif all(coord is None for coord in coords):
