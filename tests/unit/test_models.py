@@ -27,7 +27,7 @@ class MetadataTest(unittest.TestCase):
         test_extent = box(-1, -1, 1, 1)
         m = Metadata(test_dataset_name, test_extent)
 
-        self.assertEqual(test_dataset_name, m.name)
+        self.assertEqual(test_dataset_name, m.title)
         self.assertEqual(self.sanitise_id(test_dataset_name), m.id)
         self.assertEqual(test_extent, m.extent)
         self.assertEqual(DataType.OTHER, m.data_type)
@@ -45,7 +45,7 @@ class MetadataTest(unittest.TestCase):
 
         m = Metadata(test_dataset_name, test_extent, test_crs, test_description, test_data_type, test_contacts)
 
-        self.assertEqual(test_dataset_name, m.name)
+        self.assertEqual(test_dataset_name, m.title)
         self.assertEqual(self.sanitise_id(test_dataset_name), m.id)
         self.assertEqual(test_extent, m.extent)
         self.assertEqual(test_data_type, m.data_type)
