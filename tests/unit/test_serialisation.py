@@ -15,8 +15,9 @@ class MetadataYamlSerialiserTest(unittest.TestCase):
             title="Test",
             extent=box(-1, -1, 1, 1),
             description="test description",
+            keywords=["a", "b", "c"],
             data_type=DataType.MODEL_GRIDDED,
-            contacts=[]
+            contacts=[],
         )
 
     def get_expected_yaml(self, m: Metadata) -> str:
@@ -24,6 +25,7 @@ class MetadataYamlSerialiserTest(unittest.TestCase):
             "title": m.title,
             "extent": m.extent.wkt,
             "description": m.description,
+            "keywords": m.keywords,
             "crs": m.crs.to_wkt(),
             "data_type": str(m.data_type.value),
             "contacts": m.contacts

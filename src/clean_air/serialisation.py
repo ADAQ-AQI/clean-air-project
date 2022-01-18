@@ -39,6 +39,7 @@ class MetadataYamlSerialiser(Serialiser[Metadata, str]):
                 "title": obj.title,
                 "extent": obj.extent.wkt,
                 "description": obj.description,
+                "keywords": obj.keywords,
                 "crs": obj.crs.to_wkt(),
                 "data_type": obj.data_type.value,
                 "contacts": [],  # TODO

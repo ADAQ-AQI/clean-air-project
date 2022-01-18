@@ -32,6 +32,7 @@ class Metadata:
     extent: shapely.geometry.Polygon
     crs: pyproj.CRS = pyproj.CRS("EPSG:4326")
     description: str = ""
+    keywords: List[str] = dataclasses.field(default_factory=list)
     data_type: DataType = DataType.OTHER
     contacts: List[ContactDetails] = dataclasses.field(default_factory=list)
 
@@ -45,7 +46,6 @@ class Metadata:
             if c in id_str:
                 id_str = id_str.replace(c, "_")
         return id_str.lower()
-
 
 
 # Assume 1 metadata file for whole dataset, and metadata is consistent across files
