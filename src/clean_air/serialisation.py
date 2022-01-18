@@ -36,7 +36,7 @@ class MetadataYamlSerialiser(Serialiser[Metadata, str]):
     def serialise(self, obj: Metadata) -> str:
         return yaml.safe_dump(
             {
-                "dataset_name": obj.dataset_name,
+                "name": obj.name,
                 "extent": obj.extent.wkt,
                 "description": obj.description,
                 "crs": obj.crs.to_wkt(),
@@ -47,6 +47,9 @@ class MetadataYamlSerialiser(Serialiser[Metadata, str]):
 
     def deserialise(self, serialised_obj: str) -> Metadata:
         obj_dict = yaml.safe_load(serialised_obj)
+        if "dataset_name" in obj_dict:
+            obj_dict["name"] = obj_dict["dataset_name"]
+            del obj_dict["dataset_name"]
         obj_dict["extent"] = shapely.wkt.loads(obj_dict["extent"])
         obj_dict["crs"] = pyproj.CRS.from_wkt(obj_dict["crs"])
         obj_dict["data_type"] = DataType(obj_dict["data_type"])

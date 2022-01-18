@@ -4,6 +4,7 @@ import unittest
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from time import time
 from unittest import mock
 from unittest.mock import Mock
 
@@ -294,7 +295,7 @@ class DataSetStoreTest(unittest.TestCase):
         self.mock_fs.anon = False
         self.mock_storage_bucket_name = "test_bucket"
 
-        test_metadata = Metadata("test dataset", box(-2, -2, 2, 2))
+        test_metadata = Metadata(f"test dataset-{time()}", box(-2, -2, 2, 2))
 
         self.mock_metadata_store = Mock(spec=S3FSMetadataStore)
         self.mock_metadata_store.get.return_value = test_metadata
@@ -326,8 +327,9 @@ class DataSetStoreTest(unittest.TestCase):
         """
 
         def mock_get(_s3_key: str, local_dir: str, **_kwargs):
+            """Mocks S3FileSystem.get"""
             local_dir = Path(local_dir)
-            local_dir.mkdir(parents=True, exist_ok=True)
+            # S3FileSystem.get won't create the target dir if it doesn't exist
             for datafile in self.test_dataset.files:
                 (local_dir / Path(datafile)).touch()
 
@@ -398,7 +400,7 @@ class MetadataStoreTest(unittest.TestCase):
         self.mock_fs = Mock(spec=S3FileSystem)
         self.mock_fs.anon = False
         self.mock_storage_bucket_name = "test_bucket"
-        self.test_metadata = Metadata("Test", box(-1, -1, 1, 1))
+        self.test_metadata = Metadata(f"Test-{time()}", box(-1, -1, 1, 1))
 
         self.metadata_store = S3FSMetadataStore(self.mock_fs, self.mock_storage_bucket_name)
 
@@ -422,8 +424,9 @@ class MetadataStoreTest(unittest.TestCase):
         serialiser = MetadataYamlSerialiser()
 
         def mock_get(_s3_key: str, download_path: str, _recursive=False):
+            """Mocks S3FileSystem.get"""
             download_path = Path(download_path)
-            download_path.parent.mkdir(parents=True, exist_ok=True)
+            # Note that S3FileSystem.get won't create the target dir if it doesn't exist
             with open(download_path, "w") as f:
                 f.write(serialiser.serialise(self.test_metadata))
 

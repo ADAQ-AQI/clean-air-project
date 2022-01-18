@@ -12,7 +12,7 @@ class MetadataYamlSerialiserTest(unittest.TestCase):
     def setUp(self) -> None:
         self.serialiser = MetadataYamlSerialiser()
         self.test_metadata = Metadata(
-            dataset_name="Test",
+            name="Test",
             extent=box(-1, -1, 1, 1),
             description="test description",
             data_type=DataType.MODEL_GRIDDED,
@@ -21,7 +21,7 @@ class MetadataYamlSerialiserTest(unittest.TestCase):
 
     def get_expected_yaml(self, m: Metadata) -> str:
         return yaml.dump({
-            "dataset_name": m.dataset_name,
+            "name": m.name,
             "extent": m.extent.wkt,
             "description": m.description,
             "crs": m.crs.to_wkt(),
