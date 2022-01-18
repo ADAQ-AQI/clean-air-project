@@ -5,7 +5,10 @@ Top-level module for rendering datasets.
 import geopandas
 import iris
 import xarray
-from . import render_map, render_plot
+
+from clean_air import util as util
+from clean_air.data import DataSubset
+from clean_air.visualise import render_map, render_plot
 
 
 class DatasetRenderer:
@@ -24,6 +27,8 @@ class DatasetRenderer:
             # here:
             self.dataset = dataset
         self.dims = self.dataset.dim_coords
+        self.xname = self.x_coord.var_name
+        self.yname = self.y_coord.var_name
 
         # Guess all possible dim coords here using iris object before loading
         # dataframe as xarray object (but scalar coords become None because we
@@ -52,15 +57,102 @@ class DatasetRenderer:
         if self.x_coord is not None and self.y_coord is not None:
             self.img_type = 'map'
             # self.dataframe = geopandas.read_file(self.path)
-            render_map.Map(self.dataset).render(*coords)
+            fig = render_map.Map(self.dataset).render(*coords)
         # If we have just a time coord then we can make a timeseries:
         elif self.x_coord is None and self.y_coord is None:
             self.img_type = 'timeseries'
             # self.dataframe = xarray.open_dataset(self.path)
-            render_plot.Plot(self.dataset).render_timeseries()
+            fig = render_plot.Plot(self.dataset, self.x_name, self.y_name).\
+                render_timeseries()
         # If we don't have any coords then something's gone wrong and we can't
         # plot anything:
         elif all(coord is None for coord in coords):
             raise ValueError('All dimension coordinates are either missing or '
                              'scalar, please choose a dataset with more '
                              'coordinate points.')
+
+        return fig
+
+
+class TimeSeries:
+    """This class should handle inputs and outputs, hopefully.
+
+        Args:
+        * lat: latitude coordinate for point of interest
+        * lon: longitude coordinate for point of interest
+        * data: full path of data file selected by user
+    """
+    def __init__(self, data, lat=None, lon=None):
+        if isinstance(data, str):
+            self.dpath = data
+            self.data = DataSubset(data)
+        elif isinstance(data, DataSubset):
+            self.dpath = data.metadata['files']
+            self.data = data
+        else:
+            raise TypeError
+
+        self.lat = lat
+        self.lon = lon
+
+    def linear_interpolate(self):
+        """Generate dataframe containing linearly interpolated data.  This will
+        provide a time series of data values at a single point in space,
+        defaulting to ground level for altitude.  We may expand this feature
+        to create a dataset for each level of altitude at some point in the
+        future.
+
+        Returns:
+            * point_cube: an iris cube containing linearly
+            interpolated data.
+            """
+        point_cube = self.data.extract_point((self.lat, self.lon))
+
+        return point_cube
+
+    def spatial_average(self, shape, coords=None, crs=None):
+        """Generate time series containing spatially averaged data.
+
+        Args:
+            * shape: (this will be selected by user from a drop-down menu).
+            * coords: required for positioning of shape for averaging in the
+            form (xmin, ymin, xmax, ymax) or as a shapely polygon or
+            multipolygon. Not required if shape = 'Track' (coords implied
+            within data in this case).
+            * crs: Coordinate reference system. If None, this will default to
+            the CRS of the dataset.
+
+        Returns:
+            * An iris cube containing single-point timeseries data spacially
+            averaged over shape passed in by user.
+            """
+        # This bit determines the shape required by the user and sends all the
+        # bits through some checking operations and then through iris for
+        # extraction of sub-cube.  IT DOES NOT AVERAGE THE DATA.
+        if shape == 'box':
+            shape_cube = self.data.extract_box(coords, crs=crs)
+        elif shape == 'track':
+            shape_cube = self.data.extract_track(crs=crs)
+        elif shape == 'shape':
+            shape_cube = self.data.extract_shape(coords, crs=crs)
+        elif shape == 'shapes':
+            shape_cube = self.data.extract_shapes(coords, crs=crs)
+
+        # Now we must average data points over extracted cube to become a
+        # timeseries.
+        try:
+            xcoord, ycoord = util.cubes.get_xy_coords(shape_cube)
+        except iris.exceptions.CoordinateNotFoundError:
+            # This implies that the cube is missing an X or Y coord, which
+            # will be a problem for collapsing the data.
+            print("Please supply a cube containing both an x and a y coord.")
+
+        partial_cube = shape_cube.collapsed(xcoord, iris.analysis.MEAN)
+        collapsed_cube = partial_cube.collapsed(ycoord, iris.analysis.MEAN)
+
+        return collapsed_cube
+
+    def obs_data(self, site):
+        """Generate time series plot containing observational data from a
+        single-site observational dataset."""
+        # TODO: Use ABD_2015.csv or similar to test this function.
