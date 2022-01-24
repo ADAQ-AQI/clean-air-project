@@ -13,7 +13,7 @@ import clean_air.visualise.dataset_renderer as dr
 
 class TestDatasetRenderer:
     """
-    Class to test object initialisation in DatasetRenderer
+    Class to test object initialisation in Renderer
     """
 
     @pytest.fixture(scope="class")
@@ -23,7 +23,7 @@ class TestDatasetRenderer:
             "model_full",
             "aqum_daily_daqi_mean_20200520.nc"
         )
-        return dr.DatasetRenderer(path)
+        return dr.Renderer(path)
 
     def test_lazy_iris_data(self, renderer):
         # Check that the iris dataset is loaded as lazy data for performance:
@@ -44,7 +44,7 @@ class TestDatasetRenderer:
 # NOTE 2: They will also need to be rewritten to make use of sampledir
 # class TestRenderMapCall:
 #     """
-#     Class to test 'render' method of DatasetRenderer when producing maps.
+#     Class to test 'render' method of Renderer when producing maps.
 #     """
 #     def setup_class(self):
 #         self.model_path = os.path.join(MODEL_DATA_PATH,
@@ -53,7 +53,7 @@ class TestDatasetRenderer:
 #                                             'aqum_hourly_no2_modified.nc')
 #         self.scalar_path = os.path.join(SCALAR_PATH,
 #                                         'aqum_no2_modified.nc')
-#         self.dframe = dr.DatasetRenderer(self.model_path)
+#         self.dframe = dr.Renderer(self.model_path)
 #         self.dframe.render()
 #
 #     def test_render_map(self):
@@ -69,7 +69,7 @@ class TestDatasetRenderer:
 
 # class TestRenderPlotCall:
 #     """
-#     Class to test 'render' method of DatasetRenderer when producing plots.
+#     Class to test 'render' method of Renderer when producing plots.
 #     """
 #
 #     def setup_class(self):
@@ -79,13 +79,13 @@ class TestDatasetRenderer:
 #                                             'aqum_hourly_no2_modified.nc')
 #         self.scalar_path = os.path.join(SCALAR_PATH,
 #                                         'aqum_no2_modified.nc')
-#         self.dframe = dr.DatasetRenderer(self.timeseries_path)
+#         self.dframe = dr.Renderer(self.timeseries_path)
 #         self.dframe.render()
 #
 #     def test_render_timeseries(self):
 #         # Check that if we have scalar x and y coordinates but a full time
 #         # coord, the renderer will choose to make a timeseries:
-#         # dframe = dr.DatasetRenderer(self.timeseries_path)
+#         # dframe = dr.Renderer(self.timeseries_path)
 #         # dframe.render()
 #         assert self.dframe.img_type == 'timeseries'
 #
@@ -107,7 +107,7 @@ class TestErrors:
             "timeseries",
             "aircraft_o3_timeseries.nc"
         )
-        return dr.DatasetRenderer(path)
+        return dr.Renderer(path)
 
     def test_render_error(self, renderer):
         # Check that if all our coordinates end up set as None, then an

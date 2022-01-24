@@ -11,7 +11,7 @@ from clean_air.data import DataSubset
 from clean_air.visualise import render_map, render_plot
 
 
-class DatasetRenderer:
+class Renderer:
     """This class is for preparing datasets for the plotting process.
 
     Args:
@@ -27,8 +27,6 @@ class DatasetRenderer:
             # here:
             self.dataset = dataset
         self.dims = self.dataset.dim_coords
-        self.xname = self.x_coord.var_name
-        self.yname = self.y_coord.var_name
 
         # Guess all possible dim coords here using iris object before loading
         # dataframe as xarray object (but scalar coords become None because we
@@ -62,8 +60,7 @@ class DatasetRenderer:
         elif self.x_coord is None and self.y_coord is None:
             self.img_type = 'timeseries'
             # self.dataframe = xarray.open_dataset(self.path)
-            fig = render_plot.Plot(self.dataset, self.x_name, self.y_name).\
-                render_timeseries()
+            fig = render_plot.Plot(self.dataset).render_timeseries()
         # If we don't have any coords then something's gone wrong and we can't
         # plot anything:
         elif all(coord is None for coord in coords):
@@ -78,9 +75,9 @@ class TimeSeries:
     """This class should handle inputs and outputs, hopefully.
 
         Args:
-        * lat: latitude coordinate for point of interest
-        * lon: longitude coordinate for point of interest
-        * data: full path of data file selected by user
+        * lat: latitude coordinate for point of interest (if required)
+        * lon: longitude coordinate for point of interest (if required)
+        * data: full path of data file selected by user or DataSubset object
     """
     def __init__(self, data, lat=None, lon=None):
         if isinstance(data, str):
@@ -110,6 +107,12 @@ class TimeSeries:
 
         return point_cube
 
+    def track(self, crs=None):
+        """Generate time series containing data along a track."""
+        track_cube = self.data.extract_track(self.data, crs=crs)
+
+        return track_cube
+
     def spatial_average(self, shape, coords=None, crs=None):
         """Generate time series containing spatially averaged data.
 
@@ -131,8 +134,6 @@ class TimeSeries:
         # extraction of sub-cube.  IT DOES NOT AVERAGE THE DATA.
         if shape == 'box':
             shape_cube = self.data.extract_box(coords, crs=crs)
-        elif shape == 'track':
-            shape_cube = self.data.extract_track(crs=crs)
         elif shape == 'shape':
             shape_cube = self.data.extract_shape(coords, crs=crs)
         elif shape == 'shapes':

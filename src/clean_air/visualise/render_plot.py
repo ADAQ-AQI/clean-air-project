@@ -10,10 +10,8 @@ import matplotlib as mpl
 
 
 class Plot:
-    def __init__(self, dataframe, xcoord_name=None, ycoord_name=None):
+    def __init__(self, dataframe):
         self.dataframe = dataframe
-        self.xname = xcoord_name
-        self.yname = ycoord_name
 
     def render_timeseries(self):
         # First check that cube is 1-dimensional, otherwise reduce dimensions:
@@ -33,14 +31,15 @@ class Plot:
 
         # This is where we make an actual plot...
         fig = mpl.pyplot.figure()
+        xcoord = self.dataframe.dim_coords[0]
         ts_plot = fig.add_subplot(1, 1, 1)
-        ts_plot.plot(self.dataframe.data)
+        ts_plot.plot(xcoord.points, self.dataframe.data)
         ts_plot.set_title(self.dataframe.var_name)
-        # TODO: Find latest point that x and y coords are available, and pass
-        #  names of coords into dataset_renderer.DatasetRenderer and then on
-        #  into render_plot.Plot so we can use them for plot labels here.
-        ts_plot.set_xlabel(self.xname)
-        ts_plot.set_ylabel(self.yname)
+        ts_plot.set_xticks(xcoord.points)
+        ts_plot.set_yticks(self.dataframe.data)
+        ts_plot.set_xlabel(xcoord.var_name + ' in ' + xcoord.units.origin)
+        ts_plot.set_ylabel(self.dataframe.units)
+        # TODO: Format xticks and yticks so they are readable and accurate.
 
         # This line is for development and testing purposes, I would like to
         # keep it but we can comment it out once we are happy with formatting.

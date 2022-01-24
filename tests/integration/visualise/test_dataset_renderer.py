@@ -25,7 +25,7 @@ Integration tests for the test_dataset_renderer.py visualisations.
 #                                           '20200121_M265_v0.nc')
 #
 #     def test_renderer_for_model_data(self):
-#         img = dr.DatasetRenderer(self.model_path)
+#         img = dr.Renderer(self.model_path)
 #         img.render()
 #
 #     def test_renderer_for_obs_data(self):
@@ -36,7 +36,7 @@ Integration tests for the test_dataset_renderer.py visualisations.
 #         # TODO: Write csv to nc converter:
 #         # https://stackoverflow.com/questions/22933855/convert-csv-to-netcdf
 #         # This test will fail until the converter is completed.
-#         img = dr.DatasetRenderer(self.obs_path)
+#         img = dr.Renderer(self.obs_path)
 #         img.render()
 #
 #     def test_renderer_for_aircraft_data(self):
@@ -45,5 +45,5 @@ Integration tests for the test_dataset_renderer.py visualisations.
 #         # discussing this with Elle on Thursday but I think it's in the
 #         # pipeline to be resolved at some point anyway.
 #         # TODO: fix aircraft data
-#         img = dr.DatasetRenderer(self.aircraft_path)
+#         img = dr.Renderer(self.aircraft_path)
 #         img.render()
