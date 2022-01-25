@@ -17,12 +17,6 @@ def mh(sampledir):
     return mh
 
 @pytest.fixture()
-def metadata_filepath():
-    filepath = os.path.join("net","home","h05","clucas","PycharmProjects","CleanAirProject","clean_air","data")
-    return filepath
-
-
-@pytest.fixture()
 def station_metadata_filepath(sampledir):
     #filepath = os.path.join('/', 'net', 'home', 'h05', 'clucas', 'PycharmProjects', 'CleanAirProject', 'tests', 'unit','data', 'station_metadata.yaml')
     #filepath = '/net/home/h05/clucas/PycharmProjects/CleanAirProject/tests/unit/data/station_metadata.yaml'
