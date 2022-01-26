@@ -86,6 +86,14 @@ class BaseAURNSiteDataStoreTest(unittest.TestCase):
 @mock_s3
 class CreateAURNSiteDataStoreTest(BaseAURNSiteDataStoreTest):
 
+    def setUp(self) -> None:
+        # Workaround for https://github.com/spulec/moto/issues/4797
+        super().setUp()
+
+    def tearDown(self) -> None:
+        # Workaround for https://github.com/spulec/moto/issues/4797
+        super().tearDown()
+
     def test_non_default_args(self):
         expected_bucket_name = "test_bucket"
         expected_data_file_path = "made/up/path/file.csv"
@@ -129,6 +137,14 @@ class CreateAURNSiteDataStoreTest(BaseAURNSiteDataStoreTest):
 @mock_s3
 class AURNSiteDataStoreTest(BaseAURNSiteDataStoreTest):
     """Tests AURNSiteDataStore"""
+
+    def setUp(self) -> None:
+        # Workaround for https://github.com/spulec/moto/issues/4797
+        super().setUp()
+
+    def tearDown(self) -> None:
+        # Workaround for https://github.com/spulec/moto/issues/4797
+        super().tearDown()
 
     def test_all(self):
         """
