@@ -5,7 +5,8 @@ Integration tests for the test_dataset_renderer.py visualisations.
 import os
 import pytest
 
-from iris.cube import Cube
+from iris.cube import Cube, CubeList
+from shapely.geometry import Polygon, MultiPolygon
 from clean_air.visualise import dataset_renderer as dr
 from clean_air.data import DataSubset
 
@@ -98,5 +99,15 @@ class TestTimeSeries:
     def test_shape_averaged_data(self, clean_data, tmp_output_path):
         """Test that when data is passed to this function it is correctly
         averaged over the shape specified and returned as a timeseries Cube."""
-        # TODO: generate shapefile for testing
-        # TODO: Figure out wtf to do next.....
+        shape = Polygon([(0, 0), (100, 100), (100, 0)])
+        shape_data = dr.TimeSeries(clean_data).spatial_average(shape=shape)
+        assert isinstance(shape_data, Cube)
+
+    def test_shapes_averaged_data(self, clean_data, tmp_output_path):
+        """Test that when data is passed to this function it is correctly
+        averaged over the shape specified and returned as a timeseries Cube."""
+        poly_one = Polygon([(0, 0), (100, 100), (100, 0)])
+        poly_two = Polygon([(0, 0), (-100, -100), (-100, 0)])
+        shapes = MultiPolygon([poly_one, poly_two])
+        shape_data = dr.TimeSeries(clean_data).spatial_average(shape=shapes)
+        assert isinstance(shape_data, CubeList)
