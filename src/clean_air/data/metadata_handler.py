@@ -40,6 +40,8 @@ class MetadataHandler(DataFilterHandler):
         """Function to check metadata yaml files and set the filter using time
         Any files within given time values are switched on
         Any files outside given time values are switched off"""
+        
+        # *Test Commit
 
         # GO through the big old loop to set a time start & time end variable in a standard time format.
         # Then do this
