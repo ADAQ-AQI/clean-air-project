@@ -11,7 +11,7 @@ from clean_air.util import file_converter as fc
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def get_aurn__sites_site_map(site_data, output_path) -> map:
+def get_aurn_sites_site_map(site_data, output_path) -> map:
     """This function returns a site_map object with all the AURN sites plotted 
     on it.
 

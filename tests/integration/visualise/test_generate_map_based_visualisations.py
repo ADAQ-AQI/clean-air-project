@@ -28,7 +28,7 @@ def tmp_output_path(tmp_path):
 
 def test_make_AURN_map(AURN_filepath, tmp_output_path):
     save_path = os.path.join(tmp_output_path, "AURN.html")
-    make_maps.get_aurn__sites_site_map(AURN_filepath, save_path)
+    make_maps.get_aurn_sites_site_map(AURN_filepath, save_path)
     assert os.path.exists(save_path)
 
 

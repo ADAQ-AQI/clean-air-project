@@ -1,3 +1,5 @@
+#WIP . Need to add Chemical Species filters
+
 import pyproj
 from shapely.geometry import box, Point
 
@@ -63,8 +65,9 @@ class MetadataHandler(DataFilterHandler):
     def set_location_filter(self, point_lat:float, point_long:float):
         """Function to check metadata yaml files and set the filter using data source eg: lat/lon falls within bbox with N/S/E/W co-ordinates"""
 
+        #TODO:  Searches for point location within DATASET using metadata. Needs to be expanded to search at file level too.
+
         for outer_key in self.get_allfiles_dict():
-            print('Outer Key = ', outer_key)
 
             # reset values for bounding box
             north = None
@@ -146,127 +149,3 @@ class MetadataHandler(DataFilterHandler):
         pass
 
 
-
-    def test(self):
-        print('METADATA HANDLER')
-        # print yaml all file dict
-        dict_printer(self.yaml_allfiles_dict)
-        dict_printer(self.filters_dict)
-
-        # now check if a filter is on:
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/music.yaml')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/dance.yaml')
-
-        # Turn a filter off
-        self.turn_filter_off('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/fruits.yaml')
-        self.turn_filter_off('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/veggies.yaml')
-
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/fruits.yaml')
-        dict_printer(self.filters_dict)
-
-        self.turn_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/fruits.yaml')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/fruits.yaml')
-        dict_printer(self.filters_dict)
-
-        # self.dfh.turn_filter_off_contains('filetype','ground')
-        # self.dfh.turn_filter_on_contains('sweet_potato','2')
-
-        self.get_filtered_data_subsets()
-
-        # print('ACCESS INNER DICTIONARY')
-        # self.access_inner_dictionary(self.dfh.filters_dict)  #This not working !
-
-    def test2(self):
-        print('ACCESS INNER DICTIONARY')
-        # self.access_inner_dictionary()#self.dfh.filters_dict)  # This not working !
-        # self.access_inner_dict()
-        self.print_access_inner_dict()
-
-        print('METEDATA ONE TEST', )
-        # now check if a filter is on:
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        print('     Obs Level:ground')
-        # Turn a filter off using obs level
-        self.set_observation_level_filter(False, 'ground')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        # Turn a filter on using obs level
-        self.set_observation_level_filter(True, 'ground')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        print('     Data Source:health')
-        # Turn a filter off using data_source
-        self.set_data_source_filter(False, 'air_quality')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        # Turn a filter on using data_source
-        self.set_data_source_filter(True, 'air_quality')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        print('     Chemical Species: no2, pm2.5')
-        # Turn a filter off using data_source
-        self.set_chemical_species_filter(['no2', 'pm2.5'])
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        print('     Chemical Species: pm10')
-        # Turn a filter off using data_source
-        self.set_chemical_species_filter(['pm10'])
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        print('     Chemical Species: []')
-        # Turn a filter on using data_source
-        #self.set_chemical_species_filter({})
-        #self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-    def test3(self):
-        print('ACCESS INNER DICTIONARY')
-        # self.access_inner_dictionary()#self.dfh.filters_dict)  # This not working !
-        # self.access_inner_dict()
-        self.print_access_inner_dict()
-
-    def test_obs_level(self):
-        """This test demos all working filters ! """
-        print('METADATA TEST', 'Build list of all metadata files and turn filters to on by default \n')
-        dict_printer(self.filters_dict)
-
-        # now check if a filter is on:
-        #self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        #print("\033[1;32m This text is Bright Green  \n")
-        #print("\033[1;31m This text is Bright Red  \n")
-
-        print('\n  \033[1;30m    Obs Level:GROUND', ' Turn off all datasets containing Ground')
-        # Turn a filter off using obs level
-        self.set_observation_level_filter(False, 'ground')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        # Turn a filter on using obs level
-        print('\033[1;30m     Obs Level:GROUND', ' Turn on all datasets containing Ground')
-        self.set_observation_level_filter(True, 'ground')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        print(' \033[1;30m    Data Source:AIR_QUALITY', ' Turn off all datasets containing Air Quality' )
-        # Turn a filter off using data_source
-        self.set_data_source_filter(False, 'air_quality')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-        # Turn a filter on using data_source
-        print(' \033[1;30m    Data Source:AIR_QUALITY', ' Turn on all datasets containing Air Quality')
-        self.set_data_source_filter(True, 'air_quality')
-        self.is_filter_on('/net/home/h05/clucas/PycharmProjects/CleanAirProject/clean_air/data/station_metadata.yaml')
-
-    def test_location(self):
-    # Test the location filter ( add test for antartica in polar steriographic projection)
-        self.set_location_filter(0.0984, 51.5138)
-
-m = MetadataHandler()
-# m.test()
-
-#m.test2()
-
-#m.test3()
-
-#m.test4()
-
-m.test_location()
