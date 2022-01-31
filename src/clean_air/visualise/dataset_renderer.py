@@ -5,6 +5,7 @@ Top-level module for rendering datasets.
 import geopandas
 import iris
 import xarray
+from shapely.geometry import Polygon, MultiPolygon
 
 from clean_air import util as util
 from clean_air.data import DataSubset
@@ -134,26 +135,30 @@ class TimeSeries:
         # extraction of sub-cube.  IT DOES NOT AVERAGE THE DATA.
         if shape == 'box':
             shape_cube = self.data.extract_box(coords, crs=crs)
-        elif shape == 'shape':
-            shape_cube = self.data.extract_shape(coords, crs=crs)
-        elif shape == 'shapes':
-            shape_cube = self.data.extract_shapes(coords, crs=crs)
+        elif isinstance(shape, Polygon):
+            shape_cube = self.data.extract_shape(shape, crs=crs)
+        elif isinstance(shape, MultiPolygon):
+            shape_cube = self.data.extract_shapes(shape, crs=crs)
+        else:
+            raise TypeError
 
         # Now we must average data points over extracted cube to become a
         # timeseries.
-        try:
+        if isinstance(shape_cube, iris.cube.Cube):
             xcoord, ycoord = util.cubes.get_xy_coords(shape_cube)
-        except iris.exceptions.CoordinateNotFoundError:
-            # This implies that the cube is missing an X or Y coord, which
-            # will be a problem for collapsing the data.
-            print("Please supply a cube containing both an x and a y coord.")
+            partial_cube = shape_cube.collapsed(xcoord, iris.analysis.MEAN)
+            collapsed_cube = partial_cube.collapsed(ycoord, iris.analysis.MEAN)
+            return collapsed_cube
 
-        partial_cube = shape_cube.collapsed(xcoord, iris.analysis.MEAN)
-        collapsed_cube = partial_cube.collapsed(ycoord, iris.analysis.MEAN)
+        elif isinstance(shape_cube, iris.cube.CubeList):
+            shapes_data = iris.cube.CubeList()
+            for i, cube in enumerate(shape_cube):
+                xcoord, ycoord = util.cubes.get_xy_coords(cube)
+                partial = cube.collapsed(xcoord, iris.analysis.MEAN)
+                collapsed = partial.collapsed(ycoord, iris.analysis.MEAN)
+                shapes_data.append(collapsed)
+                return shapes_data
 
-        return collapsed_cube
 
-    def obs_data(self, site):
-        """Generate time series plot containing observational data from a
-        single-site observational dataset."""
-        # TODO: Use ABD_2015.csv or similar to test this function.
+
+

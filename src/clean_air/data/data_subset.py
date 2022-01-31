@@ -149,9 +149,6 @@ class DataSubset:
         if not ycoord.has_bounds():
             ycoord.guess_bounds()
 
-        # Extract bounding box
-        cube = util.cubes.extract_box(cube, shape.bounds)
-
         # Mask points outside the actual shape
         # Note we need to do the broadcasting manually: numpy is strangely
         # reluctant to do it, no matter which of the many ways of creating
