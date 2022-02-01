@@ -5,6 +5,7 @@ Top-level module for rendering datasets.
 import geopandas
 import iris
 import xarray
+from iris.cube import Cube, CubeList
 from shapely.geometry import Polygon, MultiPolygon
 
 from clean_air import util as util
@@ -16,34 +17,59 @@ class Renderer:
     """This class is for preparing datasets for the plotting process.
 
     Args:
-        * dataset: this can be either an iris cube or a dataset path.
+        * dataset: this can be either an iris cube, a cubelist or a dataset
+        path.
         """
     def __init__(self, dataset):
-        if isinstance(dataset, str):
-            # Use iris to read in dataset as lazy array here:
+        # First we put all datasets in a cubelist so that we can plot them
+        # together if necessary without too much extra coding:
+        self.plot_list = CubeList()
+
+        if isinstance(dataset, CubeList):
+            # Here we have to collect metadata from just the first Cube in a
+            # CubeList (assuming that multiple datasets such as shapes files
+            # will contain the same coordinate data), then render to produce
+            # multiple plots on single figure:
+            self.dataset = dataset
+            self.plot_list = self.dataset
+            for i, cube in enumerate(self.plot_list):
+                if i == 0:
+                    self.dims = cube.dim_coords
+                else:
+                    pass
+        elif isinstance(dataset, str):
+            # Use iris to read in dataset as lazy array and add to CubeList
+            # here:
             self.path = dataset
             self.dataset = iris.load_cube(dataset)
-        elif isinstance(dataset, iris.cube.Cube):
+            self.dims = self.dataset.dim_coords
+            self.plot_list.append(self.dataset)
+        elif isinstance(dataset, Cube):
             # Iris cube is already loaded so no advantage from loading lazily
             # here:
             self.dataset = dataset
-        self.dims = self.dataset.dim_coords
+            self.dims = self.dataset.dim_coords
+            self.plot_list.append(self.dataset)
 
-        # Guess all possible dim coords here using iris object before loading
-        # dataframe as xarray object (but scalar coords become None because we
+        # Guess all possible dim coords here using first cube in list before
+        # loading dataframe (but scalar coords become None because we
         # can't make plots out of them):
         self.x_coord = self.y_coord = self.z_coord = self.t_coord = None
-        for coord in self.dataset.coords():
-            if len(coord.points) > 1:
-                axis = iris.util.guess_coord_axis(coord)
-                if axis == 'X' and self.x_coord is None:
-                    self.x_coord = coord.name()
-                elif axis == 'Y' and self.y_coord is None:
-                    self.y_coord = coord.name()
-                elif axis == 'Z' and self.z_coord is None:
-                    self.z_coord = coord.name()
-                elif axis == 'T' and self.t_coord is None:
-                    self.t_coord = coord.name()
+        for i, cube in enumerate(self.plot_list):
+            if i == 0:
+                for coord in cube.coords():
+                    if len(coord.points) > 1:
+                        axis = iris.util.guess_coord_axis(coord)
+                        if axis == 'X' and self.x_coord is None:
+                            self.x_coord = coord.name()
+                        elif axis == 'Y' and self.y_coord is None:
+                            self.y_coord = coord.name()
+                        elif axis == 'Z' and self.z_coord is None:
+                            self.z_coord = coord.name()
+                        elif axis == 'T' and self.t_coord is None:
+                            self.t_coord = coord.name()
+            else:
+                pass
 
     def render(self):
         """
@@ -61,7 +87,7 @@ class Renderer:
         elif self.x_coord is None and self.y_coord is None:
             self.img_type = 'timeseries'
             # self.dataframe = xarray.open_dataset(self.path)
-            fig = render_plot.Plot(self.dataset).render_timeseries()
+            fig = render_plot.Plot(self.plot_list).render_timeseries()
         # If we don't have any coords then something's gone wrong and we can't
         # plot anything:
         elif all(coord is None for coord in coords):
@@ -157,7 +183,7 @@ class TimeSeries:
                 partial = cube.collapsed(xcoord, iris.analysis.MEAN)
                 collapsed = partial.collapsed(ycoord, iris.analysis.MEAN)
                 shapes_data.append(collapsed)
-                return shapes_data
+            return shapes_data
 
 
 

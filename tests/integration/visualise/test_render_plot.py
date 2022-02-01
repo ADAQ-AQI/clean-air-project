@@ -14,7 +14,6 @@ from clean_air.data import DataSubset
 from clean_air.visualise import dataset_renderer
 
 
-
 @pytest.fixture()
 def timeseries_filepath(sampledir):
     timeseries_filepath = os.path.join(sampledir, "model_full",
@@ -80,15 +79,17 @@ def test_shape_average_plot(clean_data, tmp_output_path):
 def test_shapes_average_plots(clean_data, tmp_output_path):
     """Test that when data is passed to this function it is processed to
         produce and return a set of timeseries plots."""
+    # NOTE: This test is really slow, presumably due to lots of processing
+    # during cell weight evaluation.  Can we speed this up somehow?
     poly_one = Polygon([(0, 0), (100, 100), (100, 0)])
     poly_two = Polygon([(0, 0), (-100, -100), (-100, 0)])
     shapes = MultiPolygon([poly_one, poly_two])
     shapes_data = dataset_renderer.TimeSeries(clean_data).\
         spatial_average(shapes)
-    # One plot per shape
-    for shape in shapes_data:
-        shapes_plot = dataset_renderer.Renderer(shape).render()
-        assert isinstance(shapes_plot, mpl.figure.Figure)
+    # One plot per shape, but side-by-side on same figure
+    shapes_plot = dataset_renderer.Renderer(shapes_data).render()
+    assert isinstance(shapes_plot, mpl.figure.Figure)
+
 
 
 
