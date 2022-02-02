@@ -4,7 +4,7 @@ import unittest
 import pyproj
 from shapely.geometry import box
 
-from clean_air.models import Metadata, DataType, ContactDetails
+from clean_air.models import Metadata, DataType, ContactDetails, TemporalExtent, Extent
 
 
 class MetadataTest(unittest.TestCase):
@@ -24,7 +24,7 @@ class MetadataTest(unittest.TestCase):
 
     def test_init_defaults(self):
         test_dataset_name = "MOASA Flight M270"
-        test_extent = box(-1, -1, 1, 1)
+        test_extent = Extent(box(-1, -1, 1, 1), TemporalExtent())
         m = Metadata(test_dataset_name, test_extent)
 
         self.assertEqual(test_dataset_name, m.title)
@@ -38,7 +38,7 @@ class MetadataTest(unittest.TestCase):
 
     def test_init(self):
         test_dataset_name = "Hey! This~is_one_str@ng£ DaTaSet |\\|ame"
-        test_extent = box(-1, -1, 1, 1)
+        test_extent = Extent(box(-1, -1, 1, 1), TemporalExtent())
         test_keywords = ["one", "two", "three"]
         test_crs = pyproj.CRS("EPSG:4269")
         test_data_type = DataType.OBS_STATIONARY

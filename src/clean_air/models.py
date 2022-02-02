@@ -1,6 +1,7 @@
 import dataclasses
 import string
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import List
@@ -27,9 +28,28 @@ class ContactDetails:
 
 
 @dataclass
+class TemporalExtent:
+    """"""
+
+    _dt: datetime = datetime(2022, 2, 2)
+
+    @property
+    def interval(self) -> (datetime, datetime):
+        """Returns the earliest and latest datetimes covered by the extent"""
+        # stubbed implementation, pending full implementation in another PR
+        return self._dt, self._dt
+
+
+@dataclass
+class Extent:
+    spatial: shapely.geometry.Polygon
+    temporal: TemporalExtent
+
+
+@dataclass
 class Metadata:
     title: str
-    extent: shapely.geometry.Polygon
+    extent: Extent
     crs: pyproj.CRS = pyproj.CRS("EPSG:4326")
     description: str = ""
     keywords: List[str] = dataclasses.field(default_factory=list)

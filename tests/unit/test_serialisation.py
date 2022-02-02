@@ -3,7 +3,7 @@ import unittest
 import yaml
 from shapely.geometry import box
 
-from clean_air.models import Metadata, DataType
+from clean_air.models import Metadata, DataType, Extent, TemporalExtent
 from clean_air.serialisation import MetadataYamlSerialiser
 
 
@@ -13,7 +13,7 @@ class MetadataYamlSerialiserTest(unittest.TestCase):
         self.serialiser = MetadataYamlSerialiser()
         self.test_metadata = Metadata(
             title="Test",
-            extent=box(-1, -1, 1, 1),
+            extent=Extent(box(-1, -1, 1, 1), TemporalExtent()),
             description="test description",
             keywords=["a", "b", "c"],
             data_type=DataType.MODEL_GRIDDED,
@@ -23,7 +23,10 @@ class MetadataYamlSerialiserTest(unittest.TestCase):
     def get_expected_yaml(self, m: Metadata) -> str:
         return yaml.dump({
             "title": m.title,
-            "extent": m.extent.wkt,
+            "extent": {
+                "spatial": m.extent.spatial.wkt,
+                "temporal": "2022-02-02T00:00:00,2022-02-02T00:00:00"  # Subject to change
+            },
             "description": m.description,
             "keywords": m.keywords,
             "crs": m.crs.to_wkt(),
