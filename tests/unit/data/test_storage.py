@@ -20,7 +20,7 @@ from clean_air.data.storage import AURNSiteDataStoreException, DataStoreExceptio
     create_aurn_datastore, S3FSMetadataStore, S3FSDataSetStore
 from clean_air.exceptions import CleanAirFrameworkException
 # Used by moto to correctly mock object store requests
-from clean_air.models import Metadata, DataSet
+from clean_air.models import Metadata, DataSet, TemporalExtent, Extent
 from clean_air.serialisation import MetadataYamlSerialiser
 
 os.environ["MOTO_S3_CUSTOM_ENDPOINTS"] = "https://caf-o.s3-ext.jc.rl.ac.uk"
@@ -416,7 +416,7 @@ class MetadataStoreTest(unittest.TestCase):
         self.mock_fs = Mock(spec=S3FileSystem)
         self.mock_fs.anon = False
         self.mock_storage_bucket_name = "test_bucket"
-        self.test_metadata = Metadata(f"Test-{time()}", box(-1, -1, 1, 1))
+        self.test_metadata = Metadata(f"Test-{time()}", Extent(box(-1, -1, 1, 1), TemporalExtent()))
 
         self.metadata_store = S3FSMetadataStore(self.mock_fs, self.mock_storage_bucket_name)
 
