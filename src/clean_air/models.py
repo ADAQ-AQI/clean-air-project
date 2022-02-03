@@ -1,6 +1,7 @@
 import dataclasses
 import string
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import List
@@ -27,17 +28,37 @@ class ContactDetails:
 
 
 @dataclass
+class TemporalExtent:
+    """"""
+
+    _dt: datetime = datetime(2022, 2, 2)
+
+    @property
+    def interval(self) -> (datetime, datetime):
+        """Returns the earliest and latest datetimes covered by the extent"""
+        # stubbed implementation, pending full implementation in another PR
+        return self._dt, self._dt
+
+
+@dataclass
+class Extent:
+    spatial: shapely.geometry.Polygon
+    temporal: TemporalExtent
+
+
+@dataclass
 class Metadata:
-    name: str
-    extent: shapely.geometry.Polygon
+    title: str
+    extent: Extent
     crs: pyproj.CRS = pyproj.CRS("EPSG:4326")
     description: str = ""
+    keywords: List[str] = dataclasses.field(default_factory=list)
     data_type: DataType = DataType.OTHER
     contacts: List[ContactDetails] = dataclasses.field(default_factory=list)
 
     @property
     def id(self):
-        id_str = self.name
+        id_str = self.title
         for c in string.punctuation.replace("_", ""):
             if c in id_str:
                 id_str = id_str.replace(c, "")
@@ -45,7 +66,6 @@ class Metadata:
             if c in id_str:
                 id_str = id_str.replace(c, "_")
         return id_str.lower()
-
 
 
 # Assume 1 metadata file for whole dataset, and metadata is consistent across files
@@ -60,7 +80,7 @@ class DataSet:
 
     @property
     def name(self):
-        return self.metadata.name if self.metadata else ""
+        return self.metadata.title if self.metadata else ""
 
     @property
     def id(self):
