@@ -129,7 +129,7 @@ class DataSubset:
         Extract an arbitrary area
 
         Arguments:
-            shape: shape to extract, as a shapely polygon (or multipolygon)
+            shape: shape to extract, as a shapely polygon
             crs: coordinate reference system used by the polygon. Same as
                 the dataset by default.
         """

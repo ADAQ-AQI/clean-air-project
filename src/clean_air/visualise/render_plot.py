@@ -23,11 +23,7 @@ class Plot:
         # We want 3 plots per row unless there are less than 3 plots to
         # render, then we want the figsize to match the number of plots:
         n_plots = len(self.dataframe)
-        # TODO: Format plots to always be same size, just positioned
-        #  differently for different numbers of plots
-        # TODO: Find a better way of calculating n_rows (here if we have 3
-        #  plots then we have 2 rows, which is not right)
-        n_rows = int(n_plots/3) + 1
+        n_rows = int(n_plots-1/3) + 1
         if len(self.dataframe) <= 3:
             n_cols = len(self.dataframe)
         else:
@@ -65,7 +61,7 @@ class Plot:
 
         # This line is for development and testing purposes, I would like to
         # keep it but we can comment it out once we are happy with formatting.
-        fig.show()
+        # fig.show()
 
         return fig
 
