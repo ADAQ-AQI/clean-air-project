@@ -84,7 +84,7 @@ def test_shapes_average_plots(clean_data, tmp_output_path):
     # poly_one = Polygon([(0, 0), (100, 100), (100, 0)])
     # poly_two = Polygon([(0, 0), (-100, -100), (-100, 0)])
     poly_one = Polygon([(0, 0), (10, 10), (10, 0)])
-    poly_two = Polygon([(-100, -100), (-90, -90), (-90, 0)])
+    poly_two = Polygon([(-100, -100), (-90, -90), (-90, -100)])
     shapes = MultiPolygon([poly_one, poly_two])
     shapes_data = dataset_renderer.TimeSeries(clean_data).\
         spatial_average(shapes)
