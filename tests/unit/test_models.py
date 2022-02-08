@@ -2,9 +2,10 @@ import string
 import unittest
 
 import pyproj
+import pytest
 from shapely.geometry import box
 
-from clean_air.models import Metadata, DataType, ContactDetails, TemporalExtent, Extent
+from clean_air.models import Metadata, DataType, ContactDetails, TemporalExtent, Extent, Duration
 
 
 class MetadataTest(unittest.TestCase):
@@ -56,3 +57,45 @@ class MetadataTest(unittest.TestCase):
         self.assertEqual(test_description, m.description)
         self.assertEqual(test_contacts, m.contacts)
         self.assertEqual(test_crs, m.crs)
+
+
+@pytest.mark.parametrize("dur_obj,str_dur", [
+    (Duration(3, 6, 0, 4, 12, 30, 5), "P3Y6M4DT12H30M5S"),
+    (Duration(1, 2, 0, 10, 2, 30), "P1Y2M10DT2H30M"),
+    (Duration(seconds=0), "PT0S"),
+    (Duration(days=0), "P0D"),
+    (Duration(days=23, hours=23), "P23DT23H"),
+    (Duration(4), "P4Y"),
+    (Duration(months=1), "P1M"),
+    (Duration(minutes=1), "PT1M"),
+    (Duration(0.5), "P0.5Y"),
+    (Duration(0.5), "P0,5Y"),
+    (Duration(hours=36), "PT36H"),
+    (Duration(days=1, hours=12), "P1DT12H"),
+    (Duration(days=2.3, hours=2.3), "P2.3DT2.3H"),
+    (Duration(weeks=4), "P4W"),
+    (Duration(weeks=1.5), "P1.5W"),
+])
+def test_duration_str_conversion_valid(dur_obj: Duration, str_dur: str):
+    """Can we convert back and forth between a Duration object and its ISO8601 string representation correctly?"""
+    # TODO: assert str(dur_obj) == str_dur
+    assert Duration.parse_str(str_dur) == dur_obj
+
+
+@pytest.mark.parametrize("invalid_str_dur", [
+    "P3Y6M4W4DT12H30M5S",  # Can't have weeks (W) with anything else
+    "3Y6M4W4DT12H30M5S",  # Must have a leading P
+    "P3Y6M4W4D12H30M5S",  # T separator is required between Y/M/W/D and H/M/S parts
+    "P-1D",  # Negatives not allowed
+    "P3S6M4HT12D30M5Y",  # In the spec, order matters, so I won't take on the complexity of figuring it out
+    "",  # Empty string is not a valid representation
+    # And now for some bad input values for good measure
+    None,
+    -1,
+    ["P3Y6M4W4DT12H30M5S"],
+    ["P", "3Y", "6M", "4W", "4D", "T", "12H", "30M", "5S"]
+])
+def test_duration_str_conversion_invalid(invalid_str_dur: str):
+    """Can we convert back and forth between a Duration object and its ISO8601 string representation correctly?"""
+    with pytest.raises(ValueError):
+        Duration.parse_str(invalid_str_dur)
