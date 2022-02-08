@@ -81,12 +81,11 @@ class Renderer:
         # If we have both an x-coord and y-coord then we can draw a map:
         if self.x_coord is not None and self.y_coord is not None:
             self.img_type = 'map'
-            # self.dataframe = geopandas.read_file(self.path)
             fig = render_map.Map(self.dataset).render(*coords)
         # If we have just a time coord then we can make a timeseries:
-        elif self.x_coord is None and self.y_coord is None:
+        elif self.x_coord is None and self.y_coord is None and \
+                self.t_coord is not None:
             self.img_type = 'timeseries'
-            # self.dataframe = xarray.open_dataset(self.path)
             fig = render_plot.Plot(self.plot_list).render_timeseries()
         # If we don't have any coords then something's gone wrong and we can't
         # plot anything:

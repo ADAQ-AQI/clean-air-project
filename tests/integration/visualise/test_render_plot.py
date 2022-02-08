@@ -89,11 +89,11 @@ def test_shapes_average_plots(clean_data, tmp_output_path):
     shapes_plot = dataset_renderer.Renderer(shapes_data).render()
     assert isinstance(shapes_plot, mpl.figure.Figure)
 
-def test_aircraft_data(aircraft_data, tmp_output_path):
-    """Toy test to identify syntax errors in aircraft data."""
-    data = aircraft_data
-    track_subset = dataset_renderer.TimeSeries(data).track()
-    track_plot = dataset_renderer.Renderer(track_subset).render()
-    track_plot.show()
+# def test_aircraft_data(aircraft_data, tmp_output_path):
+#     """Toy test to identify syntax errors in aircraft data."""
+#     data = aircraft_data
+#     track_subset = dataset_renderer.TimeSeries(data).track()
+#     track_plot = dataset_renderer.Renderer(track_subset).render()
+#     track_plot.show()
 
 

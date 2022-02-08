@@ -11,7 +11,7 @@ from unittest.mock import Mock
 import boto3
 import botocore
 from botocore.exceptions import ClientError, BotoCoreError
-from moto import mock_s3
+# from moto import mock_s3 # TODO: make this import work
 from mypy_boto3_s3.service_resource import Object
 from s3fs import S3FileSystem
 from shapely.geometry import box
@@ -38,6 +38,9 @@ class ExceptionsTest(unittest.TestCase):
     def test_AURNSiteDataStoreException_is_subclass_of_DataStoreException(self):
         self.assertTrue(issubclass(AURNSiteDataStoreException, DataStoreException))
 
+# TODO: Get mock_s3 working so I can reinstate these tests
+# I believe this is a conda issue in that we seem to all be running on
+# different environments.  Let's get this sorted.
 
 @mock_s3
 class BaseAURNSiteDataStoreTest(unittest.TestCase):

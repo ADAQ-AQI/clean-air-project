@@ -38,6 +38,8 @@ class TestDatasetRenderer:
         assert renderer.z_coord is None
         assert renderer.t_coord is None
 
+
+# TODO: write netcdf->csv converter to get these tests working
 # NOTE: The following two tests fail because geopandas will not load netcdf
 # files and iris will not load csv files, so until we have a netcdf/csv
 # converter (both ways) these tests cannot be reinstated.
@@ -94,23 +96,8 @@ class TestDatasetRenderer:
 #         assert isinstance(self.dframe, xarray.Dataset)
 
 
-class TestErrors:
-    """
-    Class to check that errors are caught and handled correctly.
-    """
-
-    @staticmethod
-    @pytest.fixture(scope="class")
-    def renderer(sampledir):
-        path = os.path.join(
-            sampledir,
-            "timeseries",
-            "aircraft_o3_timeseries.nc"
-        )
-        return dr.Renderer(path)
-
-    def test_render_error(self, renderer):
-        # Check that if all our coordinates end up set as None, then an
-        # error is raised.
-        with pytest.raises(ValueError):
-            renderer.render()
+def test_render_error():
+    # Check that if all our coordinates end up set as None, then an
+    # error is raised.
+    with pytest.raises(ValueError):
+        dr.Renderer(None).render()
