@@ -177,24 +177,18 @@ class Duration:
         if self._weeks is not None:
             return f"P{self._weeks}W"
 
-        s = "P"
-        if self._years is not None:
-            s += f"{self._years}Y"
-        if self._months is not None:
-            s += f"{self._months}M"
-        if self._days is not None:
-            s += f"{self._days}D"
+        # Work out which things we need to include. None indicates unset/not included/omitted, so filter out the Nones
+        pre_t_fields = [f for f in [(self._years, "Y"), (self._months, "M"), (self._days, "D")] if f[0] is not None]
+        post_t_fields = [
+            f for f in [(self._hours, "H"), (self._minutes, "M"), (self._seconds, "S")] if f[0] is not None]
 
-        if any(v is not None for v in [self._hours, self._minutes, self._seconds]):
-            s += "T"
-            if self._hours is not None:
-                s += f"{self._hours}H"
-            if self._minutes is not None:
-                s += f"{self._minutes}M"
-            if self._seconds is not None:
-                s += f"{self._seconds}S"
+        str_parts = ["P"] + [f"{val}{unit}" for val, unit in pre_t_fields]
 
-        return s
+        if post_t_fields:
+            str_parts.extend("T")
+            str_parts.extend(f"{val}{unit}" for val, unit in post_t_fields)
+
+        return "".join(str_parts)
 
     def __repr__(self):
         if self._weeks is not None:
