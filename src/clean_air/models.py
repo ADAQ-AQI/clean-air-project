@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 from functools import total_ordering
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import pyproj
 import shapely.geometry
@@ -30,11 +30,11 @@ class ContactDetails:
 
 
 @total_ordering
-@dataclass(frozen=True)
 class Duration:
     """
     Represents an ISO8601 compliant time duration
     (as described by https://en.wikipedia.org/wiki/ISO_8601#Durations)
+    This class doesn't support the combined date and time representation format (e.g. P0003-06-04T12:30:05)
 
     It's important to remember that:
     * the number of hours in a day (although almost always 24) is not constant due to daylight savings time adjustments
@@ -42,25 +42,44 @@ class Duration:
     * different months have different number of days, so P1M in the context of different dates will represent a
       different number of days
 
-    This means that the same duration applied to different dates can result in different amounts of time being
+    his means that the same duration applied to different dates can result in different amounts of time being
     added/removed.
-    For arithmetic between Duration instances, we've decided it's ok to treat days as 24 hours long, but not to assume
-    months are 30 days long, so P20D + P20D would result in P40D and not P1M10D.
+
+    We've decided to try and be consistent with the behaviour of python's timedelta as much as possible, but note that
+    the timedelta class doesn't support weeks, months, or years. Presumably to avoid issues arising from ambiguity
+    caused by different calendars.
+
+    We've also taken the decision that Durations will be naive: they won't try to take into account differences caused
+    by calendars.
+
+    For arithmetic between Duration instances, we've decided that because:
+    * python's timedelta assumes days are always 24 hours long, we will also assume that
+    * the length of months vary, we can't assume 1 month == 30 days.
+      * hence, we won't convert from days->months or months->days, so
+        * P20D + P20D would result in P40D and not P1M10D.
+        * P1.5M would not be converted to P1M15D
+
+    For the addition/subtraction of Durations from datetimes, because we'd be adding/removing time from a known
+    reference point, we would be able to take into account the length of months, daylight savings time, etc
 
     Considering the python timedelta class, it treats days as being 24 hours long, so we view this as acceptable too.
-
-    This class doesn't support the combined date and time representation format (e.g. P0003-06-04T12:30:05)
     """
+    # This class is intended to be read-only. Similar to timedelta, most operations that would cause a change should
+    # return a new instance. Here are some things that we could implement, but haven't needed as yet:
 
-    # Used for string parsing
-    # I feel I should apologise for what follows, but also assure it could be a lot worse
+    # TODO: .replace() method to create a copy of the Duration with the given fields replaced with the supplied values
+    # TODO: .remove() method to create a copy of the Duration with the given fields removed
+    # TODO: Implement __add__ and __sub__ with support for Duration, timedelta, and datetime instances
+
+    # These regexes are for parsing and extracting the values from ISO 8601 duration strings
+    # I feel I should apologise for what follows, but also assure it could be a lot worse...
     # Regex for matching a single field, parameterised to accept the match group name and unit character
     _FLOAT_REGEX_FMT = r"(?:(?P<{}>\d+(?:\.\d+)?){})?"
+    # Regex for parsing and extracting most of an ISO 8601 duration string
     _PARSER = re.compile("".join([
         "^P",
         _FLOAT_REGEX_FMT.format("years", "Y"),
         _FLOAT_REGEX_FMT.format("months", "M"),
-        # _FLOAT_REGEX_FMT.format("weeks", "W"),
         _FLOAT_REGEX_FMT.format("days", "D"),
         "(?:T",  # T is required if any of the following fields are present
         _FLOAT_REGEX_FMT.format("hours", "H"),
@@ -68,20 +87,70 @@ class Duration:
         _FLOAT_REGEX_FMT.format("seconds", "S"),
         ")?",
     ]), re.ASCII)
-    # If weeks are used, no other fields can be used. Couldn't get that 'or' logic working with a single regex, and
-    # using 2 separate ones is probably clearer anyway
+    # Regex for parsing and extracting the special case of weeks, which can't be combined with any of the other fields
     _WEEK_PARSER = re.compile(r"^P(?P<weeks>\d+(?:\.\d+)?)W$", re.ASCII)
 
-    years: float = 0
-    months: float = 0
-    weeks: float = 0
-    days: float = 0
-    hours: float = 0
-    minutes: float = 0
-    seconds: float = 0
+    def __init__(
+            self,
+            years: Optional[float] = None,
+            months: Optional[float] = None,
+            days: Optional[float] = None,
+            hours: Optional[float] = None,
+            minutes: Optional[float] = None,
+            seconds: Optional[float] = None,
+            *,  # Prevent weeks from being specified by positional argument, because it's invalid to combine weeks
+            # with other arguments
+            weeks: Optional[float] = None,
+    ):
+        # Remember that float implies int as well, so either can be stored, and its type matters for reconstructing
+        # parsed strings that match the original input (with the caveat that we don't store which decimal separator
+        # was used, as that seems too esoteric and fiddly for the uses this code was written for)
 
-    # TODO: We could add arithmetic between timedeltas, Durations, and datetimes etc, but until there's a need for it
-    #       I won't
+        args = [years, months, days, hours, minutes, seconds, weeks]
+        if all(arg is None for arg in args):
+            raise ValueError("At least one argument must be supplied")
+        if any(arg < 0 for arg in args if arg is not None):
+            raise ValueError(f"Arguments cannot be less than 0! arguments={args!r}")
+
+        if weeks is not None and any(v is not None for v in args[:-1]):
+            # If we allowed this, we couldn't generate a valid ISO 8601 string
+            raise ValueError("'weeks' cannot be combined with any other arguments")
+
+        self._years = years
+        self._months = months
+        self._days = days
+        self._hours = hours
+        self._minutes = minutes
+        self._seconds = seconds
+        self._weeks = weeks
+
+    @property
+    def years(self) -> float:
+        return self._years if self._years is not None else 0
+
+    @property
+    def months(self) -> float:
+        return self._months if self._months is not None else 0
+
+    @property
+    def days(self) -> float:
+        return self._days if self._days is not None else 0
+
+    @property
+    def hours(self) -> float:
+        return self._hours if self._hours is not None else 0
+
+    @property
+    def minutes(self) -> float:
+        return self._minutes if self._minutes is not None else 0
+
+    @property
+    def seconds(self) -> float:
+        return self._seconds if self._seconds is not None else 0
+
+    @property
+    def weeks(self) -> float:
+        return self._weeks if self._weeks is not None else 0
 
     @staticmethod
     def _get_months_seconds(dur: "Duration") -> (int, int):
@@ -103,8 +172,48 @@ class Duration:
         # Required for @total_ordering to provide a full suite of rich comparison operators
         return Duration._get_months_seconds(self) < Duration._get_months_seconds(other)
 
+    def __str__(self) -> str:
+        """Create an ISO 8601 compliant string representation"""
+        if self._weeks is not None:
+            return f"P{self._weeks}W"
+
+        s = "P"
+        if self._years is not None:
+            s += f"{self._years}Y"
+        if self._months is not None:
+            s += f"{self._months}M"
+        if self._days is not None:
+            s += f"{self._days}D"
+
+        if any(v is not None for v in [self._hours, self._minutes, self._seconds]):
+            s += "T"
+            if self._hours is not None:
+                s += f"{self._hours}H"
+            if self._minutes is not None:
+                s += f"{self._minutes}M"
+            if self._seconds is not None:
+                s += f"{self._seconds}S"
+
+        return s
+
+    def __repr__(self):
+        if self._weeks is not None:
+            args_str = f"weeks={self._weeks!r}"
+        else:
+            args_str = ", ".join(
+                f"{attr}={getattr(self, attr)!r}"
+                for attr in ["years", "months", "days", "hours", "minutes", "seconds"]
+                if getattr(self, attr) is not None
+            )
+
+        return f"Duration({args_str})"
+
     @staticmethod
     def parse_str(str_dur: str) -> "Duration":
+        """
+        Convert a valid ISO 8601 Duration string to a Duration object.
+        The combined date and time representation format (e.g. P0003-06-04T12:30:05)
+        """
         # Considering the best way to parse this, generally the string is made up a series of pairs. Each pair
         # has a character that identifies the unit and a value. The value can be multiple characters. Additionally,
         # there is a preceding P and potentially a T mid-string to indicate transition from years/months/weeks/days to
