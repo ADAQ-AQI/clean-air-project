@@ -23,7 +23,7 @@ class Plot:
         # We want 3 plots per row unless there are less than 3 plots to
         # render, then we want the figsize to match the number of plots:
         n_plots = len(self.dataframe)
-        n_rows = int(n_plots-1/3) + 1
+        n_rows = int((n_plots-1)/3) + 1
         if len(self.dataframe) <= 3:
             n_cols = len(self.dataframe)
         else:
@@ -36,8 +36,6 @@ class Plot:
                 for coord in cube.dim_coords:
                     if coord.points.size == 1:
                         cube = cube.collapsed(coord, iris.analysis.MEAN)
-                    else:
-                        pass
 
             # Now check again to make sure cube is 1D, otherwise raise error:
             if cube.ndim != 1:

@@ -90,22 +90,22 @@ class TestTimeSeries:
 
     def test_box_average_data(self, clean_data, tmp_output_path):
         """Test that when data is passed to this function it will be extracted
-        and averaged successfully into a timeseries dataset."""
+         into an iris Cube containing a timeseries dataset."""
         boxed_data = dr.TimeSeries(clean_data).\
             spatial_average(shape='box', coords=[10000, 10000, 15000, 15000])
         assert isinstance(boxed_data, Cube)
         assert boxed_data.shape == (24,)
 
     def test_shape_averaged_data(self, clean_data, tmp_output_path):
-        """Test that when data is passed to this function it is correctly
-        averaged over the shape specified and returned as a timeseries Cube."""
+        """Test that when data is passed to this function it is returned as a
+        timeseries Cube."""
         shape = Polygon([(0, 0), (100, 100), (100, 0)])
         shape_data = dr.TimeSeries(clean_data).spatial_average(shape=shape)
         assert isinstance(shape_data, Cube)
 
     def test_shapes_averaged_data(self, clean_data, tmp_output_path):
-        """Test that when data is passed to this function it is correctly
-        averaged over the shape specified and returned as a timeseries Cube."""
+        """Test that when data is passed to this function it is returned as a
+         timeseries Cube."""
         poly_one = Polygon([(0, 0), (100, 100), (100, 0)])
         poly_two = Polygon([(0, 0), (-100, -100), (-100, 0)])
         shapes = MultiPolygon([poly_one, poly_two])

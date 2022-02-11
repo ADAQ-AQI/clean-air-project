@@ -78,8 +78,6 @@ def test_shapes_average_plots(clean_data, tmp_output_path):
         produce and return a set of timeseries plots."""
     # NOTE: This test is really slow, presumably due to lots of processing
     # during cell weight evaluation.  Can we speed this up somehow?
-    # poly_one = Polygon([(0, 0), (100, 100), (100, 0)])
-    # poly_two = Polygon([(0, 0), (-100, -100), (-100, 0)])
     poly_one = Polygon([(0, 0), (10, 10), (10, 0)])
     poly_two = Polygon([(-100, -100), (-90, -90), (-90, 0)])
     shapes = MultiPolygon([poly_one, poly_two])

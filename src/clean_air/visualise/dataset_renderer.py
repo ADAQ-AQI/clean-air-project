@@ -8,7 +8,7 @@ import xarray
 from iris.cube import Cube, CubeList
 from shapely.geometry import Polygon, MultiPolygon
 
-from clean_air import util as util
+from clean_air import util
 from clean_air.data import DataSubset
 from clean_air.visualise import render_map, render_plot
 
@@ -177,7 +177,7 @@ class TimeSeries:
 
         elif isinstance(shape_cube, iris.cube.CubeList):
             shapes_data = iris.cube.CubeList()
-            for i, cube in enumerate(shape_cube):
+            for cube in shape_cube:
                 xcoord, ycoord = util.cubes.get_xy_coords(cube)
                 partial = cube.collapsed(xcoord, iris.analysis.MEAN)
                 collapsed = partial.collapsed(ycoord, iris.analysis.MEAN)
