@@ -1,6 +1,7 @@
 """
 Objects representing data subsets
 """
+import os.path
 
 import numpy as np
 import iris
@@ -48,7 +49,10 @@ class DataSubset:
                 time=lambda cell: cell.point < self.end_time
             )
 
-        cube = iris.load_cube(self.metadata["files"], constraints)
+        try:
+            cube = iris.load_cube(self.metadata.metadata['files'], constraints)
+        except AttributeError:
+            cube = iris.load_cube(self.metadata['files'], constraints)
 
         self._cube = cube
         return self._cube
@@ -125,7 +129,7 @@ class DataSubset:
         Extract an arbitrary area
 
         Arguments:
-            shape: shape to extract, as a shapely polygon (or multipolygon)
+            shape: shape to extract, as a shapely polygon
             crs: coordinate reference system used by the polygon. Same as
                 the dataset by default.
         """
@@ -144,9 +148,6 @@ class DataSubset:
             xcoord.guess_bounds()
         if not ycoord.has_bounds():
             ycoord.guess_bounds()
-
-        # Extract bounding box
-        cube = util.cubes.extract_box(cube, shape.bounds)
 
         # Mask points outside the actual shape
         # Note we need to do the broadcasting manually: numpy is strangely
