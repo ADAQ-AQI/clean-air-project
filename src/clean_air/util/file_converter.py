@@ -3,6 +3,7 @@ This converts input metadata files to selected file types for processing,
 for example:
 convert_excel(filepath, output_location)
 convert_netcdf(filepath, output_location)
+convert_csv(filepath, output_location)
 
 You can also use this module to access a pandas.DataFrame extracted from
 either an excel or netcdf input file, for example:
@@ -19,6 +20,9 @@ from json import JSONEncoder
 
 
 # subclass JSONEncoder
+from pandas.errors import ParserError
+
+
 class DateTimeEncoder(JSONEncoder):
     # Override default method so we can extract and encode datetimes:
     def default(self, obj):
@@ -28,7 +32,7 @@ class DateTimeEncoder(JSONEncoder):
 
 def generate_dataframe(filepath):
     """
-    Reads in data from excel spreadsheets and holds as temporary
+    Reads in data from specified input type and holds as temporary
     pandas.DataFrame object.
     """
     if filepath.endswith(".xlsx"):
@@ -38,9 +42,21 @@ def generate_dataframe(filepath):
         # that into a pandas dataframe.
         temp_dataset = xr.open_dataset(filepath)
         temp_dataframe = temp_dataset.to_dataframe()
+    elif filepath.endswith(".csv"):
+        # rules for csv format:
+        # - header line (column names) must be on row 4 of file (top row is 0)
+        # - column names must be standard python strings (without </> etc.)
+        temp_dataframe = pd.read_csv(filepath, header=4, engine='python')
+
     else:
         raise ValueError("No reader configured yet for this input format.")
     return pd.DataFrame(temp_dataframe)
+
+
+def csv_reformatter(filepath):
+    """This function uses a template to reformat known-source CSV files into a
+    fixed format that we can then very easily read into a pandas dataframe
+    (ready for conversion to netcdf files)."""
 
 
 def slice_data(dataframe):
@@ -172,6 +188,17 @@ def save_as_csv(data_object, output_location):
     data_object.to_csv(output_location, index=False)
 
 
+def save_as_netcdf(data_object, output_location):
+    """
+    Convert pandas.DataFrame object to netcdf file and save in specified
+    location.  Filename must be included as part of output_location.
+    """
+    # pandas can't convert to netcdf, so we will have to first convert
+    # to xarray (which can):
+    xr_object = data_object.to_xarray()
+    xr_object.to_netcdf(output_location)
+
+
 def convert_excel(filepath, output_location):
     """
     Convert excel metadata files to required output format.  Filename must be
@@ -201,3 +228,10 @@ def convert_netcdf(filepath, output_location):
     """
     temp_dataframe = generate_dataframe(filepath)
     save_as_csv(temp_dataframe, output_location)
+
+
+def convert_csv(filepath, output_location):
+    """Convert csv files to required netcdf output format.  Output filename
+    must be included in output lotion."""
+    temp_dataframe = generate_dataframe(filepath)
+    save_as_netcdf(temp_dataframe, output_location)

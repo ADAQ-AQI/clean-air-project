@@ -20,6 +20,12 @@ def netcdf_input_path(sampledir):
 
 
 @pytest.fixture
+def csv_input_path(sampledir):
+    csv_data_path = os.path.join(sampledir, "obs", "ACTH_2016.csv")
+    return csv_data_path
+
+
+@pytest.fixture
 def tmp_output_path(tmp_path):
     tmp_output_path = tmp_path / "test_data"
     tmp_output_path.mkdir()
@@ -42,6 +48,12 @@ def yaml_filename(tmp_output_path):
 def csv_filename(tmp_output_path):
     csv_fname = os.path.join(tmp_output_path, "flightpath.csv")
     return csv_fname
+
+
+@pytest.fixture
+def netcdf_filename(tmp_output_path):
+    netcdf_fname = os.path.join(tmp_output_path, "ABD_2015.netcdf")
+    return netcdf_fname
 
 
 def test_convert_excel_to_json(xl_input_path, json_filename):
@@ -81,3 +93,15 @@ def test_convert_netcdf_to_csv(netcdf_input_path, csv_filename):
             file.read()
     except FileNotFoundError as fnf_error:
         raise fnf_error
+
+
+def test_convert_csv_to_netcdf(csv_input_path, netcdf_filename):
+    """Test to check end-to-end processing of csv files and their
+     conversion into netcdf files."""
+    fc.convert_csv(csv_input_path, netcdf_filename)
+    try:
+        with open(netcdf_filename) as file:
+            file.read()
+    except FileNotFoundError as fnf_error:
+        raise fnf_error
+
