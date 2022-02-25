@@ -1,11 +1,13 @@
 import string
 import unittest
+from datetime import datetime, timedelta
 
 import pyproj
 import pytest
+from dateutil.tz import UTC, tzoffset
 from shapely.geometry import box
 
-from clean_air.models import Metadata, DataType, ContactDetails, TemporalExtent, Extent, Duration
+from clean_air.models import Metadata, DataType, ContactDetails, TemporalExtent, Extent, Duration, DateTimeInterval
 
 
 class MetadataTest(unittest.TestCase):
@@ -90,14 +92,14 @@ class DurationTest(unittest.TestCase):
 
     def test_init_kwargs_floats(self):
         """WHEN a Duration is created using keyword arguments and float values THEN the correct values are stored"""
-        d = Duration(seconds=1.1, minutes=2.2, hours=3.3, days=4.4, months=5.5, years=6.6)
+        d = Duration(seconds=1.1, minutes=2.2, hours=3.3, days=4.4, months=5, years=6)
 
         self.assertEqual(1.1, d.seconds)
         self.assertEqual(2.2, d.minutes)
         self.assertEqual(3.3, d.hours)
         self.assertEqual(4.4, d.days)
-        self.assertEqual(5.5, d.months)
-        self.assertEqual(6.6, d.years)
+        self.assertEqual(5, d.months)  # Floats not allowed here
+        self.assertEqual(6, d.years)  # Floats not allowed here
 
         self.assertEqual(0, d.weeks)  # "weeks" cannot be combined with other args
 
@@ -118,14 +120,14 @@ class DurationTest(unittest.TestCase):
 
     def test_init_positionals_floats(self):
         """WHEN a Duration is created using positional arguments and float values THEN the correct values are stored"""
-        d = Duration(6.6, 5.5, 4.4, 3.3, 2.2, 1.1)
+        d = Duration(6, 5, 4.4, 3.3, 2.2, 1.1)
 
         self.assertEqual(1.1, d.seconds)
         self.assertEqual(2.2, d.minutes)
         self.assertEqual(3.3, d.hours)
         self.assertEqual(4.4, d.days)
-        self.assertEqual(5.5, d.months)
-        self.assertEqual(6.6, d.years)
+        self.assertEqual(5, d.months)  # Floats not allowed here
+        self.assertEqual(6, d.years)  # Floats not allowed here
 
         self.assertEqual(0, d.weeks)  # "weeks" cannot be combined with other args
 
@@ -168,7 +170,7 @@ class DurationTest(unittest.TestCase):
 
     def test_init_0_floats(self):
         """GIVEN a values of 0.0 WHEN a Duration is created THEN 0.0 is stored"""
-        d = Duration(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        d = Duration(0, 0, 0.0, 0.0, 0.0, 0.0)
 
         self.assertEqual(0.0, d.seconds)
         self.assertIsInstance(d.seconds, float)
@@ -178,18 +180,197 @@ class DurationTest(unittest.TestCase):
         self.assertIsInstance(d.hours, float)
         self.assertEqual(0.0, d.days)
         self.assertIsInstance(d.days, float)
-        self.assertEqual(0.0, d.months)
-        self.assertIsInstance(d.months, float)
-        self.assertEqual(0.0, d.years)
-        self.assertIsInstance(d.years, float)
+        self.assertEqual(0, d.months)
+        self.assertIsInstance(d.months, int)
+        self.assertEqual(0, d.years)
+        self.assertIsInstance(d.years, int)
 
         d = Duration(weeks=0.0)
         self.assertEqual(0.0, d.weeks)
         self.assertIsInstance(d.weeks, float)
 
     def test_init_at_least_one_value_set(self):
-        """GIVEN no arguments are given WHEN a Duration is create THEN a ValueError is raised"""
+        """GIVEN no arguments are given WHEN a Duration is created THEN a ValueError is raised"""
         self.assertRaises(ValueError, Duration)
+
+    def test_init_float_years_rejected(self):
+        """
+        GIVEN `years` is a flot WHEN a Duration is created THEN a ValueError is raised
+
+        (Decimal years and months are ambiguous, so not supported)
+        """
+        self.assertRaises(ValueError, Duration, years=0.5)
+
+    def test_init_float_months_rejected(self):
+        """
+        GIVEN `months` is a flot WHEN a Duration is created THEN a ValueError is raised
+
+        (Decimal years and months are ambiguous, so not supported)
+        """
+        self.assertRaises(ValueError, Duration, months=0.5)
+
+
+DURATION_ADDITION_TEST_CASES = [
+    (Duration(1), Duration(1), Duration(2)),
+    (Duration(1, 2, 3, 4, 5, 6), Duration(6, 5, 4, 3, 2, 1), Duration(7, 7, 7, 7, 7, 7)),
+    (Duration(weeks=1), Duration(weeks=2), Duration(weeks=3)),
+    # Weeks are converted to days when combined with anything other than weeks
+    (Duration(1, 2, 3, 4, 5, 6), Duration(weeks=1), Duration(1, 2, 10, 4, 5, 6)),
+    # Fractional amounts
+    (Duration(days=0.5), Duration(days=0.5), Duration(days=1)),
+    (Duration(hours=0.5), Duration(hours=0.5), Duration(hours=1)),
+    (Duration(minutes=0.5), Duration(minutes=0.5), Duration(minutes=1)),
+    (Duration(seconds=0.5), Duration(seconds=0.5), Duration(seconds=1)),
+    (Duration(weeks=0.5), Duration(weeks=0.5), Duration(weeks=1)),
+    (Duration(weeks=0.5), Duration(1, 2, 3, 4, 5, 6), Duration(1, 2, 6, 16, 5, 6)),
+
+    # Overflowing fields
+    # we don't normalise fields, e.g. convert 26 hours to 1 day 2 hours, so just test things add up correctly
+    (Duration(months=6), Duration(months=7), Duration(months=13)),
+    (Duration(days=10), Duration(days=25), Duration(days=35)),
+    (Duration(hours=20), Duration(hours=20), Duration(hours=40)),
+    (Duration(minutes=59), Duration(minutes=59), Duration(minutes=118)),
+    (Duration(seconds=59), Duration(seconds=59), Duration(seconds=118)),
+    (Duration(weeks=123), Duration(weeks=321), Duration(weeks=444)),
+
+    # DATETIME TEST CASES
+    (Duration(1, 2, 3, 4, 5, 6), datetime(2003, 1, 1, 2, 3, 4), datetime(2004, 3, 4, 6, 8, 10)),
+
+    (Duration(months=6), datetime(2003, 1, 1, 2, 3, 4), datetime(2004, 7, 4, 6, 8, 10)),
+    (Duration(days=1), datetime(2003, 1, 1, 2, 3, 4), datetime(2004, 1, 2, 2, 3, 4)),
+    (Duration(hours=12), datetime(2003, 1, 1, 2, 3, 4), datetime(2004, 1, 1, 14, 3, 4)),
+    (Duration(minutes=50), datetime(2003, 1, 1, 2, 3, 4), datetime(2004, 1, 1, 2, 53, 4)),
+    (Duration(seconds=30), datetime(2003, 1, 1, 2, 3, 4), datetime(2004, 1, 1, 2, 3, 34)),
+    (Duration(weeks=1), datetime(2003, 1, 1, 2, 3, 4), datetime(2004, 1, 8, 2, 3, 4)),
+
+    (Duration(months=25), datetime(2003, 1, 1, 2, 3, 4), datetime(2006, 2, 1, 2, 3, 4)),
+    (Duration(days=400), datetime(2003, 1, 1, 2, 3, 4), datetime(2004, 2, 5, 2, 3, 4)),
+    (Duration(hours=36), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 2, 14, 3, 4)),
+    (Duration(minutes=120), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 4, 3, 4)),
+    (Duration(seconds=120), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 2, 5, 4)),
+    (Duration(weeks=123), datetime(2003, 1, 1, 2, 3, 4), datetime(2006, 5, 11, 2, 3, 4)),
+
+    (Duration(days=0.5), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 14, 3, 4)),
+    (Duration(hours=0.5), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 2, 33, 4)),
+    (Duration(minutes=0.5), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 2, 3, 34)),
+    (Duration(seconds=0.5), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 2, 3, 4, 500000)),
+    (Duration(weeks=0.5), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 3, 15, 3, 4)),
+]
+
+
+@pytest.mark.parametrize("left_operand,right_operand,expected_result", DURATION_ADDITION_TEST_CASES + [
+    # DURATION + TIMEDELTA => DURATION (different return type from __add__ so can't be shared)
+    (Duration(1, 2, 3, 4, 5, 6), timedelta(weeks=1, days=2, hours=3, minutes=4, seconds=5),
+     Duration(1, 2, 12, 7, 9, 11)),
+    (Duration(weeks=1), timedelta(weeks=1, days=2, hours=3, minutes=4, seconds=5), Duration(weeks=1.30397652116)),
+
+    (Duration(1, 2, 3, 4, 5, 6), timedelta(weeks=1), Duration(1, 2, 10, 4, 5, 6)),
+    (Duration(1, 2, 3, 4, 5, 6), timedelta(days=1), Duration(1, 2, 4, 4, 5, 6)),
+    (Duration(1, 2, 3, 4, 5, 6), timedelta(hours=1), Duration(1, 2, 3, 5, 5, 6)),
+    (Duration(1, 2, 3, 4, 5, 6), timedelta(minutes=1), Duration(1, 2, 3, 4, 6, 6)),
+    (Duration(1, 2, 3, 4, 5, 6), timedelta(seconds=1), Duration(1, 2, 3, 4, 5, 7)),
+    (Duration(1, 2, 3, 4, 5, 6), timedelta(milliseconds=500), Duration(1, 2, 3, 4, 5, 7)),
+    (Duration(1, 2, 3, 4, 5, 6), timedelta(milliseconds=499), Duration(1, 2, 3, 4, 5, 6)),
+    (Duration(1, 2, 3, 4, 5, 6), timedelta(microseconds=500000), Duration(1, 2, 3, 4, 5, 7)),
+    (Duration(1, 2, 3, 4, 5, 6), timedelta(microseconds=499999), Duration(1, 2, 3, 4, 5, 6)),
+
+    (Duration(months=25), timedelta(weeks=1), Duration(months=25, days=7)),
+    (Duration(days=400), timedelta(days=1), Duration(days=401)),
+    (Duration(hours=36), timedelta(hours=35), Duration(hours=71)),
+    (Duration(minutes=120), timedelta(minutes=66), Duration(minutes=186)),
+    (Duration(seconds=120), timedelta(seconds=321), Duration(seconds=441)),
+    (Duration(seconds=1), timedelta(milliseconds=2000), Duration(seconds=3)),
+    (Duration(seconds=1), timedelta(milliseconds=1499), Duration(seconds=2)),
+    (Duration(seconds=1), timedelta(milliseconds=1500), Duration(seconds=3)),
+    (Duration(seconds=1), timedelta(microseconds=1000000), Duration(seconds=2)),
+    (Duration(seconds=1), timedelta(microseconds=500000), Duration(seconds=2)),
+    (Duration(seconds=1), timedelta(microseconds=490000), Duration(seconds=1)),
+
+    (Duration(weeks=1), timedelta(weeks=1), Duration(weeks=2)),
+    (Duration(weeks=1), timedelta(days=1), Duration(weeks=1.14285714286)),
+    (Duration(weeks=1), timedelta(hours=35), Duration(weeks=1.20833333333)),
+    (Duration(weeks=1), timedelta(minutes=66), Duration(weeks=1.00654761905)),
+    (Duration(weeks=1), timedelta(seconds=321), Duration(weeks=1.00053075397)),
+    (Duration(weeks=1), timedelta(milliseconds=2000), Duration(weeks=1.00000330688)),
+    (Duration(weeks=1), timedelta(milliseconds=1499), Duration(weeks=1)),
+    (Duration(weeks=1), timedelta(milliseconds=1500), Duration(weeks=1.00000330688)),
+    (Duration(weeks=1), timedelta(microseconds=1000000), Duration(weeks=1.00000082672)),
+    (Duration(weeks=1), timedelta(microseconds=500000), Duration(weeks=1.00000082672)),
+    (Duration(weeks=1), timedelta(microseconds=490000), Duration(weeks=1)),
+
+    (Duration(days=0.5), timedelta(weeks=1), Duration(weeks=1.07142857143)),
+    (Duration(hours=0.5), timedelta(weeks=1), Duration(weeks=1.00297619048)),
+    (Duration(minutes=0.5), timedelta(weeks=1), Duration(weeks=1.00004960317)),
+    (Duration(seconds=0.5), timedelta(weeks=1), Duration(weeks=1.00000082672)),
+    (Duration(weeks=0.5), timedelta(weeks=1), Duration(weeks=1.5)),
+], ids=repr)
+def test_duration__add__(left_operand, right_operand, expected_result):
+    """
+    GIVEN operands A and B WHEN B is added to A THEN the expected result is returned.
+    i.e. it tests what happens when we do `a_duration + an_object`.
+    This tests the addition (`__add__`) method
+    """
+    assert left_operand + right_operand == expected_result
+
+
+@pytest.mark.parametrize(
+    # For these tests, we want to switch the transpose the operands from our common test cases, so that
+    "left_operand,right_operand,expected_result", [(b, a, res) for a, b, res in DURATION_ADDITION_TEST_CASES] + [
+        # DURATION + TIMEDELTA => TIMEDELTA (different return type from __add__ so can't be shared)
+        (timedelta(weeks=1, days=2, hours=3, minutes=4, seconds=5), Duration(1, 2, 3, 4, 5, 6),
+         timedelta()),
+        (timedelta(weeks=1, days=2, hours=3, minutes=4, seconds=5), Duration(weeks=1), timedelta()),
+
+        (timedelta(weeks=1), Duration(1, 2, 3, 4, 5, 6), timedelta()),
+        (timedelta(days=1), Duration(1, 2, 3, 4, 5, 6), timedelta()),
+        (timedelta(hours=1), Duration(1, 2, 3, 4, 5, 6), timedelta()),
+        (timedelta(minutes=1), Duration(1, 2, 3, 4, 5, 6), timedelta()),
+        (timedelta(seconds=1), Duration(1, 2, 3, 4, 5, 6), timedelta()),
+        (timedelta(milliseconds=500), Duration(1, 2, 3, 4, 5, 6), timedelta()),
+        (timedelta(milliseconds=499), Duration(1, 2, 3, 4, 5, 6), timedelta()),
+        (timedelta(microseconds=500000), Duration(1, 2, 3, 4, 5, 6), timedelta()),
+        (timedelta(microseconds=499999), Duration(1, 2, 3, 4, 5, 6), timedelta()),
+
+        (timedelta(weeks=1), Duration(months=25), timedelta()),
+        (timedelta(days=1), Duration(days=400), timedelta(days=401)),
+        (timedelta(hours=35), Duration(hours=36), timedelta(hours=71)),
+        (timedelta(minutes=66), Duration(minutes=120), timedelta(minutes=186)),
+        (timedelta(seconds=321), Duration(seconds=120), timedelta(seconds=441)),
+        (timedelta(milliseconds=2000), Duration(seconds=1), timedelta(seconds=1, milliseconds=2000)),
+        (timedelta(milliseconds=1499), Duration(seconds=1), timedelta(seconds=1, milliseconds=1499)),
+        (timedelta(milliseconds=1500), Duration(seconds=1), timedelta(seconds=1, milliseconds=1500)),
+        (timedelta(microseconds=1000000), Duration(seconds=1), timedelta(seconds=1, microseconds=1000000)),
+        (timedelta(microseconds=500000), Duration(seconds=1), timedelta(seconds=1, microseconds=500000)),
+        (timedelta(microseconds=490000), Duration(seconds=1), timedelta(seconds=1, microseconds=490000)),
+
+        (timedelta(weeks=1), Duration(weeks=1), timedelta(weeks=2)),
+        (timedelta(days=1), Duration(weeks=1), timedelta(weeks=1, days=1)),
+        (timedelta(hours=35), Duration(weeks=1), timedelta(weeks=1, hours=35)),
+        (timedelta(minutes=66), Duration(weeks=1), timedelta(weeks=1, minutes=66)),
+        (timedelta(seconds=321), Duration(weeks=1), timedelta(weeks=1, seconds=321)),
+        (timedelta(milliseconds=2000), Duration(weeks=1), timedelta(weeks=1, milliseconds=2000)),
+        (timedelta(milliseconds=1499), Duration(weeks=1), timedelta(weeks=1, milliseconds=1499)),
+        (timedelta(milliseconds=1500), Duration(weeks=1), timedelta(weeks=1, milliseconds=1500)),
+        (timedelta(microseconds=1000000), Duration(weeks=1), timedelta(weeks=1, microseconds=1000000)),
+        (timedelta(microseconds=500000), Duration(weeks=1), timedelta(weeks=1, microseconds=500000)),
+        (timedelta(microseconds=490000), Duration(weeks=1), timedelta(weeks=1, microseconds=490000)),
+
+        (timedelta(weeks=1), Duration(days=0.5), timedelta(weeks=1, hours=12)),
+        (timedelta(weeks=1), Duration(hours=0.5), timedelta(weeks=1, minutes=30)),
+        (timedelta(weeks=1), Duration(minutes=0.5), timedelta(weeks=1, seconds=30)),
+        (timedelta(weeks=1), Duration(seconds=0.5), timedelta(weeks=1, milliseconds=500)),
+        (timedelta(weeks=1), Duration(weeks=0.5), timedelta(weeks=1.5)),
+    ], ids=repr)
+def test_duration__radd__(left_operand, right_operand, expected_result):
+    """
+    GIVEN operands A and B WHEN A is added to B THEN the expected result is returned.
+    i.e. it tests what happens when we do `an_object + a_duration`.
+    This tests the reflected addition (`__radd__`) method
+    """
+    assert left_operand + right_operand == expected_result
+
+
+# TODO implement __sub__ and __rsub__
 
 
 @pytest.mark.parametrize("attr_name", ["seconds", "minutes", "hours", "days", "months", "years", "weeks"])
@@ -224,8 +405,8 @@ DURATION_STR_CONVERSION_TEST_CASES = [
     (Duration(4), "P4Y"),
     (Duration(months=1), "P1M"),
     (Duration(minutes=1), "PT1M"),
-    (Duration(0.5), "P0.5Y"),
-    (Duration(0.5), "P0,5Y"),
+    (Duration(days=0.5), "P0.5D"),
+    (Duration(days=0.5), "P0,5D"),
     (Duration(hours=36), "PT36H"),
     (Duration(days=1, hours=12), "P1DT12H"),
     (Duration(days=2.3, hours=2.3), "P2.3DT2.3H"),
@@ -245,7 +426,7 @@ def test_duration_parse_str_valid(dur_obj: Duration, str_dur: str):
 
 @pytest.mark.parametrize("dur_obj,str_dur", DURATION_STR_CONVERSION_TEST_CASES)
 def test_duration_str_valid(dur_obj: Duration, str_dur: str):
-    """Can a Duration object to a valid ISO8601 string ?"""
+    """Can we convert a Duration object to a valid ISO8601 string?"""
     # commas are valid as a separator, but we will always serialise using periods
     assert str(dur_obj) == str_dur.replace(",", ".")
 
@@ -267,5 +448,259 @@ def test_duration_str_valid(dur_obj: Duration, str_dur: str):
     ids=lambda val: f"invalid_str_{val!r}"  # Fixes a test report issue due to empty string case
 )
 def test_duration_str_conversion_invalid(invalid_str_dur: str):
-    """Can we convert back and forth between a Duration object and its ISO8601 string representation correctly?"""
+    """
+    GIVEN an invalid string WHEN converting the string to a Duration object is attempted THEN a ValueError is raised
+    """
     pytest.raises(ValueError, Duration.parse_str, invalid_str_dur)
+
+
+class DateTimeIntervalTest(unittest.TestCase):
+
+    def test_init_end_date_before_start_date(self):
+        """GIVEN end date is before start date WHEN a DateTimeInterval is created THEN a ValueError is raised"""
+        start_date = datetime.now()
+        end_date = start_date - timedelta(days=1)
+
+        self.assertRaises(ValueError, DateTimeInterval, start_date, end_date)
+
+    def test_init_recurrences_less_than_minus_1(self):
+        """GIVEN recurrences is less than -1 WHEN a DateTimeInterval is created THEN a ValueError is raised"""
+        start_date = datetime.now()
+        end_date = start_date + timedelta(days=1)
+
+        # recurrences must be >= -1, so -2 is invalid
+        self.assertRaises(ValueError, DateTimeInterval, start_date, end_date, recurrences=-2)
+
+    def test_init_all_fields_set(self):
+        """
+        GIVEN start_date, end_date, and duration are provided
+        WHEN a DateTimeInterval is created
+        THEN a ValueError is raised
+
+        The only valid combinations are:
+        * start date & end date
+        * start date & duration
+        * duration & end date
+        * duration only
+        So everything else is not allowed
+        """
+        self.assertRaises(ValueError, DateTimeInterval, datetime.now(), datetime.now(), Duration(1))
+
+    def test_init_only_start_date_set(self):
+        """
+        GIVEN only start_date is provided
+        WHEN a DateTimeInterval is created
+        THEN a ValueError is raised
+        """
+        self.assertRaises(ValueError, DateTimeInterval, datetime.now())
+
+    def test_init_only_end_date_set(self):
+        """
+        GIVEN only end_date is provided
+        WHEN a DateTimeInterval is created
+        THEN a ValueError is raised
+        """
+        self.assertRaises(ValueError, DateTimeInterval, end=datetime.now())
+
+    def test_init_only_duration_set(self):
+        """
+        GIVEN only duration is provided
+        WHEN a DateTimeInterval is created
+        THEN the correct DateTimeInterval is created
+        """
+        duration = Duration(1, 2, 3, 4)
+
+        dti = DateTimeInterval(duration=duration)
+
+        self.assertIsNone(dti.start)
+        self.assertIsNone(dti.end)
+        self.assertEqual(duration, dti.duration)
+
+    def test_start_property_inference(self):
+        """
+        GIVEN a DateTimeInterval created with end and duration parameters
+        WHEN start property is accessed
+        THEN the correct start date is returned
+        """
+
+        d = Duration(weeks=1)
+        end = datetime(2022, 1, 8)
+        expected_start = datetime(2022, 1, 1)
+        dti = DateTimeInterval(end=end, duration=d)
+
+        self.assertEqual(expected_start, dti.start)
+
+    def test_start_property_inference_duration_only(self):
+        """
+        GIVEN a DateTimeInterval created with just a duration parameter
+        WHEN start property is accessed
+        THEN None is returned
+        """
+
+        d = Duration(weeks=1)
+        dti = DateTimeInterval(duration=d)
+
+        self.assertIsNone(dti.start)
+
+    def test_end_property_inference(self):
+        """
+        GIVEN a DateTimeInterval created with start and duration parameters
+        WHEN end property is accessed
+        THEN the correct end date is returned
+        """
+
+        d = Duration(weeks=1)
+        start = datetime(2022, 1, 8)
+        expected_end = datetime(2022, 1, 16)
+        dti = DateTimeInterval(start=start, duration=d)
+
+        self.assertEqual(expected_end, dti.start)
+
+    def test_end_property_inference_duration_only(self):
+        """
+        GIVEN a DateTimeInterval created with just a duration parameter
+        WHEN end property is accessed
+        THEN None is returned
+        """
+
+        d = Duration(weeks=1)
+        dti = DateTimeInterval(duration=d)
+
+        self.assertIsNone(dti.end)
+
+    def test_duration_property_inference(self):
+        """
+        GIVEN a DateTimeInterval created with start and end date parameters
+        WHEN duration property is accessed
+        THEN the correct Duration is returned
+        """
+        start = datetime(2010, 2, 1, 12, 30, 15)
+        end = datetime(2013, 1, 12, 9, 15, 3)
+        expected_duration = Duration(2, 11, 10, 20, 44, 48)
+
+        dti = DateTimeInterval(start, end)
+
+        self.assertEqual(expected_duration, dti.duration)
+
+
+@pytest.mark.parametrize("str_dti, dti_obj", [
+    # start/end interval tests
+    ("2022-01-01T00:00:00Z/2022-01-01T12:00:00Z",
+     DateTimeInterval(datetime(2022, 1, 1, tzinfo=UTC), datetime(2022, 1, 1, 12, tzinfo=UTC))),
+    ("2022-01-01T00:00:00+00:00/2022-01-01T12:00:00+00:00",
+     DateTimeInterval(datetime(2022, 1, 1, tzinfo=UTC), datetime(2022, 1, 1, 12, tzinfo=UTC))),
+    # start/end interval tests - non UTC timezones
+    ("2022-01-01T00:00:00+01:00/2022-01-01T12:00:00+01:00",
+     DateTimeInterval(
+         datetime(2022, 1, 1, tzinfo=tzoffset("", 3600)), datetime(2022, 1, 1, 12, tzinfo=tzoffset("", 3600)))
+     ),
+    ("2022-01-01T00:00:00-00:30/2022-01-01T12:00:00-00:30",
+     DateTimeInterval(
+         datetime(2022, 1, 1, tzinfo=tzoffset("", -1800)), datetime(2022, 1, 1, 12, tzinfo=tzoffset("", -1800)))),
+    ("2022-01-01T00:00:00+0030/2022-01-01T12:00:00+0030",
+     DateTimeInterval(
+         datetime(2022, 1, 1, tzinfo=tzoffset("", 1800)), datetime(2022, 1, 1, 12, tzinfo=tzoffset("", 1800)))),
+    ("2022-01-01T00:00:00-0030/2022-01-01T12:00:00-0030",
+     DateTimeInterval(
+         datetime(2022, 1, 1, tzinfo=tzoffset("", -1800)), datetime(2022, 1, 1, 12, tzinfo=tzoffset("", -1800)))),
+    ("2022-01-01T00:00:00+12/2022-01-01T12:00:00+12",
+     DateTimeInterval(
+         datetime(2022, 1, 1, tzinfo=tzoffset("", 3600 * 12)),
+         datetime(2022, 1, 1, 12, tzinfo=tzoffset("", 3600 * 12)))),
+    ("2022-01-01T00:00:00-11/2022-01-01T12:00:00-11",
+     DateTimeInterval(
+         datetime(2022, 1, 1, tzinfo=tzoffset("", 3600 * -11)),
+         datetime(2022, 1, 1, 12, tzinfo=tzoffset("", 3600 * -11)))),
+
+    # start/duration tests
+    ("2007-03-01T13:00:00Z/P1Y2M10DT2H30M",
+     DateTimeInterval(datetime(2007, 3, 1, 13, tzinfo=UTC), duration=Duration(1, 2, 10, 2, 30))),
+
+    # duration/end tests
+    ("P1Y2M10DT2H30M/2008-05-11T15:30:00Z",
+     DateTimeInterval(duration=Duration(1, 2, 10, 2, 30), end=datetime(2008, 5, 11, 15, 30, tzinfo=UTC))),
+
+    # duration only tests
+    ("P1Y2M10DT2H30M", DateTimeInterval(duration=Duration(1, 2, 10, 2, 30))),
+
+    # Repeating interval tests
+    ("R2/2022-01-01T00:00:00Z/2022-01-01T12:00:00Z",
+     DateTimeInterval(datetime(2022, 1, 1, tzinfo=UTC), datetime(2022, 1, 1, 12, tzinfo=UTC), recurrences=2)),
+    ("R5/2008-03-01T13:00:00Z/P1Y2M10DT2H30M",
+     DateTimeInterval(datetime(2008, 3, 1, 13, tzinfo=UTC), duration=Duration(1, 2, 10, 2, 30), recurrences=5)),
+    ("R0/P1Y2M10DT2H30M", DateTimeInterval(duration=Duration(1, 2, 10, 2, 30), recurrences=0)),
+    ("R-1/P1Y2M10DT2H30M", DateTimeInterval(duration=Duration(1, 2, 10, 2, 30), recurrences=-1)),
+])
+def test_datetimeinterval_parse_str_valid(str_dti: str, dti_obj: DateTimeInterval):
+    """Can we convert a valid ISO8601 duration string to a Duration object?"""
+    # There are minor but important differences between these test cases and the object->str test cases, as the __str__
+    # method uses a specific ISO compliant format and doesn't support generating all the different valid ISO flavours.
+    # Which is why these test cases aren't shared like the equivalent Duration tests.
+
+    assert DateTimeInterval.parse_str(str_dti) == dti_obj
+
+
+@pytest.mark.parametrize("str_dti", [
+    # Technically having -00:00 as the timezone offset is invalid, as should be +00:00. However, the dateutil library
+    # handles this, and I don't think it's important enough to make it fail, so I've just left it here commented out
+    # to acknowledge its validity as a test case and why we're not testing it
+    # "2022-01-01T00:00:00-00:00/2022-01-01T12:00:00-00:00",
+    "R-2/2022-01-01T00:00:00Z/2022-01-01T12:00:00Z"
+])
+def test_datetimeinterval_parse_str_invalid(str_dti: str):
+    pytest.raises(ValueError, DateTimeInterval.parse_str, str_dti)
+
+
+@pytest.mark.parametrize("dti_obj,str_dti", [
+    # start/end interval tests
+    (DateTimeInterval(datetime(2022, 1, 1, tzinfo=UTC), datetime(2022, 1, 1, 12, tzinfo=UTC)),
+     "2022-01-01T00:00:00+00:00/2022-01-01T12:00:00+00:00"),
+    (DateTimeInterval(datetime(2022, 1, 1, tzinfo=UTC), datetime(2022, 1, 1, 12, tzinfo=UTC)),
+     "2022-01-01T00:00:00+00:00/2022-01-01T12:00:00+00:00"),
+    # microseconds are ignored
+    (DateTimeInterval(datetime(2022, 1, 1, 3, 4, 5, microsecond=6, tzinfo=UTC),
+                      datetime(2022, 1, 1, 12, 1, 2, microsecond=3, tzinfo=UTC)),
+     "2022-01-01T03:04:05+00:00/2022-01-01T12:01:02+00:00"),
+    # start/end interval tests - non UTC timezones
+    (DateTimeInterval(
+        datetime(2022, 1, 1, tzinfo=tzoffset("", 3600)), datetime(2022, 1, 1, 12, tzinfo=tzoffset("", 3600))),
+     "2022-01-01T00:00:00+01:00/2022-01-01T12:00:00+01:00"),
+    (DateTimeInterval(
+        datetime(2022, 1, 1, tzinfo=tzoffset("", -1800)), datetime(2022, 1, 1, 12, tzinfo=tzoffset("", -1800))),
+     "2022-01-01T00:00:00-00:30/2022-01-01T12:00:00-00:30"),
+    (DateTimeInterval(
+        datetime(2022, 1, 1, tzinfo=tzoffset("", 1800)), datetime(2022, 1, 1, 12, tzinfo=tzoffset("", 1800))),
+     "2022-01-01T00:00:00+00:30/2022-01-01T12:00:00+00:30"),
+    (DateTimeInterval(
+        datetime(2022, 1, 1, tzinfo=tzoffset("", -1800)), datetime(2022, 1, 1, 12, tzinfo=tzoffset("", -1800))),
+     "2022-01-01T00:00:00-00:30/2022-01-01T12:00:00-00:30"),
+    (DateTimeInterval(datetime(2022, 1, 1, tzinfo=tzoffset("", 3600 * 12)),
+                      datetime(2022, 1, 1, 12, tzinfo=tzoffset("", 3600 * 12))),
+     "2022-01-01T00:00:00+12:00/2022-01-01T12:00:00+12:00"),
+    (DateTimeInterval(datetime(2022, 1, 1, tzinfo=tzoffset("", 3600 * -11)),
+                      datetime(2022, 1, 1, 12, tzinfo=tzoffset("", 3600 * -11))),
+     "2022-01-01T00:00:00-11:00/2022-01-01T12:00:00-11:00"),
+
+    # start/duration tests
+    (DateTimeInterval(datetime(2007, 3, 1, 13, tzinfo=UTC), duration=Duration(1, 2, 10, 2, 30)),
+     "2007-03-01T13:00:00+00:00/P1Y2M10DT2H30M"),
+
+    # duration/end tests
+    (DateTimeInterval(duration=Duration(1, 2, 10, 2, 30), end=datetime(2008, 5, 11, 15, 30, tzinfo=UTC)),
+     "P1Y2M10DT2H30M/2008-05-11T15:30:00+00:00"),
+
+    # duration only tests
+    (DateTimeInterval(duration=Duration(1, 2, 10, 2, 30)), "P1Y2M10DT2H30M"),
+
+    # Repeating interval tests
+    (DateTimeInterval(datetime(2022, 1, 1, tzinfo=UTC), datetime(2022, 1, 1, 12, tzinfo=UTC), recurrences=2),
+     "R2/2022-01-01T00:00:00+00:00/2022-01-01T12:00:00+00:00"),
+    (DateTimeInterval(datetime(2008, 3, 1, 13, tzinfo=UTC), duration=Duration(1, 2, 10, 2, 30), recurrences=5),
+     "R5/2008-03-01T13:00:00+00:00/P1Y2M10DT2H30M"),
+    (DateTimeInterval(duration=Duration(1, 2, 10, 2, 30), recurrences=0), "R0/P1Y2M10DT2H30M"),
+    (DateTimeInterval(duration=Duration(1, 2, 10, 2, 30), recurrences=-1), "R-1/P1Y2M10DT2H30M"),
+])
+def test_datetimeinterval_str_valid(dti_obj: DateTimeInterval, str_dti: str, ):
+    """Can we convert a Duration object to a valid ISO8601 string?"""
+    # commas are valid as a separator, but we will always serialise using periods
+    assert str(dti_obj) == str_dti
