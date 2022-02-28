@@ -4,7 +4,7 @@ import re
 import string
 import warnings
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from functools import total_ordering
 from pathlib import Path
@@ -13,6 +13,7 @@ from typing import List, Optional, Union, Tuple
 import dateutil.parser
 import pyproj
 import shapely.geometry
+from dateutil.relativedelta import relativedelta
 
 
 class DataType(Enum):
@@ -186,6 +187,40 @@ class Duration:
         # Required for @total_ordering to provide a full suite of rich comparison operators
         return Duration._get_months_seconds(self) < Duration._get_months_seconds(other)
 
+    @staticmethod
+    def _to_relativedelta(d: "Duration") -> relativedelta:
+
+        kwargs = {
+            "years": d.years,
+            "months": d.months,
+            "days": d.days,
+            "hours": d.hours,
+            "minutes": d.minutes,
+            "seconds": d.seconds,
+            "weeks": d.weeks
+        }
+        return relativedelta(**kwargs)
+
+    @staticmethod
+    def _from_relativedelta(rd: relativedelta) -> "Duration":
+        kwargs = {
+            "years": rd.years,
+            "months": rd.months,
+            "hours": rd.hours,
+            "minutes": rd.minutes,
+            "seconds": rd.seconds
+        }
+        if not any(kwargs.items()) and rd.days and not rd.days % 7:
+            kwargs = {"weeks": int(rd.days / 7)}
+        else:
+            kwargs["days"] = rd.days
+
+        # relativedelta doesn't distinguish between 0 and unset, so we'll treat 0 as unset, and filter out anything
+        # without a value
+        kwargs = {k: v for k, v in kwargs.items() if v}
+
+        return Duration(**kwargs)
+
     def _add_durations(self, other: "Duration") -> "Duration":
         kwargs = {}
 
@@ -270,11 +305,18 @@ class Duration:
     def __add__(self, other):
         if isinstance(other, Duration):
             return self._add_durations(other)
+        elif isinstance(other, datetime):
+            rd = Duration._to_relativedelta(self)
+            return other + rd
+        elif isinstance(other, timedelta):
+            rd = Duration._to_relativedelta(self)
+            new_rd = other + rd
+            return Duration._from_relativedelta(new_rd)
 
         return NotImplemented
 
     def __radd__(self, other):
-        return NotImplemented
+        return self.__add__(other)
 
     def __str__(self) -> str:
         """
