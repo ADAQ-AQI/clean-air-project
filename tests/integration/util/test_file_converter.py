@@ -1,6 +1,7 @@
 """Integration tests for file_converter.py"""
 import os
 import pytest
+import netCDF4
 
 from clean_air.util import file_converter as fc
 
@@ -52,7 +53,7 @@ def csv_filename(tmp_output_path):
 
 @pytest.fixture
 def netcdf_filename(tmp_output_path):
-    netcdf_fname = os.path.join(tmp_output_path, "ABD_2015.netcdf")
+    netcdf_fname = os.path.join(tmp_output_path, "ACTH_2016.nc")
     return netcdf_fname
 
 
@@ -100,8 +101,7 @@ def test_convert_csv_to_netcdf(csv_input_path, netcdf_filename):
      conversion into netcdf files."""
     fc.convert_csv(csv_input_path, netcdf_filename)
     try:
-        with open(netcdf_filename) as file:
-            file.read()
+        netCDF4.Dataset(netcdf_filename)
     except FileNotFoundError as fnf_error:
         raise fnf_error
 

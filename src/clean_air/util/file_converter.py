@@ -10,6 +10,7 @@ either an excel or netcdf input file, for example:
 generate_dataframe(filepath)
 """
 
+import csv
 import os
 import pandas as pd
 import json
@@ -17,7 +18,6 @@ import yaml
 import datetime
 import xarray as xr
 from json import JSONEncoder
-
 
 # subclass JSONEncoder
 from pandas.errors import ParserError
@@ -43,11 +43,10 @@ def generate_dataframe(filepath):
         temp_dataset = xr.open_dataset(filepath)
         temp_dataframe = temp_dataset.to_dataframe()
     elif filepath.endswith(".csv"):
-        # rules for csv format:
-        # - header line (column names) must be on row 4 of file (top row is 0)
-        # - column names must be standard python strings (without </> etc.)
-        temp_dataframe = pd.read_csv(filepath, header=4, engine='python')
-
+        # Not only do we need to read this format into a dataframe, but we
+        # also need to reformat it into acceptable standards before passing
+        # it on to saving functions.
+        temp_dataframe = csv_reformatter(filepath)
     else:
         raise ValueError("No reader configured yet for this input format.")
     return pd.DataFrame(temp_dataframe)
@@ -57,6 +56,57 @@ def csv_reformatter(filepath):
     """This function uses a template to reformat known-source CSV files into a
     fixed format that we can then very easily read into a pandas dataframe
     (ready for conversion to netcdf files)."""
+    # rules for csv format:
+    # - header line (column names) must be on row 4 of file (top row is 0)
+    # - column names must be standard python strings.
+
+    # This is a dictionary containing names to look for and what to convert
+    # them into.
+    cap_converters = dict(
+        {'PM<sub>10</sub> particulate matter (Hourly measured)': 'PM10',
+         'Non-volatile PM<sub>10</sub> (Hourly measured)': 'Non-volatilePM10',
+         'Non-volatile PM<sub>2.5</sub> (Hourly measured)': 'Non-volatilePM2p5',
+         'PM<sub>2.5</sub> particulate matter (Hourly measured)': 'PM2p5',
+         'Volatile PM<sub>10</sub> (Hourly measured)': 'Volatile PM10',
+         'Volatile PM<sub>2.5</sub> (Hourly measured)': 'Volatile PM2p5',
+         'Ozone': 'O3',
+         'Nitric Oxide': 'NO',
+         'Nitrogen Dioxide': 'NO2',
+         'Sulphur Dioxide': 'SO2',
+         'Carbon Monoxide': 'CO',
+         'Date': 'Date',
+         'time': 'time'})
+
+    # Now that we have some things to look for we can read the header row of
+    # the file and pull out the applicable column names:
+    data_names = pd.read_csv(filepath, nrows=1, skiprows=4, delimiter=',')
+
+    # We need to narrow down our own list of column names by matching them
+    # to those we are looking for:
+    good_names = []
+    bad_names = []
+    for n, name in enumerate(data_names.columns):
+        if name in (cap_converters.keys() or cap_converters.values()):
+            good_names.append(name)
+        else:
+            bad_names.append(name)
+
+    # And then we need to produce a shorter conversion list containing only
+    # the conversions required in this file:
+    conv_list = {}
+    for k, v in cap_converters.items():
+        if (k or v) in good_names:
+            conv_list[k] = v
+
+    # Now that we have all these relevant lists, we can use them to read the
+    # file into a dataframe, remove the columns we don't need and convert the
+    # column names we do need into an appropriate format for netCDF4:
+    temp_dataframe = pd.read_csv(filepath, header=4, engine='python')
+    temp_dataframe.drop(columns=bad_names, inplace=True)
+    temp_dataframe.rename(columns=conv_list, inplace=True)
+    # This can now be passed back to our more general conversion functions.
+
+    return temp_dataframe
 
 
 def slice_data(dataframe):
@@ -232,6 +282,11 @@ def convert_netcdf(filepath, output_location):
 
 def convert_csv(filepath, output_location):
     """Convert csv files to required netcdf output format.  Output filename
-    must be included in output lotion."""
+    must be included in output location with a valid extension of either '.txt'
+    or '.nc'."""
     temp_dataframe = generate_dataframe(filepath)
-    save_as_netcdf(temp_dataframe, output_location)
+    filetype = os.path.splitext(output_location)[1]
+    if filetype == ".nc":
+        save_as_netcdf(temp_dataframe, output_location)
+    elif filetype == ".txt":
+        pass
