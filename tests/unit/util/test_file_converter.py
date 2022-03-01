@@ -32,6 +32,12 @@ def csv_filepath(sampledir):
     return csv_filepath
 
 
+@pytest.fixture
+def yml_filepath(sampledir):
+    yml_filepath = os.path.join(sampledir, "yaml_data", "station_metadata.yaml")
+    return yml_filepath
+
+
 @pytest.fixture()
 def tmp_output_path(tmp_path):
     tmp_output_path = tmp_path / "tmp_output_path"
@@ -71,9 +77,21 @@ def test_read_netcdf_data(netcdf_filepath):
     assert isinstance(temp_df, pd.DataFrame)
 
 
+def test_read_csv_data(csv_filepath):
+    """
+    Test that csv files are read and converted successfully into
+    temporary dataframe objects.
+    """
+    temp_df = fc.generate_dataframe(filepath=csv_filepath)
+    assert isinstance(temp_df, pd.DataFrame)
+
+
 def test_bad_input_data(csv_filepath):
+    """Test that certain filetypes are rejected by the 'generate_dataframe'
+    function because they are unrecognised (like a yaml file, for example,
+    which we can only convert to at the moment, not from)."""
     with pytest.raises(Exception):
-        fc.generate_dataframe(filepath=csv_filepath)
+        fc.generate_dataframe(filepath=yml_filepath)
 
 
 def test_slice_data(excel_filepath):
@@ -193,3 +211,17 @@ def test_csv_no_index(tmp_output_path, netcdf_filepath):
             else:
                 assert dt.datetime.fromisoformat(row[0])
 
+
+def test_csv_reformat_bad_names_removed(tmp_output_path, csv_filepath):
+    """Test that dataframes that have been reformatted using 'csv_reformatter'
+    no longer contain columns of data we do not require."""
+    tmp_df = fc.csv_reformatter(csv_filepath)
+    assert "status" not in tmp_df.columns
+
+
+def test_csv_reformat_syntax_corrected(tmp_output_path, csv_filepath):
+    """Test that dataframes that have been reformatted using 'csv_reformatter'
+    no longer contain invalid syntax in headers."""
+    tmp_df = fc.csv_reformatter(csv_filepath)
+    assert "PM<sub>10</sub> particulate matter (Hourly measured)" \
+           not in tmp_df.columns
