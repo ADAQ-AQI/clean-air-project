@@ -6,11 +6,10 @@ convert_netcdf(filepath, output_location)
 convert_csv(filepath, output_location)
 
 You can also use this module to access a pandas.DataFrame extracted from
-either an excel or netcdf input file, for example:
-generate_dataframe(filepath)
+either an excel, netcdf or csv input file, for example:
+clean_air.util.file_converter.generate_dataframe(filepath)
 """
 
-import csv
 import os
 import pandas as pd
 import json
@@ -78,7 +77,7 @@ def csv_reformatter(filepath):
          'time': 'time'})
 
     # Now that we have some things to look for we can read the header row of
-    # the file and pull out the applicable column names:
+    # the file to pull out the applicable column names:
     data_names = pd.read_csv(filepath, nrows=1, skiprows=4, delimiter=',')
 
     # We need to narrow down our own list of column names by matching them
@@ -104,7 +103,7 @@ def csv_reformatter(filepath):
     temp_dataframe = pd.read_csv(filepath, header=4, engine='python')
     temp_dataframe.drop(columns=bad_names, inplace=True)
     temp_dataframe.rename(columns=conv_list, inplace=True)
-    # This can now be passed back to our more general conversion functions.
+    # This can now be passed back to our more general converter functions.
 
     return temp_dataframe
 
