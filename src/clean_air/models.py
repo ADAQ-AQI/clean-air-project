@@ -1,14 +1,15 @@
 import dataclasses
 import math
+import operator
 import re
 import string
 import warnings
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from functools import total_ordering
+from functools import total_ordering, cached_property
 from pathlib import Path
-from typing import List, Optional, Union, Tuple
+from typing import List, Optional, Union, Tuple, Dict, Callable, Any
 
 import dateutil.parser
 import pyproj
@@ -74,9 +75,18 @@ class Duration:
     """
     # This class is intended to be read-only. Similar to timedelta, most operations that would cause a change should
     # return a new instance. Here are some things that we could implement, but haven't needed as yet:
-
     # TODO: .replace() method to create a copy of the Duration with the given fields replaced with the supplied values
     # TODO: .remove() method to create a copy of the Duration with the given fields removed
+
+    # Constants used during various field conversions
+    _MONTHS_IN_YEAR = 12
+    _DAYS_IN_WEEK = 7
+    _MICROSECONDS_IN_SECOND = 1000000
+    _SECONDS_IN_MINUTE = 60
+    _SECONDS_IN_HOUR = 60 * _SECONDS_IN_MINUTE
+    _SECONDS_IN_DAY = 24 * _SECONDS_IN_HOUR
+    _SECONDS_IN_WEEK = 7 * _SECONDS_IN_DAY
+    _SECONDS_IN_YEAR = 365 * _SECONDS_IN_DAY  # Common year, rather than Gregorian year (and definitely not Julian!)
 
     # These regexes are for parsing and extracting the values from ISO 8601 duration strings
     # I feel I should apologise for what follows, but also assure it could be a lot worse...
@@ -167,144 +177,229 @@ class Duration:
     def weeks(self) -> float:
         return self._weeks if self._weeks is not None else 0
 
-    @staticmethod
-    def _get_months_seconds(dur: "Duration") -> (int, int):
-        months = dur.months if dur.months else 0
-        months += dur.years * 12 if dur.years else 0
+    @cached_property
+    def _id(self):
+        """
+        This is a helper method that standardises how we compare Duration instances.
+        It's used in functions like __hash__, __eq__, __lte__, etc
 
-        seconds = dur.seconds if dur.seconds else 0
-        seconds += dur.hours * 3600 if dur.hours else 0
-        seconds += dur.days * 86400 if dur.days else 0
-        seconds += dur.weeks * 604800 if dur.weeks else 0
+        Cached because it requires various calculations and has the potential to be called a lot.
+        (We can cache it because Duration is designed to be immutable)
+        """
+        return Duration._get_months_seconds(**Duration._to_dict(self))
+
+    @staticmethod
+    def _get_months_seconds(
+            years: Optional[int] = None,
+            months: Optional[int] = None,
+            days: Optional[float] = None,
+            hours: Optional[float] = None,
+            minutes: Optional[float] = None,
+            seconds: Optional[float] = None,
+            weeks: Optional[float] = None
+    ) -> (int, float):
+        """
+        Convert the different fields to months and seconds, which is useful when doing comparisons as equivalent inputs
+        give the same result.
+
+        Months are reported separately because they're the only unit that can't be converted to seconds, due to months
+        having a variable length. However, months will be normalised to whole years wherever possible
+        (e.g. 12 months -> 1 year) because we can guarantee this duration will always be the same.
+
+        Years, days, hours, minutes, seconds, and weeks will then all be converted to seconds and summed.
+        """
+
+        # Allowing Nones and converting them here makes it easier to call this method
+        years = years if years is not None else 0
+        months = months if months is not None else 0
+        days = days if days is not None else 0
+        hours = hours if hours is not None else 0
+        minutes = minutes if minutes is not None else 0
+        seconds = seconds if seconds is not None else 0
+        weeks = weeks if weeks is not None else 0
+
+        # We can't convert from months to days (or other things) except for converting 12 months to a year.
+        # So we can use this fact to convert as many months to years as possible, then we can convert years to seconds
+        # which gives us greater flexibility when the output of this
+        if months:
+            # We can convert multiples of 12 months to years because we can guarantee that 12 months always equals 1
+            # year, but can't convert partial months because different months have different lengths, so can't guarantee
+            # their length
+            years_from_months = int(months / Duration._MONTHS_IN_YEAR)
+            if years_from_months:
+                years = years + years_from_months
+                # Note, math.fmod is not the same as the modulo operator,
+                # refer to https://docs.python.org/3/library/math.html#math.fmod
+                months = int(math.fmod(months, Duration._MONTHS_IN_YEAR))  # preserves the sign
+
+        seconds += (
+                minutes * Duration._SECONDS_IN_MINUTE + hours * Duration._SECONDS_IN_HOUR
+                + days * Duration._SECONDS_IN_DAY + weeks * Duration._SECONDS_IN_WEEK
+                + years * Duration._SECONDS_IN_YEAR
+        )
 
         return months, seconds
 
-    def __eq__(self, other):
-        # Required for @total_ordering to provide a full suite of rich comparison operators
-        return Duration._get_months_seconds(self) == Duration._get_months_seconds(other)
+    @staticmethod
+    def _to_dict(obj: Union["Duration", relativedelta, timedelta]) -> Dict[str, float]:
+        """
+        Helper method used internally, particularly for situations where we're still calculating values for
+        creating a new Duration instance. Specifically useful for situations where fields contain negative values that
+        we're resolving
+        """
+        if isinstance(obj, Duration):
+            return {
+                "years": obj.years,
+                "months": obj.months,
+                "days": obj.days,
+                "hours": obj.hours,
+                "minutes": obj.minutes,
+                "seconds": obj.seconds,
+                "weeks": obj.weeks
+            }
+        elif isinstance(obj, relativedelta):
+            kwargs = {
+                "years": obj.years,
+                "months": obj.months,
+                "days": obj.days,
+                "hours": obj.hours,
+                "minutes": obj.minutes,
+                "seconds": obj.seconds + obj.microseconds / Duration._MICROSECONDS_IN_SECOND
+            }
 
-    def __lt__(self, other):
-        # Required for @total_ordering to provide a full suite of rich comparison operators
-        return Duration._get_months_seconds(self) < Duration._get_months_seconds(other)
+            # relativedelta doesn't distinguish between 0 and unset, so we'll treat 0 as unset, and filter out anything
+            # without a value
+            kwargs = {k: v for k, v in kwargs.items() if v}
+            # relative deltas can contain negative fields, so we need to normalise the result
+            return Duration._normalise(**kwargs)
+        elif isinstance(obj, timedelta):
+
+            seconds = obj.total_seconds() + obj.microseconds / Duration._MICROSECONDS_IN_SECOND
+            return Duration._normalise(seconds=seconds)
+        else:
+            raise NotImplementedError(f"{type(obj)} is not supported")
 
     @staticmethod
     def _to_relativedelta(d: "Duration") -> relativedelta:
-
-        kwargs = {
-            "years": d.years,
-            "months": d.months,
-            "days": d.days,
-            "hours": d.hours,
-            "minutes": d.minutes,
-            "seconds": d.seconds,
-            "weeks": d.weeks
-        }
-        return relativedelta(**kwargs)
+        return relativedelta(**Duration._to_dict(d))
 
     @staticmethod
     def _from_relativedelta(rd: relativedelta) -> "Duration":
-        kwargs = {
-            "years": rd.years,
-            "months": rd.months,
-            "hours": rd.hours,
-            "minutes": rd.minutes,
-            "seconds": rd.seconds
+        return Duration(**Duration._to_dict(rd))
+
+    @staticmethod
+    def _normalise(
+            years: Optional[int] = None,
+            months: Optional[int] = None,
+            days: Optional[float] = None,
+            hours: Optional[float] = None,
+            minutes: Optional[float] = None,
+            seconds: Optional[float] = None,
+            weeks: Optional[float] = None,
+            *,
+            normalise_to_weeks: bool = False,
+    ) -> Dict[str, Optional[float]]:
+        """
+        :param normalise_to_weeks: If `True`, the result will be converted to weeks if it can be expressed as an integer
+                                   number of weeks
+        """
+
+        months, total_seconds = Duration._get_months_seconds(years, months, days, hours, minutes, seconds, weeks)
+
+        years, seconds = divmod(total_seconds, Duration._SECONDS_IN_YEAR)
+        days, seconds = divmod(seconds, Duration._SECONDS_IN_DAY)
+        hours, seconds = divmod(seconds, Duration._SECONDS_IN_HOUR)
+        minutes, seconds = divmod(seconds, Duration._SECONDS_IN_MINUTE)
+
+        result = {
+            "years": years,
+            "months": months,
+            "days": days,
+            "hours": hours,
+            "minutes": minutes,
+            "seconds": seconds,
+            "weeks": None
         }
-        if not any(kwargs.items()) and rd.days and not rd.days % 7:
-            kwargs = {"weeks": int(rd.days / 7)}
-        else:
-            kwargs["days"] = rd.days
+        if normalise_to_weeks:
+            years_months_hours_minutes_seconds_not_set = not any(v for k, v in result.items()
+                                                                 if k not in ("weeks", "days"))
+            days_can_be_converted_to_weeks = days and not days % Duration._DAYS_IN_WEEK
 
-        # relativedelta doesn't distinguish between 0 and unset, so we'll treat 0 as unset, and filter out anything
-        # without a value
-        kwargs = {k: v for k, v in kwargs.items() if v}
+            if years_months_hours_minutes_seconds_not_set and days_can_be_converted_to_weeks:
+                # Use weeks if days is exactly divisible by 7 and there's no other values (since weeks can only be used
+                # on it's own)
+                result["weeks"] = int(days / 7)
+                result["days"] = None
 
+        for k, v in result.items():
+            if not v:
+                # replace zeroes with None
+                result[k] = None
+            elif k != "seconds":
+                # seconds is the only key that could have a non-integer value, so cast the rest to ints
+                result[k] = int(v)
+
+        if not any(v for v in result.values()):
+            result["seconds"] = 0  # If the result is 0, we need to ensure at least 1 field is not None
+
+        return result
+
+    @staticmethod
+    def parse_str(str_dur: str) -> "Duration":
+        """
+        Convert a valid ISO 8601 Duration string to a Duration object.
+        The combined date and time representation format (e.g. P0003-06-04T12:30:05)
+        """
+        # Considering the best way to parse this, generally the string is made up a series of pairs. Each pair
+        # has a character that identifies the unit and a value. The value can be multiple characters. Additionally,
+        # there is a preceding P and potentially a T mid-string to indicate transition from years/months/weeks/days to
+        # hours/minutes/seconds.
+
+        # As a result, a loop based method that examines 1 character at a time is going to get complex, as we need to
+        # track state such as whether we've seen a T character, which unit we're processing, and collecting values that
+        # span multiple characters across loop iterations.
+
+        # Therefore, I think a regex approach will be the lesser of the available evils and yield the clearest and
+        # easiest to maintain code.
+
+        try:
+            # Substituting "," for "." simplifies the regex and subsequent conversion from str to int/float
+            clean_dur_str = str_dur.replace(",", ".").strip()
+        except AttributeError as e:
+            raise ValueError(f"{str_dur!r} doesn't appear to be a string: {e}")
+
+        parsed_str = Duration._PARSER.fullmatch(clean_dur_str) or Duration._WEEK_PARSER.fullmatch(clean_dur_str)
+        if parsed_str is None:
+            raise ValueError(f"Unable to parse {str_dur!r}; Probably because it's invalid")
+
+        kwargs = {
+            k: float(v) if "." in v else int(v)
+            for k, v in parsed_str.groupdict().items()
+            if v is not None  # Filter out non-matches
+        }
         return Duration(**kwargs)
 
-    def _add_durations(self, other: "Duration") -> "Duration":
-        kwargs = {}
+    def __hash__(self):
+        return hash(self._id)
 
-        if self._weeks and other._weeks:
-            kwargs["weeks"] = self.weeks + other.weeks
-        elif self._weeks or other._weeks:
-            # When adding weeks to a duration that doesn't use weeks,
-            # the weeks must be converted to years, months, days, etc (remembering that weeks can be a float, like 1.75)
-            _WEEKS_IN_YEAR = 52
-            _DAYS_IN_WEEK = 7
-            _HOURS_IN_DAY = 24
-            _MINS_IN_HOUR = 60
-            _SECS_IN_MIN = 60
-
-            # Work out which of the 2 durations has the weeks value, and store that value
-            weeks = self._weeks if self._weeks else other._weeks
-            dur = other if self._weeks else self  # The Duration that doesn't have a "weeks" value
-
-            # Get starting values for fields from the Duration that doesn't have weeks
-            kwargs = {
-                "years": dur._years,
-                "months": dur._months,
-                "days": dur._days,
-                "hours": dur._hours,
-                "minutes": dur._minutes,
-                "seconds": dur._seconds
-            }
-
-            # Convert the weeks value to years/months/days/hours/minutes/seconds
-            if weeks >= _WEEKS_IN_YEAR:
-                years = math.floor(weeks / _WEEKS_IN_YEAR)
-                weeks -= years * _WEEKS_IN_YEAR
-            else:
-                years = None
-            # ignore months, because months aren't a consistent length and so the conversion is ambiguous
-
-            partial_days, days = math.modf(weeks * _DAYS_IN_WEEK)
-            partial_hours, hours = math.modf(partial_days * _HOURS_IN_DAY)
-            partial_minutes, minutes = math.modf(partial_hours * _MINS_IN_HOUR)
-            seconds = round(partial_minutes * _SECS_IN_MIN)
-
-            # Add the converted year/month/day/hours/minutes/seconds values to the starting values
-            if years:
-                kwargs["years"] = kwargs["years"] + years if kwargs["years"] else years
-            if days:
-                kwargs["days"] = kwargs["days"] + days if kwargs["days"] else days
-            if hours:
-                kwargs["hours"] = kwargs["hours"] + hours if kwargs["hours"] else hours
-            if minutes:
-                kwargs["minutes"] = kwargs["minutes"] + minutes if kwargs["minutes"] else minutes
-            if seconds:
-                kwargs["seconds"] = kwargs["seconds"] + seconds if kwargs["seconds"] else seconds
-
+    def __eq__(self, other: Any) -> bool:
+        # Required for @total_ordering to provide a full suite of rich comparison operators
+        if isinstance(other, Duration):
+            return self._id == other._id
         else:
-            # Straight-forward case of combining the values from two Durations that don't use weeks
-            # We don't normalise values, so don't care whether they "rollover" (e.g. a value of 26 hours is fine,
-            # we don't attempt to convert it to 1 day & 2 hours)
+            return False
 
-            # We check the private attributes, because they distinguish between an explicit 0 and unset
-            # We add using the public properties because it simplifies the operation
-            # because any Nones get converted to 0
-            if self._years is not None or other._years is not None:
-                kwargs["years"] = self.years + other.years
-
-            if self._months is not None or other._months is not None:
-                kwargs["months"] = self.months + other.months
-
-            if self._days is not None or other._days is not None:
-                kwargs["days"] = self.days + other.days
-
-            if self._hours is not None or other._hours is not None:
-                kwargs["hours"] = self.hours + other.hours
-
-            if self._minutes is not None or other._minutes is not None:
-                kwargs["minutes"] = self.minutes + other.minutes
-
-            if self._seconds is not None or other._seconds is not None:
-                kwargs["seconds"] = self.seconds + other.seconds
-
-        return Duration(**kwargs)
+    def __lt__(self, other):
+        # Required for @total_ordering to provide a full suite of rich comparison operators
+        if isinstance(other, Duration):
+            return self._id < other._id
+        else:
+            raise TypeError(f"{type(other)} cannot be compared to Duration")
 
     def __add__(self, other):
+        """quantities less than 1 second are truncated"""
         if isinstance(other, Duration):
-            return self._add_durations(other)
+            return self._add_sub_durations(other)
         elif isinstance(other, datetime):
             rd = Duration._to_relativedelta(self)
             return other + rd
@@ -317,6 +412,30 @@ class Duration:
 
     def __radd__(self, other):
         return self.__add__(other)
+
+    def __sub__(self, other):
+        # TODO - Only actually need to be able to sub Duration from datetime - it's time to cut my losses and move on
+        # Support for other types is tricky, as it forces us to handle carryover logic between fields as negative
+        # values aren't allowed. This is possible, but complex, and not necessary for our current use case, so best to
+        # back out of that and avoid
+        if isinstance(other, Duration):
+            return self._add_sub_durations(other, operator.sub)
+        elif isinstance(other, timedelta):
+            new_rd = Duration._to_relativedelta(self) - relativedelta(seconds=int(other.total_seconds()),
+                                                                      microseconds=other.microseconds)
+            return Duration._from_relativedelta(new_rd)
+
+        return NotImplemented
+
+    def __rsub__(self, other):
+        if isinstance(other, datetime):
+            return other - Duration._to_relativedelta(self)
+        elif isinstance(other, timedelta):
+            new_rd = other - Duration._to_relativedelta(self)
+            kwargs = Duration._normalise(**Duration._to_dict(new_rd))
+            return Duration(**kwargs)
+
+        return NotImplemented
 
     def __str__(self) -> str:
         """
@@ -352,39 +471,48 @@ class Duration:
 
         return f"Duration({args_str})"
 
-    @staticmethod
-    def parse_str(str_dur: str) -> "Duration":
-        """
-        Convert a valid ISO 8601 Duration string to a Duration object.
-        The combined date and time representation format (e.g. P0003-06-04T12:30:05)
-        """
-        # Considering the best way to parse this, generally the string is made up a series of pairs. Each pair
-        # has a character that identifies the unit and a value. The value can be multiple characters. Additionally,
-        # there is a preceding P and potentially a T mid-string to indicate transition from years/months/weeks/days to
-        # hours/minutes/seconds.
-
-        # As a result, a loop based method that examines 1 character at a time is going to get complex, as we need to
-        # track state such as whether we've seen a T character, which unit we're processing, and collecting values that
-        # span multiple characters across loop iterations.
-
-        # Therefore, I think a regex approach will be the lesser of the available evils and yield the clearest and
-        # easiest to maintain code.
-
-        try:
-            # Substituting "," for "." simplifies the regex and subsequent conversion from str to int/float
-            clean_dur_str = str_dur.replace(",", ".").strip()
-        except AttributeError as e:
-            raise ValueError(f"{str_dur!r} doesn't appear to be a string: {e}")
-
-        parsed_str = Duration._PARSER.fullmatch(clean_dur_str) or Duration._WEEK_PARSER.fullmatch(clean_dur_str)
-        if parsed_str is None:
-            raise ValueError(f"Unable to parse {str_dur!r}; Probably because it's invalid")
-
+    def _add_sub_durations(
+            self, other: "Duration", operator_func: Callable[[Any, Any], Any] = operator.add) -> "Duration":
         kwargs = {
-            k: float(v) if "." in v else int(v)
-            for k, v in parsed_str.groupdict().items()
-            if v is not None  # Filter out non-matches
+            "years": None,
+            "months": None,
+            "days": None,
+            "hours": None,
+            "minutes": None,
+            "seconds": None
         }
+
+        if self._weeks and other._weeks:
+            kwargs = {
+                "weeks": operator_func(self.weeks, other.weeks),
+            }
+        elif self._weeks or other._weeks:
+            # "Cheat" slightly, by normalising the objects with weeks to their equivalent in days/hours/mins/secs
+            # Then call the operator again. It'll come back to this method, but will take a different branch, which
+            # will do the calculation, rather than reimplementing the same logic in this branch.
+            # Less efficient, but expedient until performance is a problem.
+            normalised_self = (Duration(**Duration._normalise(**Duration._to_dict(self), normalise_to_weeks=False))
+                               if self._weeks else self)
+            normalised_other = (Duration(**Duration._normalise(**Duration._to_dict(other), normalise_to_weeks=False))
+                                if other._weeks else other)
+
+            return operator_func(normalised_self, normalised_other)
+
+        else:
+            # Straight-forward case of combining the values from two Durations that don't use weeks
+
+            # We check the private attributes, because they distinguish between an explicit 0 and unset
+            # We add using the public properties because it simplifies the operation because any Nones get converted
+            # to 0
+            for k, v in kwargs.items():
+                # Loop through the kwargs dict keys (which correspond to years, months, days, hours, seconds, minutes,
+                # seconds). If the private attribute for either self or other are not None, then add the values for
+                # the corresponding properties
+                pvt_attr_name = f"_{k}"
+                if getattr(self, pvt_attr_name) is not None or getattr(other, pvt_attr_name) is not None:
+                    kwargs[k] = operator_func(getattr(self, k), getattr(other, k))
+
+        kwargs = Duration._normalise(**kwargs)
         return Duration(**kwargs)
 
 
@@ -449,8 +577,8 @@ class DateTimeInterval:
         Converts the object to the ISO 8601 string representation of this interval
 
         The generated string will be based off the arguments passed to the __init__ method. For example, if the object
-         was created with `start` and `end` dates, expect the `<start>/<end>` version. Whereas if `end` and `duration` were
-         passed, expect `<duration>/<end>`.
+         was created with `start` and `end` dates, expect the `<start>/<end>` version. Whereas if `end` and `duration`
+         were passed, expect `<duration>/<end>`.
 
         Because there are many flavours of valid ISO string, calling this method on an object created by parsing an ISO
         string isn't guaranteed to re-create the original input. The resulting string will be equivalent, but may not be
