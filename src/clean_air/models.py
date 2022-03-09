@@ -509,6 +509,20 @@ class Duration:
         kwargs = Duration._normalise(**kwargs)
         return Duration(**kwargs)
 
+    def to_timedelta(self) -> timedelta:
+        """
+        Convert this `Duration` instance to a `timedelta`.
+        `Duration` has `months`, but `timedelta` does not. Whilst it's imperfect, for the purposes of this conversion,
+        we treat months as being 30 days long. Otherwise, it's not possible to perform the conversion at all
+        """
+        if self.weeks:
+            return timedelta(weeks=self.weeks)
+        else:
+            months, seconds = Duration._get_months_seconds(
+                self._years, self._months, self._days, self._hours, self._minutes, self._seconds, self._weeks)
+
+            return timedelta(days=self.months * 30, seconds=seconds)
+
 
 @dataclass
 class DateTimeInterval:

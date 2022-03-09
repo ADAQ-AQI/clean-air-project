@@ -559,10 +559,46 @@ def test_duration_str_conversion_invalid(invalid_str_dur: str):
     pytest.raises(ValueError, Duration.parse_str, invalid_str_dur)
 
 
+@pytest.mark.parametrize("dur, expected_td", (
+        (Duration(1, 2, 3, 4, 5, 6.07), timedelta(days=428, hours=4, minutes=5, seconds=6, microseconds=70000)),
+        (Duration(years=1), timedelta(days=365)),
+        (Duration(months=1), timedelta(days=30)),
+        (Duration(days=9, hours=3, minutes=4, seconds=11.07),
+         timedelta(days=9, hours=3, minutes=4, seconds=11, microseconds=70000)),
+
+        (Duration(weeks=54), timedelta(weeks=54)),
+        (Duration(weeks=1), timedelta(weeks=1)),
+        (Duration(weeks=0.5), timedelta(weeks=0.5)),
+
+        (Duration(days=428), timedelta(days=428)),
+        (Duration(days=1), timedelta(days=1)),
+        (Duration(days=0.75), timedelta(days=0.75)),
+
+        (Duration(hours=48), timedelta(days=2)),
+        (Duration(hours=1), timedelta(hours=1)),
+        (Duration(hours=0.123), timedelta(hours=0.123)),
+
+        (Duration(minutes=360), timedelta(hours=6)),
+        (Duration(minutes=1), timedelta(minutes=1)),
+        (Duration(minutes=0.5), timedelta(seconds=30)),
+
+        (Duration(seconds=3600), timedelta(hours=1),),
+        (Duration(seconds=1), timedelta(seconds=1),),
+        (Duration(seconds=0.5), timedelta(milliseconds=500),),
+        (Duration(seconds=54.321), timedelta(milliseconds=54321)),
+        (Duration(seconds=0.0005), timedelta(microseconds=500),),
+), ids=repr)
+def test_duration_to_timedelta(dur: Duration, expected_td: timedelta):
+    """GIVEN a timedelta WHEN Duration.from_timedelta is called THEN the equivalent Duration is returned"""
+    assert dur.to_timedelta() == expected_td
+
+
 @pytest.mark.parametrize("td, expected_dur", (
         (timedelta(weeks=1, days=2, hours=3, minutes=4, seconds=5, milliseconds=6000, microseconds=70000),
          Duration(days=9, hours=3, minutes=4, seconds=11.07)),
+
         (timedelta(weeks=1), Duration(weeks=1)),
+        (timedelta(weeks=0.5), Duration(weeks=0.5)),
         (timedelta(days=1), Duration(days=1)),
         (timedelta(hours=1), Duration(hours=1)),
         (timedelta(minutes=1), Duration(minutes=1)),
