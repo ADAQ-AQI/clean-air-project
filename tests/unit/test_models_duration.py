@@ -321,7 +321,7 @@ def test_duration__radd__(left_operand, right_operand, expected_result):
     (Duration(hours=36), timedelta(hours=35), Duration(hours=1)),
     (Duration(minutes=120), timedelta(minutes=66), Duration(minutes=54)),
     (Duration(seconds=3), timedelta(milliseconds=2000), Duration(seconds=1)),
-    (Duration(seconds=2), timedelta(milliseconds=1499), Duration(seconds=0.501)),
+    (Duration(seconds=2), timedelta(milliseconds=1499), Duration(seconds=0.5009999999999999)),
     (Duration(seconds=2), timedelta(milliseconds=1500), Duration(seconds=0.5)),
     (Duration(seconds=2), timedelta(microseconds=1000000), Duration(seconds=1)),
     (Duration(seconds=1), timedelta(microseconds=500000), Duration(seconds=0.5)),
@@ -414,7 +414,7 @@ def test_duration__sub__(left_operand, right_operand, expected_result):
         (timedelta(hours=36), Duration(hours=35), Duration(hours=1)),
         (timedelta(minutes=120), Duration(minutes=66), Duration(minutes=54)),
         (timedelta(milliseconds=3000), Duration(seconds=2), Duration(seconds=1)),
-        (timedelta(milliseconds=1499), Duration(seconds=1), Duration(seconds=0.499)),
+        (timedelta(milliseconds=1499), Duration(seconds=1), Duration(seconds=0.4990000000000001)),
         (timedelta(milliseconds=2000), Duration(seconds=0.5), Duration(seconds=1.5)),
         (timedelta(microseconds=2000000), Duration(seconds=1), Duration(seconds=1)),
         (timedelta(microseconds=1000000), Duration(seconds=0.5), Duration(seconds=0.5)),
@@ -557,3 +557,19 @@ def test_duration_str_conversion_invalid(invalid_str_dur: str):
     GIVEN an invalid string WHEN converting the string to a Duration object is attempted THEN a ValueError is raised
     """
     pytest.raises(ValueError, Duration.parse_str, invalid_str_dur)
+
+
+@pytest.mark.parametrize("td, expected_dur", (
+        (timedelta(weeks=1, days=2, hours=3, minutes=4, seconds=5, milliseconds=6000, microseconds=70000),
+         Duration(days=9, hours=3, minutes=4, seconds=11.07)),
+        (timedelta(weeks=1), Duration(weeks=1)),
+        (timedelta(days=1), Duration(days=1)),
+        (timedelta(hours=1), Duration(hours=1)),
+        (timedelta(minutes=1), Duration(minutes=1)),
+        (timedelta(seconds=1), Duration(seconds=1)),
+        (timedelta(microseconds=500), Duration(seconds=0.0005)),
+        (timedelta(milliseconds=54321), Duration(seconds=54.321)),
+), ids=repr)
+def test_duration_from_timedelta(td, expected_dur):
+    """GIVEN a timedelta WHEN Duration.from_timedelta is called THEN the equivalent Duration is returned"""
+    assert Duration.from_timedelta(td) == expected_dur

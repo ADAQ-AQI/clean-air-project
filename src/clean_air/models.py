@@ -273,9 +273,7 @@ class Duration:
             # relative deltas can contain negative fields, so we need to normalise the result
             return Duration._normalise(**kwargs)
         elif isinstance(obj, timedelta):
-
-            seconds = obj.total_seconds() + obj.microseconds / Duration._MICROSECONDS_IN_SECOND
-            return Duration._normalise(seconds=seconds)
+            return Duration._normalise(seconds=obj.total_seconds())
         else:
             raise NotImplementedError(f"{type(obj)} is not supported")
 
@@ -345,6 +343,10 @@ class Duration:
         return result
 
     @staticmethod
+    def from_timedelta(td: timedelta) -> "Duration":
+        return Duration(**Duration._to_dict(td))
+
+    @staticmethod
     def parse_str(str_dur: str) -> "Duration":
         """
         Convert a valid ISO 8601 Duration string to a Duration object.
@@ -401,12 +403,9 @@ class Duration:
         if isinstance(other, Duration):
             return self._add_sub_durations(other)
         elif isinstance(other, datetime):
-            rd = Duration._to_relativedelta(self)
-            return other + rd
+            return other + Duration._to_relativedelta(self)
         elif isinstance(other, timedelta):
-            rd = Duration._to_relativedelta(self)
-            new_rd = other + rd
-            return Duration._from_relativedelta(new_rd)
+            return self + Duration.from_timedelta(other)
 
         return NotImplemented
 
@@ -414,16 +413,13 @@ class Duration:
         return self.__add__(other)
 
     def __sub__(self, other):
-        # TODO - Only actually need to be able to sub Duration from datetime - it's time to cut my losses and move on
         # Support for other types is tricky, as it forces us to handle carryover logic between fields as negative
         # values aren't allowed. This is possible, but complex, and not necessary for our current use case, so best to
         # back out of that and avoid
         if isinstance(other, Duration):
             return self._add_sub_durations(other, operator.sub)
         elif isinstance(other, timedelta):
-            new_rd = Duration._to_relativedelta(self) - relativedelta(seconds=int(other.total_seconds()),
-                                                                      microseconds=other.microseconds)
-            return Duration._from_relativedelta(new_rd)
+            return self - Duration.from_timedelta(other)
 
         return NotImplemented
 
@@ -431,9 +427,7 @@ class Duration:
         if isinstance(other, datetime):
             return other - Duration._to_relativedelta(self)
         elif isinstance(other, timedelta):
-            new_rd = other - Duration._to_relativedelta(self)
-            kwargs = Duration._normalise(**Duration._to_dict(new_rd))
-            return Duration(**kwargs)
+            return Duration.from_timedelta(other) - self
 
         return NotImplemented
 
