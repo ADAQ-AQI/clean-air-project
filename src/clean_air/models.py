@@ -109,7 +109,7 @@ class Duration:
 
     def __init__(
             self,
-            years: Optional[int] = None,
+            years: Optional[float] = None,
             months: Optional[int] = None,
             days: Optional[float] = None,
             hours: Optional[float] = None,
@@ -133,10 +133,6 @@ class Duration:
             # If we allowed this, we couldn't generate a valid ISO 8601 string
             raise ValueError("'weeks' cannot be combined with any other arguments")
 
-        if years and not isinstance(years, int):
-            raise ValueError(
-                "'years' must be an int because non-integer years and months are ambiguous and not currently supported"
-            )
         if months and not isinstance(months, int):
             raise ValueError(
                 "'months' must be an int because non-integer years and months are ambiguous and not currently supported"
@@ -154,7 +150,7 @@ class Duration:
         return self._years if self._years is not None else 0
 
     @property
-    def months(self) -> float:
+    def months(self) -> int:
         return self._months if self._months is not None else 0
 
     @property
@@ -278,16 +274,8 @@ class Duration:
             raise NotImplementedError(f"{type(obj)} is not supported")
 
     @staticmethod
-    def _to_relativedelta(d: "Duration") -> relativedelta:
-        return relativedelta(**Duration._to_dict(d))
-
-    @staticmethod
-    def _from_relativedelta(rd: relativedelta) -> "Duration":
-        return Duration(**Duration._to_dict(rd))
-
-    @staticmethod
     def _normalise(
-            years: Optional[int] = None,
+            years: Optional[float] = None,
             months: Optional[int] = None,
             days: Optional[float] = None,
             hours: Optional[float] = None,
@@ -295,19 +283,52 @@ class Duration:
             seconds: Optional[float] = None,
             weeks: Optional[float] = None,
             *,
-            normalise_to_weeks: bool = False,
+            normalise_to_weeks: bool = True,
     ) -> Dict[str, Optional[float]]:
         """
+        The main purpose of this method is to deal with relativedeltas containing negative values, which aren't
+        supported by the ISO8601 spec for Durations. Negative values prevent us from creating a valid Duration, so
+        we need to normalise them before passing to Duration.__init_. That's why this method returns a dictionary and
+        not an instance.
+
+        It also enables us to be more consistent with timedelta behaviour, as they are automatically normalised.
+        We don't automatically normalise because we want the ability to reproduce the supplied parameters as given,
+        so if a user wants P36H and wants that exact string calling str(), they don't get P1D12H instead.
+        We do normalise the result of arithmetic operations however, since we're normalising the result for
+        relativedelta, it's more consistent to do it for all outputs.
+
         :param normalise_to_weeks: If `True`, the result will be converted to weeks if it can be expressed as an integer
                                    number of weeks
         """
 
         months, total_seconds = Duration._get_months_seconds(years, months, days, hours, minutes, seconds, weeks)
 
+        if normalise_to_weeks and not months:
+            weeks, remaining_seconds = divmod(total_seconds, Duration._SECONDS_IN_WEEK)
+            if not remaining_seconds:  # Only normalise to weeks if there's no remainder
+                return {
+                    "years": None,
+                    "months": None,
+                    "days": None,
+                    "hours": None,
+                    "minutes": None,
+                    "seconds": None,
+                    "weeks": weeks
+                }
+
+        # Otherwise, we didn't normalise to whole weeks, so continue normalising to year/month/day/hours/minutes/seconds
         years, seconds = divmod(total_seconds, Duration._SECONDS_IN_YEAR)
         days, seconds = divmod(seconds, Duration._SECONDS_IN_DAY)
         hours, seconds = divmod(seconds, Duration._SECONDS_IN_HOUR)
         minutes, seconds = divmod(seconds, Duration._SECONDS_IN_MINUTE)
+
+        # NOTE: As we convert microseconds and milliseconds to seconds, which results in seconds being a float
+        # this code can result in float precision issues (https://docs.python.org/3/tutorial/floatingpoint.html).
+        # The code is correct, however. I've just tweaked the test cases such that the test inputs don't exhibit any
+        # rounding issues. Since the ISO 8601 Duration has no concept of anything smaller than seconds, the best real
+        # solution is to refactor the class to store seconds as a Decimal, however that's not something I want to
+        # undertake at this time. It also has the drawback of forcing all the arithmetic involving floats to use
+        # Decimal, and there may be cases where Decimal isn't supported in some of the functions we've used
 
         result = {
             "years": years,
@@ -318,16 +339,6 @@ class Duration:
             "seconds": seconds,
             "weeks": None
         }
-        if normalise_to_weeks:
-            years_months_hours_minutes_seconds_not_set = not any(v for k, v in result.items()
-                                                                 if k not in ("weeks", "days"))
-            days_can_be_converted_to_weeks = days and not days % Duration._DAYS_IN_WEEK
-
-            if years_months_hours_minutes_seconds_not_set and days_can_be_converted_to_weeks:
-                # Use weeks if days is exactly divisible by 7 and there's no other values (since weeks can only be used
-                # on it's own)
-                result["weeks"] = int(days / 7)
-                result["days"] = None
 
         for k, v in result.items():
             if not v:
@@ -341,6 +352,11 @@ class Duration:
             result["seconds"] = 0  # If the result is 0, we need to ensure at least 1 field is not None
 
         return result
+
+    @staticmethod
+    def from_relativedelta(rd: relativedelta) -> "Duration":
+        kwargs = {k: v for k, v in Duration._to_dict(rd).items() if v}
+        return Duration(**kwargs)
 
     @staticmethod
     def from_timedelta(td: timedelta) -> "Duration":
@@ -399,13 +415,12 @@ class Duration:
             raise TypeError(f"{type(other)} cannot be compared to Duration")
 
     def __add__(self, other):
-        """quantities less than 1 second are truncated"""
         if isinstance(other, Duration):
             return self._add_sub_durations(other)
         elif isinstance(other, datetime):
-            return other + Duration._to_relativedelta(self)
+            return other + self.to_relativedelta()
         elif isinstance(other, timedelta):
-            return self + Duration.from_timedelta(other)
+            return self._add_sub_durations(Duration.from_timedelta(other))
 
         return NotImplemented
 
@@ -413,21 +428,18 @@ class Duration:
         return self.__add__(other)
 
     def __sub__(self, other):
-        # Support for other types is tricky, as it forces us to handle carryover logic between fields as negative
-        # values aren't allowed. This is possible, but complex, and not necessary for our current use case, so best to
-        # back out of that and avoid
         if isinstance(other, Duration):
             return self._add_sub_durations(other, operator.sub)
         elif isinstance(other, timedelta):
-            return self - Duration.from_timedelta(other)
+            return self._add_sub_durations(Duration.from_timedelta(other), operator.sub)
 
         return NotImplemented
 
     def __rsub__(self, other):
         if isinstance(other, datetime):
-            return other - Duration._to_relativedelta(self)
+            return other - self.to_relativedelta()
         elif isinstance(other, timedelta):
-            return Duration.from_timedelta(other) - self
+            return Duration.from_timedelta(other)._add_sub_durations(self, operator.sub)
 
         return NotImplemented
 
@@ -508,6 +520,70 @@ class Duration:
 
         kwargs = Duration._normalise(**kwargs)
         return Duration(**kwargs)
+
+    def normalized(self) -> "Duration":
+        """
+        Returns a Duration representing the same quantity of time but represented using the largest units possible
+        whilst still using integer values. Equivalent to
+        https://dateutil.readthedocs.io/en/stable/relativedelta.html#dateutil.relativedelta.relativedelta.normalized
+
+        For example:
+        * P24H becomes P1D
+        * P05.D become PT12H
+        * P1.5D become P1DT12H
+
+        Due to the ambiguity between converting months to other units (due to varying number of days), months will
+        only be converted to whole years, and any remainder will remain as months.
+        E.g.
+        * P12M becomes P1Y
+        * P18M becomes P1Y6M.
+
+        On the ambiguity months cause, cConsider, there are 12 months in a year, so it follows that 6 months is half a
+        year; but there a 181 days in Jan-Jun, 184 days in Jul-Dec, & 183 days in Apr-Sep despite all 3 periods being
+        6 months long! Furthermore, considering the number of days in a year, half a year implies 365 days/2= 182.5
+        days, which doesn't correspond with any period of 6 months!
+
+        So, for the purposes of normalisation, a year is 365 days long, doesn't take into account leap days or leap
+        seconds, and we've totally ignored months. Partial years will be converted to days.
+        E.g.
+        * P1.5Y becomes P1Y182D12H (not P1Y6M!)
+        * P0.5Y18M becomes P1Y6M182DT12H (i.e. 18M becomes 1Y6M, combined with the 0.5Y to give 1.5Y6M, and then the
+          0.5Y is converted to days and hours)
+
+        Weeks are a special case too. Since weeks cannot be combined with other fields, so when normalising, we will
+        only normalise to weeks if the value can be expressed as integer weeks.
+        E.g.
+        * P7D becomes P1W
+        * P8D stays as P8D
+        * P14D becomes P2W
+        * P14DT1S stays as P14DT1S
+        * P1.5W becomes P10DT12H
+        """
+        return Duration(**Duration._normalise(
+            self._years, self._months, self._days, self._hours, self._minutes, self._seconds, self._weeks))
+
+    def to_relativedelta(self) -> relativedelta:
+
+        # Duration accepts floats, but relative delta doesn't, so we must normalise first
+        tmp_dur = Duration._normalise(
+            self.years, self.months, self.days, self.hours, self.minutes, self.seconds, weeks=self.weeks)
+
+        if tmp_dur["weeks"]:
+            # after normalisation, if weeks are present, they are guaranteed to be whole and for there to be no other
+            # values
+            return relativedelta(weeks=tmp_dur["weeks"])
+
+        if tmp_dur["seconds"]:
+            partial_seconds, seconds = math.modf(tmp_dur["seconds"])
+            microseconds = int(partial_seconds * Duration._MICROSECONDS_IN_SECOND)
+        else:
+            seconds = 0
+            microseconds = 0
+        # Tidy up the input to remove seconds and None values
+        del tmp_dur["seconds"]
+        tmp_dur = {k: v for k, v in tmp_dur.items() if v}
+
+        return relativedelta(seconds=int(seconds), microseconds=microseconds, **tmp_dur)
 
     def to_timedelta(self) -> timedelta:
         """

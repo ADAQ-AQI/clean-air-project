@@ -6,6 +6,7 @@ import unittest
 from datetime import datetime, timedelta
 
 import pytest
+from dateutil.relativedelta import relativedelta
 
 from clean_air.models import Duration
 
@@ -41,14 +42,14 @@ class DurationTest(unittest.TestCase):
 
     def test_init_kwargs_floats(self):
         """WHEN a Duration is created using keyword arguments and float values THEN the correct values are stored"""
-        d = Duration(seconds=1.1, minutes=2.2, hours=3.3, days=4.4, months=5, years=6)
+        d = Duration(seconds=1.1, minutes=2.2, hours=3.3, days=4.4, months=5, years=6.6)
 
         self.assertEqual(1.1, d.seconds)
         self.assertEqual(2.2, d.minutes)
         self.assertEqual(3.3, d.hours)
         self.assertEqual(4.4, d.days)
         self.assertEqual(5, d.months)  # Floats not allowed here
-        self.assertEqual(6, d.years)  # Floats not allowed here
+        self.assertEqual(6.6, d.years)  # Floats not allowed here
 
         self.assertEqual(0, d.weeks)  # "weeks" cannot be combined with other args
 
@@ -69,14 +70,14 @@ class DurationTest(unittest.TestCase):
 
     def test_init_positionals_floats(self):
         """WHEN a Duration is created using positional arguments and float values THEN the correct values are stored"""
-        d = Duration(6, 5, 4.4, 3.3, 2.2, 1.1)
+        d = Duration(6.0, 5, 4.4, 3.3, 2.2, 1.1)
 
         self.assertEqual(1.1, d.seconds)
         self.assertEqual(2.2, d.minutes)
         self.assertEqual(3.3, d.hours)
         self.assertEqual(4.4, d.days)
         self.assertEqual(5, d.months)  # Floats not allowed here
-        self.assertEqual(6, d.years)  # Floats not allowed here
+        self.assertEqual(6.0, d.years)  # Floats not allowed here
 
         self.assertEqual(0, d.weeks)  # "weeks" cannot be combined with other args
 
@@ -119,7 +120,7 @@ class DurationTest(unittest.TestCase):
 
     def test_init_0_floats(self):
         """GIVEN a values of 0.0 WHEN a Duration is created THEN 0.0 is stored"""
-        d = Duration(0, 0, 0.0, 0.0, 0.0, 0.0)
+        d = Duration(0.0, 0, 0.0, 0.0, 0.0, 0.0)
 
         self.assertEqual(0.0, d.seconds)
         self.assertIsInstance(d.seconds, float)
@@ -131,8 +132,8 @@ class DurationTest(unittest.TestCase):
         self.assertIsInstance(d.days, float)
         self.assertEqual(0, d.months)
         self.assertIsInstance(d.months, int)
-        self.assertEqual(0, d.years)
-        self.assertIsInstance(d.years, int)
+        self.assertEqual(0.0, d.years)
+        self.assertIsInstance(d.years, float)
 
         d = Duration(weeks=0.0)
         self.assertEqual(0.0, d.weeks)
@@ -141,14 +142,6 @@ class DurationTest(unittest.TestCase):
     def test_init_at_least_one_value_set(self):
         """GIVEN no arguments are given WHEN a Duration is created THEN a ValueError is raised"""
         self.assertRaises(ValueError, Duration)
-
-    def test_init_float_years_rejected(self):
-        """
-        GIVEN `years` is a flot WHEN a Duration is created THEN a ValueError is raised
-
-        (Decimal years and months are ambiguous, so not supported)
-        """
-        self.assertRaises(ValueError, Duration, years=0.5)
 
     def test_init_float_months_rejected(self):
         """
@@ -166,6 +159,7 @@ DURATION_ADDITION_TEST_CASES = [
     # Weeks are converted to days when combined with anything other than weeks
     (Duration(1, 2, 3, 4, 5, 6), Duration(weeks=1), Duration(1, 2, 10, 4, 5, 6)),
     # Fractional amounts
+    (Duration(years=0.5), Duration(years=0.5), Duration(years=1)),
     (Duration(days=0.5), Duration(days=0.5), Duration(days=1)),
     (Duration(hours=0.5), Duration(hours=0.5), Duration(hours=1)),
     (Duration(minutes=0.5), Duration(minutes=0.5), Duration(minutes=1)),
@@ -174,7 +168,6 @@ DURATION_ADDITION_TEST_CASES = [
     (Duration(weeks=0.5), Duration(1, 2, 3, 4, 5, 6), Duration(1, 2, 6, 16, 5, 6)),
 
     # Overflowing fields
-    # we don't normalise fields, e.g. convert 26 hours to 1 day 2 hours, so just test things add up correctly
     (Duration(months=6), Duration(months=7), Duration(months=13)),
     (Duration(days=10), Duration(days=25), Duration(days=35)),
     (Duration(hours=20), Duration(hours=20), Duration(hours=40)),
@@ -184,7 +177,7 @@ DURATION_ADDITION_TEST_CASES = [
 
     # DATETIME TEST CASES
     (Duration(1, 2, 3, 4, 5, 6), datetime(2003, 1, 1, 2, 3, 4), datetime(2004, 3, 4, 6, 8, 10)),
-
+    (Duration(years=1), datetime(2003, 1, 1, 2, 3, 4), datetime(2004, 1, 1, 2, 3, 4)),
     (Duration(months=6), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 7, 1, 2, 3, 4)),
     (Duration(days=1), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 2, 2, 3, 4)),
     (Duration(hours=12), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 14, 3, 4)),
@@ -199,6 +192,7 @@ DURATION_ADDITION_TEST_CASES = [
     (Duration(seconds=120), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 2, 5, 4)),
     (Duration(weeks=123), datetime(2003, 1, 1, 2, 3, 4), datetime(2005, 5, 11, 2, 3, 4)),
 
+    (Duration(years=0.5), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 7, 2, 14, 3, 4)),
     (Duration(days=0.5), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 14, 3, 4)),
     (Duration(hours=0.5), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 2, 33, 4)),
     (Duration(minutes=0.5), datetime(2003, 1, 1, 2, 3, 4), datetime(2003, 1, 1, 2, 3, 34)),
@@ -250,6 +244,7 @@ DURATION_ADDITION_TEST_CASES = [
     (Duration(hours=0.5), timedelta(weeks=1), Duration(days=7, hours=0.5)),
     (Duration(minutes=0.5), timedelta(weeks=1), Duration(days=7, minutes=0.5)),
     (Duration(seconds=0.5), timedelta(weeks=1), Duration(days=7, seconds=0.5)),
+    (Duration(years=0.5), timedelta(weeks=1), Duration(days=189, hours=12)),
     (Duration(weeks=0.5), timedelta(weeks=1), Duration(weeks=1.5)),
 ]
 
@@ -285,6 +280,7 @@ def test_duration__radd__(left_operand, right_operand, expected_result):
     # Weeks are converted to days when combined with anything other than weeks
     (Duration(1, 2, 10, 4, 5, 6), Duration(weeks=1), Duration(1, 2, 3, 4, 5, 6)),
     # Fractional amounts
+    (Duration(years=0.5), Duration(years=0.5), Duration(years=0)),
     (Duration(days=0.5), Duration(days=0.5), Duration(days=0)),
     (Duration(hours=0.5), Duration(hours=0.5), Duration(hours=0)),
     (Duration(minutes=0.5), Duration(minutes=0.5), Duration(minutes=0)),
@@ -292,7 +288,6 @@ def test_duration__radd__(left_operand, right_operand, expected_result):
     (Duration(weeks=0.5), Duration(weeks=0.5), Duration(weeks=0)),
 
     # Overflowing fields
-    # we don't normalise fields, e.g. convert 26 hours to 1 day 2 hours, so just test things add up correctly
     (Duration(months=7), Duration(months=6), Duration(months=1)),
     (Duration(days=25), Duration(days=10), Duration(days=15)),
     (Duration(hours=40), Duration(hours=20), Duration(hours=20)),
@@ -361,6 +356,7 @@ def test_duration__sub__(left_operand, right_operand, expected_result):
         # DATETIME TEST CASES
         (datetime(2003, 1, 1, 2, 3, 4), Duration(1, 2, 3, 4, 5, 6), datetime(2001, 10, 28, 21, 57, 58)),
 
+        (datetime(2003, 1, 1, 2, 3, 4), Duration(years=1), datetime(2002, 1, 1, 2, 3, 4)),
         (datetime(2003, 1, 1, 2, 3, 4), Duration(months=6), datetime(2002, 7, 1, 2, 3, 4)),
         (datetime(2003, 1, 1, 2, 3, 4), Duration(days=1), datetime(2002, 12, 31, 2, 3, 4)),
         (datetime(2003, 1, 1, 2, 3, 4), Duration(hours=12), datetime(2002, 12, 31, 14, 3, 4)),
@@ -375,6 +371,7 @@ def test_duration__sub__(left_operand, right_operand, expected_result):
         (datetime(2003, 1, 1, 2, 3, 4), Duration(seconds=120), datetime(2003, 1, 1, 2, 1, 4)),
         (datetime(2003, 1, 1, 2, 3, 4), Duration(weeks=123), datetime(2000, 8, 23, 2, 3, 4)),
 
+        (datetime(2003, 1, 1, 2, 3, 4), Duration(years=0.5), datetime(2002, 7, 2, 14, 3, 4)),
         (datetime(2003, 1, 1, 2, 3, 4), Duration(days=0.5), datetime(2002, 12, 31, 14, 3, 4)),
         (datetime(2003, 1, 1, 2, 3, 4), Duration(hours=0.5), datetime(2003, 1, 1, 1, 33, 4)),
         (datetime(2003, 1, 1, 2, 3, 4), Duration(minutes=0.5), datetime(2003, 1, 1, 2, 2, 34)),
@@ -501,6 +498,58 @@ def test_duration_init_weeks_mutually_exclusive(incompatible_kwarg):
     pytest.raises(ValueError, Duration, **{"weeks": 0, incompatible_kwarg: 0})
 
 
+@pytest.mark.parametrize("dur,expected", [
+    (Duration(seconds=1), Duration(seconds=1)),
+    (Duration(minutes=1), Duration(minutes=1)),
+    (Duration(hours=1), Duration(hours=1)),
+    (Duration(days=1), Duration(days=1)),
+    (Duration(weeks=1), Duration(weeks=1)),
+    (Duration(months=1), Duration(months=1)),
+    (Duration(years=1), Duration(years=1)),
+
+    (Duration(seconds=60), Duration(minutes=1)),
+    (Duration(minutes=60), Duration(hours=1)),
+    (Duration(hours=24), Duration(days=1)),
+    (Duration(days=7), Duration(weeks=1)),
+    (Duration(days=14), Duration(weeks=2)),
+    (Duration(days=365), Duration(years=1)),
+    (Duration(months=12), Duration(years=1)),
+
+    (Duration(seconds=61), Duration(minutes=1, seconds=1)),
+    (Duration(minutes=61), Duration(hours=1, minutes=1)),
+    (Duration(hours=25), Duration(days=1, hours=1)),
+    (Duration(days=8), Duration(days=8)),
+    (Duration(days=14, seconds=1), Duration(days=14, seconds=1)),
+    (Duration(days=366), Duration(years=1, days=1)),
+    (Duration(months=18), Duration(years=1, months=6)),
+
+    (Duration(seconds=0.5), Duration(seconds=0.5)),
+    (Duration(minutes=0.5), Duration(seconds=30)),
+    (Duration(hours=0.5), Duration(minutes=30)),
+    (Duration(days=0.5), Duration(hours=12)),
+    (Duration(weeks=0.5), Duration(days=3, hours=12)),
+    (Duration(weeks=1.5), Duration(days=10, hours=12)),
+    # non-integer months not allowed
+    (Duration(years=0.5), Duration(days=182, hours=12)),
+
+    (Duration(days=1.5), Duration(days=1, hours=12)),
+    (Duration(years=1.5), Duration(years=1, days=182, hours=12))
+], ids=repr)
+def test_duration_normalized(dur: Duration, expected: Duration):
+    actual = dur.normalized()
+    assert actual == expected
+    # Also need to check individual fields,
+    # since Duration.__eq__ treats equivalent values expressed differently as equal
+
+    assert actual.years == expected.years
+    assert actual.months == expected.months
+    assert actual.days == expected.days
+    assert actual.hours == expected.hours
+    assert actual.minutes == expected.minutes
+    assert actual.seconds == expected.seconds
+    assert actual.weeks == expected.weeks
+
+
 DURATION_STR_CONVERSION_TEST_CASES = [
     (Duration(3, 6, 4, 12, 30, 5), "P3Y6M4DT12H30M5S"),
     (Duration(1, 2, 10, 2, 30), "P1Y2M10DT2H30M"),
@@ -582,14 +631,14 @@ def test_duration_str_conversion_invalid(invalid_str_dur: str):
         (Duration(minutes=1), timedelta(minutes=1)),
         (Duration(minutes=0.5), timedelta(seconds=30)),
 
-        (Duration(seconds=3600), timedelta(hours=1),),
-        (Duration(seconds=1), timedelta(seconds=1),),
-        (Duration(seconds=0.5), timedelta(milliseconds=500),),
+        (Duration(seconds=3600), timedelta(hours=1)),
+        (Duration(seconds=1), timedelta(seconds=1)),
+        (Duration(seconds=0.5), timedelta(milliseconds=500)),
         (Duration(seconds=54.321), timedelta(milliseconds=54321)),
-        (Duration(seconds=0.0005), timedelta(microseconds=500),),
+        (Duration(seconds=0.0005), timedelta(microseconds=500)),
 ), ids=repr)
 def test_duration_to_timedelta(dur: Duration, expected_td: timedelta):
-    """GIVEN a timedelta WHEN Duration.from_timedelta is called THEN the equivalent Duration is returned"""
+    """GIVEN a Duration WHEN Duration.to_timedelta is called THEN the equivalent timedelta is returned"""
     assert dur.to_timedelta() == expected_td
 
 
@@ -609,3 +658,58 @@ def test_duration_to_timedelta(dur: Duration, expected_td: timedelta):
 def test_duration_from_timedelta(td, expected_dur):
     """GIVEN a timedelta WHEN Duration.from_timedelta is called THEN the equivalent Duration is returned"""
     assert Duration.from_timedelta(td) == expected_dur
+
+
+@pytest.mark.parametrize("dur, expected_rd", (
+        (Duration(1, 2, 3, 4, 5, 6.07),
+         relativedelta(years=1, months=2, days=3, hours=4, minutes=5, seconds=6, microseconds=70000)),
+        (Duration(years=1), relativedelta(years=1)),
+        (Duration(months=1), relativedelta(months=1)),
+        (Duration(days=3, hours=3, minutes=4, seconds=6.07),
+         relativedelta(days=3, hours=3, minutes=4, seconds=6, microseconds=70000)),
+
+        (Duration(weeks=54), relativedelta(weeks=54)),
+        (Duration(weeks=1), relativedelta(weeks=1)),
+        (Duration(weeks=0.5), relativedelta(days=3, hours=12)),
+
+        (Duration(days=428), relativedelta(years=1, days=63)),
+        (Duration(days=1), relativedelta(days=1)),
+        (Duration(days=0.75), relativedelta(hours=18)),
+
+        (Duration(hours=48), relativedelta(days=2)),
+        (Duration(hours=1), relativedelta(hours=1)),
+        (Duration(hours=0.25), relativedelta(minutes=15)),
+
+        (Duration(minutes=360), relativedelta(hours=6)),
+        (Duration(minutes=1), relativedelta(minutes=1)),
+        (Duration(minutes=0.5), relativedelta(seconds=30)),
+
+        (Duration(seconds=3600), relativedelta(hours=1)),
+        (Duration(seconds=1), relativedelta(seconds=1)),
+        (Duration(seconds=0.0005), relativedelta(microseconds=500)),
+), ids=repr)
+def test_duration_to_relativedelta(dur: Duration, expected_rd: relativedelta):
+    """GIVEN a Duration WHEN Duration.to_relativedelta is called THEN the equivalent relativedelta is returned"""
+
+    assert dur.to_relativedelta() == expected_rd
+
+
+@pytest.mark.parametrize("rd, expected_dur", (
+        (relativedelta(weeks=1, days=2, hours=3, minutes=4, seconds=5, microseconds=70000),
+         Duration(days=9, hours=3, minutes=4, seconds=5.07)),
+
+        (relativedelta(weeks=1), Duration(weeks=1)),
+        (relativedelta(days=1), Duration(days=1)),
+        (relativedelta(days=400), Duration(days=400)),
+        (relativedelta(hours=1), Duration(hours=1)),
+        (relativedelta(hours=36), Duration(hours=36)),
+        (relativedelta(minutes=1), Duration(minutes=1)),
+        (relativedelta(minutes=120), Duration(minutes=120)),
+        (relativedelta(seconds=1), Duration(seconds=1)),
+        (relativedelta(seconds=180), Duration(seconds=180)),
+        (relativedelta(microseconds=500), Duration(seconds=0.0005)),
+        (relativedelta(microseconds=4255000), Duration(seconds=4.255)),
+), ids=repr)
+def test_duration_from_relativedelta(rd: relativedelta, expected_dur: Duration):
+    """GIVEN a relativedelta WHEN Duration.from_relativedelta is called THEN the equivalent Duration is returned"""
+    assert Duration.from_relativedelta(rd) == expected_dur
