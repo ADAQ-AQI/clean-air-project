@@ -622,6 +622,7 @@ class DateTimeInterval:
     * When recurrences=None, the `R[n]/` part of the string representation is omitted
     * When recurrences=0, `R0/` is prefixed to the string representation to explicitly indicate 0 repetitions
     """
+    INFINITE_RECURRENCES = -1
 
     def __init__(
             self,
@@ -651,10 +652,57 @@ class DateTimeInterval:
         if recurrences is not None and recurrences < -1:
             raise ValueError("recurrences cannot be less than -1")
 
-        self.start = start
-        self.end = end
-        self.duration = duration
-        self.recurrences = recurrences
+        self._start = start
+        self._end = end
+        self._duration = duration
+        self._recurrences = recurrences
+
+    @property
+    def start(self) -> Optional[datetime]:
+        if self._start:
+            return self._start
+        elif self._end and self._duration:
+            if not self.recurrences:  # Property converts None->0 for us
+                # No recurrences
+                return self._end - self._duration
+            elif self.recurrences == DateTimeInterval.INFINITE_RECURRENCES:
+                return None
+            else:
+                return self._end - (self.duration.to_timedelta() * self.recurrences)
+        else:
+            return None
+
+    @property
+    def end(self) -> Optional[datetime]:
+        if self._end:
+            return self._end
+        elif self._start and self._duration and self._recurrences != DateTimeInterval.INFINITE_RECURRENCES:
+            if self._recurrences:
+                return self._start + (self.duration.to_timedelta() * self._recurrences)
+            else:
+                return self._start + self._duration
+        else:
+            return None
+
+    @property
+    def duration(self) -> Optional[Duration]:
+
+        if self._duration:
+            return self._duration
+        elif not self._recurrences:
+            return Duration.from_timedelta(self._end - self._start)
+        elif self._recurrences != self.INFINITE_RECURRENCES:
+            td = (self._end - self._start) * self._recurrences
+            return Duration.from_timedelta(td)
+
+    @property
+    def recurrences(self) -> int:
+        """
+        Number of recurrences, -1 for infinite recurrences, 0 for none (obviously), otherwise a positive integer.
+        Internally, we distinguish between implied non-recurrence (recurrences=None) vs explicit non-recurrence
+        (recurrences=0) for recreating strings as they were parsed, but for ease of use here we convert None->0.
+        """
+        return self._recurrences if self._recurrences else 0
 
     def __str__(self) -> str:
         """
@@ -669,21 +717,21 @@ class DateTimeInterval:
         identical.
         """
         parts = []
-        if self.recurrences is not None:
-            parts.append(f"R{self.recurrences}")
+        if self._recurrences is not None:
+            parts.append(f"R{self._recurrences}")
 
-        if self.duration:
-            if self.start:
-                parts.append(self.start.isoformat(timespec="seconds"))
-                parts.append(str(self.duration))
-            elif self.end:
-                parts.append(str(self.duration))
-                parts.append(self.end.isoformat(timespec="seconds"))
+        if self._duration:
+            if self._start:
+                parts.append(self._start.isoformat(timespec="seconds"))
+                parts.append(str(self._duration))
+            elif self._end:
+                parts.append(str(self._duration))
+                parts.append(self._end.isoformat(timespec="seconds"))
             else:
-                parts.append(str(self.duration))
+                parts.append(str(self._duration))
         else:
-            parts.append(self.start.isoformat(timespec="seconds"))
-            parts.append(self.end.isoformat(timespec="seconds"))
+            parts.append(self._start.isoformat(timespec="seconds"))
+            parts.append(self._end.isoformat(timespec="seconds"))
 
         return "/".join(parts)
 

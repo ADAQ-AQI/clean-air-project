@@ -61,8 +61,11 @@ class MetadataTest(unittest.TestCase):
         self.assertEqual(test_crs, m.crs)
 
 
-
 class DateTimeIntervalTest(unittest.TestCase):
+
+    def test_constant_inifinite_recurrences(self):
+        """Verify that DateTimeInterval.INFINITE_RECURRENCES is set to the correct value"""
+        self.assertEqual(-1, DateTimeInterval.INFINITE_RECURRENCES)
 
     def test_init_end_date_before_start_date(self):
         """GIVEN end date is before start date WHEN a DateTimeInterval is created THEN a ValueError is raised"""
@@ -124,14 +127,12 @@ class DateTimeIntervalTest(unittest.TestCase):
         self.assertIsNone(dti.end)
         self.assertEqual(duration, dti.duration)
 
-    @pytest.mark.skip("TODO")
     def test_start_property_inference(self):
         """
         GIVEN a DateTimeInterval created with end and duration parameters
         WHEN start property is accessed
         THEN the correct start date is returned
         """
-        # TODO - write implementation so this test will pass
         d = Duration(weeks=1)
         end = datetime(2022, 1, 8)
         expected_start = datetime(2022, 1, 1)
@@ -139,60 +140,247 @@ class DateTimeIntervalTest(unittest.TestCase):
 
         self.assertEqual(expected_start, dti.start)
 
-    def test_start_property_inference_duration_only(self):
+    def test_start_property_inference_with_recurrence(self):
         """
-        GIVEN a DateTimeInterval created with just a duration parameter
+        GIVEN a DateTimeInterval created with end, duration, and recurrences parameters
+        WHEN start property is accessed
+        THEN the correct start date is returned
+        """
+        d = Duration(weeks=1)
+        recurrences = 40
+        end = datetime(2022, 1, 8)
+        expected_start = end - (timedelta(weeks=1) * recurrences)
+        dti = DateTimeInterval(end=end, duration=d, recurrences=recurrences)
+
+        self.assertEqual(expected_start, dti.start)
+
+    def test_start_property_inference_with_recurrences_zero(self):
+        """
+        GIVEN a DateTimeInterval created with end and duration parameters
+        AND recurrences=0
+        WHEN start property is accessed
+        THEN the correct start date is returned
+        """
+        d = Duration(weeks=1)
+        end = datetime(2022, 1, 8)
+        expected_start = datetime(2022, 1, 1)
+        dti = DateTimeInterval(end=end, duration=d, recurrences=0)
+
+        self.assertEqual(expected_start, dti.start)
+
+    def test_start_property_inference_with_recurrence_infinite(self):
+        """
+        GIVEN a DateTimeInterval created with end, duration, and recurrences parameters
+        AND recurrences are infinite (recurrences=-1)
         WHEN start property is accessed
         THEN None is returned
         """
-
-        d = Duration(weeks=1)
-        dti = DateTimeInterval(duration=d)
+        dti = DateTimeInterval(end=datetime(2022, 1, 8), duration=Duration(weeks=1), recurrences=-1)
 
         self.assertIsNone(dti.start)
 
-    @pytest.mark.skip("TODO")
     def test_end_property_inference(self):
         """
         GIVEN a DateTimeInterval created with start and duration parameters
         WHEN end property is accessed
         THEN the correct end date is returned
         """
-        # TODO - write implementation so this test will pass
         d = Duration(weeks=1)
         start = datetime(2022, 1, 8)
-        expected_end = datetime(2022, 1, 16)
+        expected_end = datetime(2022, 1, 15)
         dti = DateTimeInterval(start=start, duration=d)
 
-        self.assertEqual(expected_end, dti.start)
+        self.assertEqual(expected_end, dti.end)
 
-    def test_end_property_inference_duration_only(self):
+    def test_end_property_inference_with_recurrence(self):
         """
-        GIVEN a DateTimeInterval created with just a duration parameter
+        GIVEN a DateTimeInterval created with start, duration, & recurrence parameters
+        WHEN end property is accessed
+        THEN the correct end date is returned
+        """
+        d = Duration(weeks=1)
+        recurrence = 5
+        start = datetime(2022, 1, 8)
+        expected_end = start + (timedelta(weeks=1) * recurrence)
+        dti = DateTimeInterval(start=start, duration=d, recurrences=recurrence)
+
+        self.assertEqual(expected_end, dti.end)
+
+    def test_end_property_inference_with_recurrence_zero(self):
+        """
+        GIVEN a DateTimeInterval created with start and duration parameters
+        AND recurrence=0
+        WHEN end property is accessed
+        THEN the correct end date is returned
+        """
+        d = Duration(weeks=1)
+        start = datetime(2022, 1, 8)
+        expected_end = datetime(2022, 1, 15)
+        dti = DateTimeInterval(start=start, duration=d, recurrences=0)
+
+        self.assertEqual(expected_end, dti.end)
+
+    def test_end_property_inference_with_recurrence_infinite(self):
+        """
+        GIVEN a DateTimeInterval created with start, duration, and recurrences parameters
+        AND recurrences are infinite (recurrences=-1)
         WHEN end property is accessed
         THEN None is returned
         """
-
-        d = Duration(weeks=1)
-        dti = DateTimeInterval(duration=d)
-
+        dti = DateTimeInterval(start=datetime(2022, 1, 8), duration=Duration(weeks=1), recurrences=-1)
         self.assertIsNone(dti.end)
 
-    @pytest.mark.skip("TODO")
     def test_duration_property_inference(self):
         """
         GIVEN a DateTimeInterval created with start and end date parameters
         WHEN duration property is accessed
         THEN the correct Duration is returned
         """
-        # TODO - write implementation so this test will pass
         start = datetime(2010, 2, 1, 12, 30, 15)
         end = datetime(2013, 1, 12, 9, 15, 3)
-        expected_duration = Duration(2, 11, 10, 20, 44, 48)
+        expected_duration = Duration(years=2, days=345, hours=20, minutes=44, seconds=48)
 
         dti = DateTimeInterval(start, end)
 
         self.assertEqual(expected_duration, dti.duration)
+
+    def test_duration_property_inference_with_recurrence(self):
+        """
+        GIVEN a DateTimeInterval created with start, end, & recurrence parameters
+        WHEN duration property is accessed
+        THEN the correct duration is returned
+        """
+        start = datetime(2010, 2, 1, 12, 30, 15)
+        end = datetime(2013, 1, 12, 9, 15, 3)
+        recurrence = 5
+        expected_duration = Duration.from_timedelta((end - start) * recurrence)
+
+        dti = DateTimeInterval(start, end, recurrences=recurrence)
+
+        self.assertEqual(expected_duration, dti.duration)
+
+
+    def test_duration_property_inference_with_recurrence_zero(self):
+        """
+        GIVEN a DateTimeInterval created with start and end parameters
+        AND recurrence=0
+        WHEN duration property is accessed
+        THEN the correct duration is returned
+        """
+        start = datetime(2010, 2, 1, 12, 30, 15)
+        end = datetime(2013, 1, 12, 9, 15, 3)
+        expected_duration = Duration(years=2, days=345, hours=20, minutes=44, seconds=48)
+
+        dti = DateTimeInterval(start, end, recurrences=0)
+
+        self.assertEqual(expected_duration, dti.duration)
+
+    def test_duration_property_inference_with_recurrence_infinite(self):
+        """
+        GIVEN a DateTimeInterval created with start, end, and recurrences parameters
+        AND recurrences are infinite (recurrences=-1)
+        WHEN duration property is accessed
+        THEN None is returned
+        """
+        dti = DateTimeInterval(start=datetime(2022, 1, 8), end=datetime(2022, 1, 9), recurrences=-1)
+        self.assertIsNone(dti.duration)
+
+    def test_duration_only_properties_are_none(self):
+        """
+        WHEN a DateTimeInterval created with just a duration parameter
+        THEN start property is None
+        AND end property is None
+        """
+
+        d = Duration(weeks=1)
+        dti = DateTimeInterval(duration=d)
+
+        self.assertIsNone(dti.start)
+        self.assertIsNone(dti.end)
+
+    def test_duration_only_properties_are_none_with_recurrence(self):
+        """
+        WHEN a DateTimeInterval created with just a duration parameter
+        AND a recurrences is a positive integer
+        THEN start property is None
+        AND end property is None
+        """
+
+        d = Duration(weeks=1)
+        dti = DateTimeInterval(duration=d, recurrences=5)
+
+        self.assertIsNone(dti.start)
+        self.assertIsNone(dti.end)
+
+    def test_duration_only_properties_are_none_with_recurrence_zero(self):
+        """
+        WHEN a DateTimeInterval created with just a duration parameter
+        AND a recurrences is zero
+        THEN start property is None
+        AND end property is None
+        """
+
+        d = Duration(weeks=1)
+        dti = DateTimeInterval(duration=d, recurrences=0)
+
+        self.assertIsNone(dti.start)
+        self.assertIsNone(dti.end)
+
+    def test_duration_only_properties_are_none_with_recurrence_infinite(self):
+        """
+        WHEN a DateTimeInterval created with just a duration parameter
+        AND recurrences are infinite (recurrences=-1)
+        THEN start property is None
+        AND end property is None
+        """
+
+        d = Duration(weeks=1)
+        dti = DateTimeInterval(duration=d, recurrences=-1)
+
+        self.assertIsNone(dti.start)
+        self.assertIsNone(dti.end)
+
+    def test_recurrences(self):
+        """
+        GIVEN a DateTimeInterval created with recurrences specified
+        THEN the recurrences property gives the value the instance was created with
+        """
+        expected_recurrences = 7
+        dti = DateTimeInterval(duration=Duration(1), recurrences=expected_recurrences)
+        self.assertEqual(expected_recurrences, dti.recurrences)
+
+    def test_recurrences_default(self):
+        """
+        GIVEN a DateTimeInterval created without providing a value for recurrences
+        THEN the recurrences property returns 0
+        """
+        dti = DateTimeInterval(duration=Duration(1))
+        self.assertEqual(0, dti.recurrences)
+
+    def test_recurrences_inifite(self):
+        """
+        GIVEN a DateTimeInterval created with infinite (-1) recurrences specified
+        THEN the recurrences property gives the value the instance was created with
+        """
+        expected_recurrences = -1
+        dti = DateTimeInterval(duration=Duration(1), recurrences=expected_recurrences)
+        self.assertEqual(expected_recurrences, dti.recurrences)
+
+    def test_recurrences_non_recurrence_implied(self):
+        """
+        GIVEN a DateTimeInterval created with recurrences=None
+        THEN the recurrences property returns 0
+        """
+        dti = DateTimeInterval(duration=Duration(1), recurrences=None)
+        self.assertEqual(0, dti.recurrences)
+
+    def test_recurrences_non_recurrence_explicit(self):
+        """
+        GIVEN a DateTimeInterval created with recurrences=0
+        THEN the recurrences property returns 0
+        """
+        dti = DateTimeInterval(duration=Duration(1), recurrences=0)
+        self.assertEqual(0, dti.recurrences)
 
 
 @pytest.mark.parametrize("str_dti, dti_obj", [
