@@ -36,8 +36,8 @@ class MetadataYamlSerialiser(Serialiser[Metadata, str]):
     @staticmethod
     def _serialise_temporal_extent(val: TemporalExtent) -> str:
         # Subject to change
-        start_dt, end_dt = val.interval
-        return f"{start_dt.isoformat()},{end_dt.isoformat()}"
+        start_dt, end_dt = val.bounds
+        return f"{start_dt.isoformat() if start_dt else None},{end_dt.isoformat() if end_dt else None}"
 
     def serialise(self, obj: Metadata) -> str:
         return yaml.safe_dump(

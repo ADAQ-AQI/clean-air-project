@@ -704,6 +704,9 @@ class DateTimeInterval:
         """
         return self._recurrences if self._recurrences else 0
 
+    def __repr__(self) -> str:
+        return f"Duration({self._start!r}, {self._end!r}, {self._duration!r}, {self._recurrences!r})"
+
     def __str__(self) -> str:
         """
         Converts the object to the ISO 8601 string representation of this interval
@@ -782,7 +785,8 @@ class TemporalExtent:
     A temporal extent can be made up of one or more DateTimeIntervals, one or more specific datetimes, or a
     combination of both
     """
-    values: List[Union[datetime, DateTimeInterval]] = dataclasses.field(default_factory=list)
+    values: List[datetime] = dataclasses.field(default_factory=list)
+    intervals: List[DateTimeInterval] = dataclasses.field(default_factory=list)
 
     @property
     def interval(self) -> Tuple[Optional[datetime], Optional[datetime]]:
@@ -797,8 +801,33 @@ class TemporalExtent:
         None indicates an open-ended interval, such as where a duration repeats indefinitely. The lower bound, upper
         bound, or both lower & and upper bounds can be open, depending on the extent being represented.
         """
-        # TODO test and implement
-        return datetime(2022, 2, 2), datetime(2022, 2, 3)  # stubbed implementation
+        lower_bound = None
+        open_lower_bound = False
+        upper_bound = None
+        open_upper_bound = False
+
+        vals = self.values.copy()
+        for dti in self.intervals:
+            if dti.start is None:
+                open_lower_bound = True
+            else:
+                vals.append(dti.start)
+
+            if dti.end is None:
+                open_upper_bound = True
+            else:
+                vals.append(dti.end)
+
+        if not vals:
+            return None, None
+
+        if not open_lower_bound:
+            lower_bound = min(vals)
+
+        if not open_upper_bound:
+            upper_bound = max(vals)
+
+        return lower_bound, upper_bound
 
 
 @dataclass

@@ -25,7 +25,7 @@ class MetadataYamlSerialiserTest(unittest.TestCase):
             "title": m.title,
             "extent": {
                 "spatial": m.extent.spatial.wkt,
-                "temporal": "2022-02-02T00:00:00,2022-02-03T00:00:00"  # Subject to change
+                "temporal": "None,None"  # Subject to change
             },
             "description": m.description,
             "keywords": m.keywords,
