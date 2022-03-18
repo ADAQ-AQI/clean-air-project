@@ -640,6 +640,9 @@ class DateTimeInterval:
                          `start` or `end` (but not both at the same time). If supplied on its own, it won't be possible
                          to calculate the bounds of this interval.
         """
+        if not start and not end and not duration:
+            raise ValueError("At least some parameters must be supplied. Valid options are: "
+                             "start & end, start & duration, end & duration, or just duration on its own")
         if start and end and start > end:
             raise ValueError("start datetime cannot be after end datetime")
 
@@ -657,45 +660,37 @@ class DateTimeInterval:
         self._duration = duration
         self._recurrences = recurrences
 
-    @property
+    @cached_property
     def start(self) -> Optional[datetime]:
+        """The datetime that the interval begins, without taking any recurrence into account"""
         if self._start:
             return self._start
         elif self._end and self._duration:
-            if not self.recurrences:  # Property converts None->0 for us
-                # No recurrences
-                return self._end - self._duration
-            elif self.recurrences == DateTimeInterval.INFINITE_RECURRENCES:
-                return None
-            else:
-                return self._end - (self.duration.to_timedelta() * self.recurrences)
+            return self._end - self._duration
         else:
             return None
 
-    @property
+    @cached_property
     def end(self) -> Optional[datetime]:
+        """The datetime that the interval finishes, without taking any recurrence into account"""
         if self._end:
             return self._end
-        elif self._start and self._duration and self._recurrences != DateTimeInterval.INFINITE_RECURRENCES:
-            if self._recurrences:
-                return self._start + (self.duration.to_timedelta() * self._recurrences)
-            else:
-                return self._start + self._duration
+        elif self._start and self._duration:
+            return self._start + self._duration
         else:
             return None
 
-    @property
+    @cached_property
     def duration(self) -> Optional[Duration]:
-
+        """The length of the interval, ignoring recurrence i.e. the time between the start and end properties"""
         if self._duration:
             return self._duration
-        elif not self._recurrences:
+        elif self._start and self._end:
             return Duration.from_timedelta(self._end - self._start)
-        elif self._recurrences != self.INFINITE_RECURRENCES:
-            td = (self._end - self._start) * self._recurrences
-            return Duration.from_timedelta(td)
+        else:
+            return None  # This case only applies if an empty interval is created e.g. DateTimeInterval()
 
-    @property
+    @cached_property
     def recurrences(self) -> int:
         """
         Number of recurrences, -1 for infinite recurrences, 0 for none (obviously), otherwise a positive integer.
@@ -704,8 +699,95 @@ class DateTimeInterval:
         """
         return self._recurrences if self._recurrences else 0
 
+    @cached_property
+    def lower_bound(self) -> Optional[datetime]:
+        """
+        Get the lower bound of the interval.
+        The convention for intervals is that if the interval was created with a start date parameter, that is always the
+        beginning of the interval, and hence the lower bound.
+        Else if it was created with an end date parameter, that indicates where the interval stops, and any recurrence
+         extends into the past. So the lower bound depends upon the interval's duration and number of recurrences.
+        Otherwise, there isn't enough information to calculate the bounds, and they are undefined.
+        """
+        if self._start:
+            # When we have an explicit start date, the convention is that the interval begins at the start date and
+            # recurs into the future (if applicable), hence an explicit start date is always the lower bound
+            return self._start
+        elif self._end:
+            # If don't have an explicit start date, but do have an explicit end date, then the convention is the
+            # interval stops at the end date and any recurrence extends into the past (if applicable)
+            if self.recurrences == DateTimeInterval.INFINITE_RECURRENCES:
+                return None  # Infinitely recurring interval up to a defined end date, implies no lower bound
+            else:
+                return self._end - self.total_duration
+        else:
+            # Neither start nor end dates, so can't calculate a lower bound
+            return None
+
+    @cached_property
+    def upper_bound(self) -> Optional[datetime]:
+        """
+        Get the upper bound of the interval.
+        The convention for intervals is that if the interval was created with a start date parameter, that is always the
+        beginning of the interval, and any recurrence extends into the future. So the upper bound depends upon the
+          interval's duration and number of recurrences.
+        Else if it was created with an end date parameter, that indicates where the interval stops, so in that case the
+         upper bound is always the end date.
+        Otherwise, there isn't enough information to calculate the bounds, and they are undefined.
+        """
+        if self._start and self._end:
+            # When both start and end are explicitly provided, the convention is that the interval begins at the start
+            # date and recurs into the future (if applicable)
+
+            if self.recurrences == DateTimeInterval.INFINITE_RECURRENCES:
+                # Infinite recurrence into the future implies no upper bound
+                return None
+            elif self.recurrences > 0:
+                return self._start + self.total_duration
+            else:
+                # If there's no recurrences, and we have an end date, then the upper bound is just that date.
+                # In this scenario, self._end == self._start + self.total_duration, but this avoids performing that
+                # calculation unnecessarily
+                return self._end
+        elif self._end:
+            # When an end date is explicitly provided without a start date, the convention is that the interval ends at
+            # the end date and recurs into the past (if applicable). So the upper bound is simply the end date
+            return self._end
+
+        elif self._start:
+            # If we have an explicit start date without an explicit end date, the convention is the interval begins at
+            # the start date and recurs into the future.
+            # Negative values for self.recurrences implies infinite recurrence and the upper bound being undefined.
+            return self._start + self.total_duration if self.recurrences >= 0 else None
+        else:
+            # If we don't have a start or end date, we can't calculate bounds at all
+            return None
+
+    @cached_property
+    def total_duration(self) -> Optional[Duration]:
+        """
+        The length of the interval after taking into account any recurrences. None if the interval recurs infinitely
+        """
+        if self.recurrences >= 0:
+            # Because the count of recurrences doesn't include the original interval
+            total_occurrences = self.recurrences + 1
+            return Duration.from_timedelta(self.duration.to_timedelta() * total_occurrences)
+        else:
+            # recurrences values less than 0 implies infinite recurrence, which has an infinite total duration
+            return None
+
+    def _key(self):
+        """Standardises the way we represent the state of this object for equality comparison and hashing"""
+        return self.recurrences, self.start, self.end, self.duration
+
+    def __eq__(self, other):
+        if isinstance(other, DateTimeInterval):
+            return self._key() == other._key()
+        else:
+            return False
+
     def __repr__(self) -> str:
-        return f"Duration({self._start!r}, {self._end!r}, {self._duration!r}, {self._recurrences!r})"
+        return f"DateTimeInterval({self._start!r}, {self._end!r}, {self._duration!r}, {self._recurrences!r})"
 
     def __str__(self) -> str:
         """
@@ -801,33 +883,25 @@ class TemporalExtent:
         None indicates an open-ended interval, such as where a duration repeats indefinitely. The lower bound, upper
         bound, or both lower & and upper bounds can be open, depending on the extent being represented.
         """
-        lower_bound = None
         open_lower_bound = False
-        upper_bound = None
         open_upper_bound = False
 
         vals = self.values.copy()
         for dti in self.intervals:
-            if dti.start is None:
+            if dti.lower_bound:
+                vals.append(dti.lower_bound)
+            else:
                 open_lower_bound = True
-            else:
-                vals.append(dti.start)
 
-            if dti.end is None:
+            if dti.upper_bound:
+                vals.append(dti.upper_bound)
+            else:
                 open_upper_bound = True
-            else:
-                vals.append(dti.end)
 
-        if not vals:
+        if vals:
+            return min(vals) if not open_lower_bound else None, max(vals) if not open_upper_bound else None
+        else:
             return None, None
-
-        if not open_lower_bound:
-            lower_bound = min(vals)
-
-        if not open_upper_bound:
-            upper_bound = max(vals)
-
-        return lower_bound, upper_bound
 
 
 @dataclass
