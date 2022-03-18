@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 
+import dateutil.parser
 import pyproj
 import shapely.wkt
 import yaml
 
-from .models import Metadata, DataType, Extent, TemporalExtent
+from .models import Metadata, DataType, Extent, TemporalExtent, DateTimeInterval
 
 DeserialisedType = TypeVar("DeserialisedType")
 SerialisedType = TypeVar("SerialisedType")
@@ -34,19 +35,37 @@ class MetadataSerialiser(Serialiser[Metadata, SerialisedType], ABC):
 class MetadataYamlSerialiser(Serialiser[Metadata, str]):
 
     @staticmethod
-    def _serialise_temporal_extent(val: TemporalExtent) -> str:
-        # Subject to change
-        start_dt, end_dt = val.bounds
-        return f"{start_dt.isoformat() if start_dt else None},{end_dt.isoformat() if end_dt else None}"
+    def _serialise_extent(extent: Extent) -> dict:
+        return {
+            "spatial": extent.spatial.wkt,
+            "temporal": MetadataYamlSerialiser._serialise_temporal_extent(extent.temporal)
+        }
+
+    @staticmethod
+    def _serialise_temporal_extent(val: TemporalExtent) -> dict:
+        return {
+            "values": [dt.isoformat() for dt in val.values],
+            "intervals": [str(dti) for dti in val.intervals]
+        }
+
+    @staticmethod
+    def _deserialise_temporal_extent(serialised_temporal_extent: dict) -> TemporalExtent:
+
+        values = [dateutil.parser.isoparse(str_dt) for str_dt in serialised_temporal_extent["values"]]
+        intervals = [DateTimeInterval.parse_str(str_dti) for str_dti in serialised_temporal_extent["intervals"]]
+        return TemporalExtent(values, intervals)
+
+    @staticmethod
+    def _deserialise_extent(extent_dict: dict) -> Extent:
+        spatial_extent = shapely.wkt.loads(extent_dict["spatial"])
+        temporal_extent = MetadataYamlSerialiser._deserialise_temporal_extent(extent_dict["temporal"])
+        return Extent(spatial_extent, temporal_extent)
 
     def serialise(self, obj: Metadata) -> str:
         return yaml.safe_dump(
             {
                 "title": obj.title,
-                "extent": {
-                    "spatial": obj.extent.spatial.wkt,
-                    "temporal": self._serialise_temporal_extent(obj.extent.temporal)
-                },
+                "extent": MetadataYamlSerialiser._serialise_extent(obj.extent),
                 "description": obj.description,
                 "keywords": obj.keywords,
                 "crs": obj.crs.to_wkt(),
@@ -68,7 +87,7 @@ class MetadataYamlSerialiser(Serialiser[Metadata, str]):
             # Backwards compatibility with a previous version, to be phased out eventually
             obj_dict["extent"] = Extent(shapely.wkt.loads(obj_dict["extent"]), TemporalExtent())
         else:
-            obj_dict["extent"] = Extent(shapely.wkt.loads(obj_dict["extent"]["spatial"]), TemporalExtent())
+            obj_dict["extent"] = MetadataYamlSerialiser._deserialise_extent(obj_dict["extent"])
 
         obj_dict["crs"] = pyproj.CRS.from_wkt(obj_dict["crs"])
         obj_dict["data_type"] = DataType(obj_dict["data_type"])
