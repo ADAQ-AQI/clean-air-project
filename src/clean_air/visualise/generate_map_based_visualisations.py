@@ -7,9 +7,7 @@ import os
 
 from clean_air.util import file_converter as fc
 
-
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-
 
 def get_aurn_sites_site_map(site_data, output_path) -> map:
     """This function returns a site_map object with all the AURN sites plotted 
@@ -98,3 +96,20 @@ def get_aircraft_track_map(aircraft_track_coords, output_path) -> map:
     m5.save(output_path)
 
     return m5
+
+def get_boundaries(boundary_data, output_path) -> map:
+    """This function returns a site_map object with a layer displaying boundaries.
+
+    call display(site_map) to show this site_map in a Jupyter notebook
+    There is also an html version generated for use at boundaries.html '"""
+
+    # Create base map
+    boundary_map = folium.Map(location=[50.72039, -1.88092], zoom_start=7)
+
+    # Add boundary layer
+    folium.GeoJson(boundary_data).add_to(boundary_map)
+
+    # Save my completed map
+    boundary_map.save(output_path)
+
+    return boundary_map
