@@ -106,8 +106,11 @@ def get_boundaries(boundary_data, output_path) -> map:
     # Create base map
     boundary_map = folium.Map(location=[50.72039, -1.88092], zoom_start=7)
 
+    # Add some styling
+    style = {'weight': 2}    
+
     # Add boundary layer
-    folium.GeoJson(boundary_data).add_to(boundary_map)
+    folium.GeoJson(boundary_data, style_function = lambda x: style).add_to(boundary_map)
 
     # Save my completed map
     boundary_map.save(output_path)

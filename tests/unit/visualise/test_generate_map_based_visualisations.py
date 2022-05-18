@@ -24,13 +24,17 @@ def aircraft_filepath(sampledir):
                                      "MOCCA_M251_20190903.nc")
     return aircraft_filepath
 
+@pytest.fixture()
+def boundaries_filepath(sampledir):
+    boundaries_filepath = os.path.join(sampledir, "shapefiles",
+                                     "NUTS_Level_1_boundries500mgjsn.geojson")
+    return boundaries_filepath
 
 @pytest.fixture()
 def AURN_site_map(AURN_filepath, tmp_output_path):
     save_path = os.path.join(tmp_output_path, "AURN.html")
     site_map = make_maps.get_aurn_sites_site_map(AURN_filepath, save_path)
     return site_map
-
 
 @pytest.fixture()
 def aircraft_track(aircraft_filepath, tmp_output_path):
@@ -39,6 +43,12 @@ def aircraft_track(aircraft_filepath, tmp_output_path):
                                                       save_path)
     return aircraft_track
 
+@pytest.fixture()
+def boundaries(boundaries_filepath, tmp_output_path):
+    save_path = os.path.join(tmp_output_path, "boundaries.html")
+    boundaries = make_maps.get_boundaries(boundaries_filepath,
+                                                      save_path)
+    return boundaries
 
 # Tests for get_AURN__sites_site_map:
 def test_AURN_site_map_is_Map(AURN_site_map):
@@ -76,3 +86,18 @@ def test_aircraft_track_map_has_children(aircraft_track):
     # Again, this input file is fixed and static so the output should always
     # produce three children.
     assert len(aircraft_track._children) == 3
+
+
+# Tests for get_boundaries:
+def test_boundaries_map_is_Map(boundaries):
+    """Test that boundary data has been successfully converted to a folium
+    Map object."""
+    assert boundaries._name == 'Map'
+
+
+def test_boundaries_map_has_children(boundaries):
+    """Test that children (lines) added during map processing are present in
+    site_map object."""
+    # This is always the same input file, so the number of children
+    # should always be the same.
+    assert len(boundaries._children) == 2
