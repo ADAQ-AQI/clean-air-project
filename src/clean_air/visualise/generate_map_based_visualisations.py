@@ -9,7 +9,7 @@ from clean_air.util import file_converter as fc
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def get_aurn_sites_site_map(site_data, output_path) -> map:
+def get_aurn_sites_site_map(site_data, output_path) -> folium.Map:
     """This function returns a site_map object with all the AURN sites plotted 
     on it.
 
@@ -59,7 +59,7 @@ def get_aurn_sites_site_map(site_data, output_path) -> map:
     return site_map
 
 
-def get_aircraft_track_map(aircraft_track_coords, output_path) -> map:
+def get_aircraft_track_map(aircraft_track_coords, output_path) -> folium.Map:
     """
     Create a standard base map, read and convert aircraft track files
     into lat/lon pairs, then plot these locations on the map and draw lines
@@ -97,7 +97,7 @@ def get_aircraft_track_map(aircraft_track_coords, output_path) -> map:
 
     return m5
 
-def get_boundaries(boundary_data, output_path) -> map:
+def get_boundaries(boundary_data, output_path) -> folium.Map:
     """This function returns a site_map object with a layer displaying boundaries.
 
     call display(site_map) to show this site_map in a Jupyter notebook

@@ -1,4 +1,5 @@
 import os
+import folium
 import pytest
 
 from clean_air.visualise import generate_map_based_visualisations as make_maps
@@ -30,31 +31,19 @@ def boundaries_filepath(sampledir):
                                      "NUTS_Level_1_boundries500mgjsn.geojson")
     return boundaries_filepath
 
+
+# Tests for get_AURN__sites_site_map:
 @pytest.fixture()
 def AURN_site_map(AURN_filepath, tmp_output_path):
     save_path = os.path.join(tmp_output_path, "AURN.html")
     site_map = make_maps.get_aurn_sites_site_map(AURN_filepath, save_path)
     return site_map
 
-@pytest.fixture()
-def aircraft_track(aircraft_filepath, tmp_output_path):
-    save_path = os.path.join(tmp_output_path, "AircraftTrack.html")
-    aircraft_track = make_maps.get_aircraft_track_map(aircraft_filepath,
-                                                      save_path)
-    return aircraft_track
 
-@pytest.fixture()
-def boundaries(boundaries_filepath, tmp_output_path):
-    save_path = os.path.join(tmp_output_path, "boundaries.html")
-    boundaries = make_maps.get_boundaries(boundaries_filepath,
-                                                      save_path)
-    return boundaries
-
-# Tests for get_AURN__sites_site_map:
 def test_AURN_site_map_is_Map(AURN_site_map):
     """Test that AURN site data has been successfully converted to a folium
     Map object."""
-    assert AURN_site_map._name == 'Map'
+    assert isinstance(AURN_site_map, folium.Map)
 
 
 def test_AURN_site_map_has_children(AURN_site_map):
@@ -66,6 +55,14 @@ def test_AURN_site_map_has_children(AURN_site_map):
 
 
 # Tests for get_aircraft_track_map:
+@pytest.fixture()
+def aircraft_track(aircraft_filepath, tmp_output_path):
+    save_path = os.path.join(tmp_output_path, "AircraftTrack.html")
+    aircraft_track = make_maps.get_aircraft_track_map(aircraft_filepath,
+                                                      save_path)
+    return aircraft_track
+
+
 def test_input_filetype_error(AURN_filepath, tmp_output_path):
     """Test that an error is thrown when a non-netCDF filetype is used as
     input data."""
@@ -77,7 +74,7 @@ def test_input_filetype_error(AURN_filepath, tmp_output_path):
 def test_aircraft_track_map_is_Map(aircraft_track):
     """Test that aircraft track data has been successfully converted to a
     folium Map object."""
-    assert aircraft_track._name == 'Map'
+    assert isinstance(aircraft_track, folium.Map)
 
 
 def test_aircraft_track_map_has_children(aircraft_track):
@@ -89,10 +86,18 @@ def test_aircraft_track_map_has_children(aircraft_track):
 
 
 # Tests for get_boundaries:
+@pytest.fixture()
+def boundaries(boundaries_filepath, tmp_output_path):
+    save_path = os.path.join(tmp_output_path, "boundaries.html")
+    boundaries = make_maps.get_boundaries(boundaries_filepath,
+                                                      save_path)
+    return boundaries
+
+
 def test_boundaries_map_is_Map(boundaries):
     """Test that boundary data has been successfully converted to a folium
     Map object."""
-    assert boundaries._name == 'Map'
+    assert isinstance(boundaries, folium.Map)
 
 
 def test_boundaries_map_has_children(boundaries):
