@@ -1,4 +1,3 @@
-from importlib.resources import path
 import os
 import folium
 import pytest
