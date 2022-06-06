@@ -20,7 +20,7 @@ def get_aurn_sites_site_map(site_data, output_path) -> folium.Map:
 
     data_file = site_data
     df = pd.DataFrame(data_file)
-
+    
     # Renaming 'type' column to stop geopanda confusing 'type' with 'geom_type'
     df.rename(columns={"type": "site_type"}, inplace=True)
 
@@ -29,7 +29,7 @@ def get_aurn_sites_site_map(site_data, output_path) -> folium.Map:
                            geometry=gpd.points_from_xy(df.longitude,
                                                        df.latitude))
     # insert multiple markers, iterate through list
-    # add a different color marker associated with type of volcano
+    # add a different color marker associated with type of site
     geo_df_list = [[point.xy[1][0], point.xy[0][0]] for point in gdf.geometry]
     i = 0
 
