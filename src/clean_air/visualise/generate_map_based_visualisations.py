@@ -19,25 +19,27 @@ def get_aurn_sites_site_map(site_data, output_path) -> folium.Map:
     site_map = folium.Map(location=[50.72039, -1.88092], zoom_start=7)
 
     data_file = site_data
-    df = pd.read_csv(data_file, skiprows=0, na_values=['no info', '.'])
+    df = pd.DataFrame(data_file)
+    
+    # Renaming 'type' column to stop geopanda confusing 'type' with 'geom_type'
+    df.rename(columns={"type": "site_type"}, inplace=True)
 
     # Add geometry and convert to geopanda
     gdf = gpd.GeoDataFrame(df, crs="EPSG:4326",
-                           geometry=gpd.points_from_xy(df.Longitude,
-                                                       df.Latitude))
-
+                           geometry=gpd.points_from_xy(df.longitude,
+                                                       df.latitude))
     # insert multiple markers, iterate through list
-    # add a different color marker associated with type of volcano
+    # add a different color marker associated with type of site
     geo_df_list = [[point.xy[1][0], point.xy[0][0]] for point in gdf.geometry]
-
     i = 0
+
     for coordinates in geo_df_list:
         # assign a color marker for the type of AURN site
-        if gdf.Type[i] == "URBAN_BACKGROUND":
+        if gdf.site_type[i] == "URBAN_BACKGROUND":
             type_color = "green"
-        elif gdf.Type[i] == "URBAN_TRAFFIC":
+        elif gdf.site_type[i] == "URBAN_TRAFFIC":
             type_color = "blue"
-        elif gdf.Type[i] == "RURAL_BACKGROUND":
+        elif gdf.site_type[i] == "RURAL_BACKGROUND":
             type_color = "orange"
         else:
             type_color = "purple"
@@ -45,8 +47,8 @@ def get_aurn_sites_site_map(site_data, output_path) -> folium.Map:
         # now place the markers with the popup labels and data
         site_map.add_child(folium.Marker(location=coordinates,
                                          popup=
-                                         "Name: " + str(gdf.Name[i]) + '<br>' +
-                                         "Type: " + str(gdf.Type[i]) + '<br>' +
+                                         "Name: " + str(gdf.name[i]) + '<br>' +
+                                         "Type: " + str(gdf.site_type[i]) + '<br>' +
                                          "Coordinates: " + str(geo_df_list[i]),
                                          icon=folium.Icon(
                                              color="%s" % type_color)))
