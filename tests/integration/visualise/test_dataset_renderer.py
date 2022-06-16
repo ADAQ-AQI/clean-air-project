@@ -63,7 +63,7 @@ def timeseries_filepath(sampledir):
 def clean_data(timeseries_filepath):
     # Note: This is a DataSubset object which can be used and adapted for later
     # fixtures and tests.  These objects are NOT subscriptable.
-    clean_df = DataSubset({"files": timeseries_filepath})
+    clean_df = DataSubset(timeseries_filepath)
     return clean_df
 
 

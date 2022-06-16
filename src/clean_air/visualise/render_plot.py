@@ -61,5 +61,5 @@ class Plot:
         # keep it but we can comment it out once we are happy with formatting.
         # fig.show()
 
-        return fig
+        return fig, ts_plot
 

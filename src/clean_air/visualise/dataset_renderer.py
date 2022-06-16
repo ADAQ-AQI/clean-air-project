@@ -86,7 +86,7 @@ class Renderer:
         elif self.x_coord is None and self.y_coord is None and \
                 self.t_coord is not None:
             self.img_type = 'timeseries'
-            fig = render_plot.Plot(self.plot_list).render_timeseries()
+            fig, ax = render_plot.Plot(self.plot_list).render_timeseries()
         # If we don't have any coords then something's gone wrong and we can't
         # plot anything:
         elif all(coord is None for coord in coords):
@@ -94,29 +94,29 @@ class Renderer:
                              'scalar, please choose a dataset with more '
                              'coordinate points.')
 
-        return fig
+        return fig, ax
 
 
 class TimeSeries:
     """This class should handle inputs and outputs, hopefully.
 
         Args:
-        * lat: latitude coordinate for point of interest (if required)
-        * lon: longitude coordinate for point of interest (if required)
+        * x: x coordinate for point of interest (if required)
+        * y: y coordinate for point of interest (if required)
         * data: full path of data file selected by user or DataSubset object
     """
-    def __init__(self, data, lat=None, lon=None):
+    def __init__(self, data, x=None, y=None):
         if isinstance(data, str):
             self.dpath = data
             self.data = DataSubset(data)
         elif isinstance(data, DataSubset):
-            self.dpath = data.metadata['files']
+            self.dpath = data.metadata
             self.data = data
         else:
             raise TypeError
 
-        self.lat = lat
-        self.lon = lon
+        self.x = x
+        self.y = y
 
     def linear_interpolate(self):
         """Generate dataframe containing linearly interpolated data.  This will
@@ -129,7 +129,7 @@ class TimeSeries:
             * point_cube: an iris cube containing linearly
             interpolated data.
             """
-        point_cube = self.data.extract_point((self.lat, self.lon))
+        point_cube = self.data.extract_point((self.x, self.y))
 
         return point_cube
 
