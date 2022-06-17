@@ -86,7 +86,7 @@ class Renderer:
         elif self.x_coord is None and self.y_coord is None and \
                 self.t_coord is not None:
             self.img_type = 'timeseries'
-            fig, ax = render_plot.Plot(self.plot_list).render_timeseries()
+            fig, axes = render_plot.Plot(self.plot_list).render_timeseries()
         # If we don't have any coords then something's gone wrong and we can't
         # plot anything:
         elif all(coord is None for coord in coords):
@@ -94,7 +94,7 @@ class Renderer:
                              'scalar, please choose a dataset with more '
                              'coordinate points.')
 
-        return fig, ax
+        return fig, axes
 
 
 class TimeSeries:
