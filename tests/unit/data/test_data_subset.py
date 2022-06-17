@@ -35,9 +35,7 @@ class TestPointSubset:
     @staticmethod
     @pytest.fixture
     def dataset(sampledir):
-        return DataSubset(
-            {"files": os.path.join(sampledir, "model_full", "aqum_daily*")}
-        )
+        return DataSubset(os.path.join(sampledir, "model_full", "aqum_daily*"))
 
     @staticmethod
     def test_as_cube(dataset):
@@ -62,9 +60,7 @@ class TestBoxSubset:
     @staticmethod
     @pytest.fixture
     def dataset(sampledir):
-        return DataSubset(
-            {"files": os.path.join(sampledir, "model_full", "aqum_daily*")}
-        )
+        return DataSubset(os.path.join(sampledir, "model_full", "aqum_daily*"))
 
     @staticmethod
     def test_as_cube(dataset):

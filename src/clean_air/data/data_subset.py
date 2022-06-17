@@ -50,7 +50,7 @@ class DataSubset:
             )
 
         try:
-            cube = iris.load_cube(self.metadata.metadata['files'], constraints)
+            cube = iris.load_cube(self.metadata, constraints)
         except AttributeError:
             cube = iris.load_cube(self.metadata['files'], constraints)
 

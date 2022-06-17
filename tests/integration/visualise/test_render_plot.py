@@ -29,13 +29,13 @@ def aircraft_filepath(sampledir):
 def clean_data(timeseries_filepath):
     # Note: This is a DataSubset object which can be used and adapted for later
     # fixtures and tests.  These objects are NOT subscriptable.
-    clean_df = DataSubset({"files": timeseries_filepath})
+    clean_df = DataSubset(timeseries_filepath)
     return clean_df
 
 
 @pytest.fixture()
 def aircraft_data(aircraft_filepath):
-    aircraft_dataset = DataSubset({"files": aircraft_filepath})
+    aircraft_dataset = DataSubset(aircraft_filepath)
     return aircraft_dataset
 
 
@@ -51,7 +51,7 @@ def test_linear_interpolate_3d_plot(clean_data, tmp_output_path):
     produce and return a timeseries plot."""
     interped_data = dataset_renderer.TimeSeries(clean_data, 150, 150).\
         linear_interpolate()
-    interped_plot = dataset_renderer.Renderer(interped_data).render()
+    interped_plot, ax = dataset_renderer.Renderer(interped_data).render()
     assert isinstance(interped_plot, mpl.figure.Figure)
 
 
@@ -60,7 +60,7 @@ def test_box_average_plot(clean_data, tmp_output_path):
         produce and return a timeseries plot."""
     boxed_data = dataset_renderer.TimeSeries(clean_data).\
         spatial_average(shape='box', coords=[10000, 10000, 15000, 15000])
-    boxed_plot = dataset_renderer.Renderer(boxed_data).render()
+    boxed_plot, ax = dataset_renderer.Renderer(boxed_data).render()
     assert isinstance(boxed_plot, mpl.figure.Figure)
 
 
@@ -69,7 +69,7 @@ def test_shape_average_plot(clean_data, tmp_output_path):
     produce and return a timeseries plot."""
     shape = Polygon([(0, 0), (100, 100), (100, 0)])
     shape_data = dataset_renderer.TimeSeries(clean_data).spatial_average(shape)
-    shape_plot = dataset_renderer.Renderer(shape_data).render()
+    shape_plot, ax = dataset_renderer.Renderer(shape_data).render()
     assert isinstance(shape_plot, mpl.figure.Figure)
 
 
@@ -84,7 +84,7 @@ def test_shapes_average_plots(clean_data, tmp_output_path):
     shapes_data = dataset_renderer.TimeSeries(clean_data).\
         spatial_average(shapes)
     # One plot per shape, but side-by-side on same figure
-    shapes_plot = dataset_renderer.Renderer(shapes_data).render()
+    shapes_plot, ax = dataset_renderer.Renderer(shapes_data).render()
     assert isinstance(shapes_plot, mpl.figure.Figure)
 
 # def test_aircraft_data(aircraft_data, tmp_output_path):
