@@ -101,7 +101,6 @@ class DataSubset:
                 dataset by default.
         """
         box = shapely.geometry.box(*box)
-
         cube = self._load_cube()
 
         # Ensure coordinate systems match
