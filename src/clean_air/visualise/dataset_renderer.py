@@ -111,6 +111,9 @@ class TimeSeries:
         elif isinstance(data, DataSubset):
             self.dpath = data.metadata
             self.data = data
+        elif isinstance(data, iris.cube.Cube):
+            self.dpath = data
+            self.data = DataSubset(data)
         else:
             raise TypeError
 
@@ -151,7 +154,7 @@ class TimeSeries:
             the CRS of the dataset.
 
         Returns:
-            * An iris cube containing single-point timeseries data spacially
+            * An iris cube containing single-point timeseries data spatially
             averaged over shape passed in by user.
             """
         # This bit determines the shape required by the user and sends all the
@@ -182,6 +185,12 @@ class TimeSeries:
                 collapsed = partial.collapsed(ycoord, iris.analysis.MEAN)
                 shapes_data.append(collapsed)
             return shapes_data
+
+    def diurnal_average(self):
+        """Generate a mean 24hr profile for data spanning multiple days."""
+        diurnal_cube = self.data.average_time()
+
+        return diurnal_cube
 
 
 
