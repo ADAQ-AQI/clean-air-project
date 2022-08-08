@@ -186,7 +186,7 @@ class DataSubset:
             constraint = iris.Constraint(time=lambda cell: cell.point.hour == hour)
             transverse_cube = cube.extract(constraint)
             mean_cube = transverse_cube.collapsed('time', iris.analysis.MEAN)
-            
+
             # Make the time dimension of the new cube equal to that of the first day
             mean_cube.coord('time').points = transverse_cube.coord('time').points[0]
             cube_list.append(mean_cube)

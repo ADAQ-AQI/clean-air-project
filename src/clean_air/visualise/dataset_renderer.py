@@ -105,15 +105,12 @@ class TimeSeries:
         * data: full path of data file selected by user or DataSubset object
     """
     def __init__(self, data, x=None, y=None):
-        if isinstance(data, str):
+        if isinstance(data, str or iris.cube.Cube):
             self.dpath = data
             self.data = DataSubset(data)
         elif isinstance(data, DataSubset):
             self.dpath = data.metadata
             self.data = data
-        elif isinstance(data, iris.cube.Cube):
-            self.dpath = data
-            self.data = DataSubset(data)
         else:
             raise TypeError
 
@@ -191,7 +188,3 @@ class TimeSeries:
         diurnal_cube = self.data.average_time()
 
         return diurnal_cube
-
-
-
-
