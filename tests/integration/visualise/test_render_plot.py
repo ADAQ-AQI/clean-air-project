@@ -4,7 +4,7 @@ Integration tests for render_plot.py
 
 import os
 import pytest
-import matplotlib as mpl
+import pandas
 from shapely.geometry import Polygon, MultiPolygon
 
 from clean_air.data import DataSubset
@@ -48,34 +48,34 @@ def tmp_output_path(tmp_path):
 
 def test_linear_interpolate_3d_plot(clean_data, tmp_output_path):
     """Test that when data is passed to this function it is processed to
-    produce and return a timeseries plot."""
-    interped_data = dataset_renderer.TimeSeries(clean_data, 150, 150).\
+    produce and return a pandas dataframe."""
+    interpreted_data = dataset_renderer.TimeSeries(clean_data, 150, 150).\
         linear_interpolate()
-    interped_plot, ax = dataset_renderer.Renderer(interped_data).render()
-    assert isinstance(interped_plot, mpl.figure.Figure)
+    interpreted_plot = dataset_renderer.Renderer(interpreted_data).render()
+    assert isinstance(interpreted_plot, pandas.DataFrame)
 
 
 def test_box_average_plot(clean_data, tmp_output_path):
     """Test that when data is passed to this function it is processed to
-        produce and return a timeseries plot."""
+        produce and return a pandas dataframe."""
     boxed_data = dataset_renderer.TimeSeries(clean_data).\
         spatial_average(shape='box', coords=[10000, 10000, 15000, 15000])
-    boxed_plot, ax = dataset_renderer.Renderer(boxed_data).render()
-    assert isinstance(boxed_plot, mpl.figure.Figure)
+    boxed_plot = dataset_renderer.Renderer(boxed_data).render()
+    assert isinstance(boxed_plot, pandas.DataFrame)
 
 
 def test_shape_average_plot(clean_data, tmp_output_path):
     """Test that when data is passed to this function it is processed to
-    produce and return a timeseries plot."""
+    produce and return a pandas dataframe."""
     shape = Polygon([(0, 0), (100, 100), (100, 0)])
     shape_data = dataset_renderer.TimeSeries(clean_data).spatial_average(shape)
-    shape_plot, ax = dataset_renderer.Renderer(shape_data).render()
-    assert isinstance(shape_plot, mpl.figure.Figure)
+    shape_plot = dataset_renderer.Renderer(shape_data).render()
+    assert isinstance(shape_plot, pandas.DataFrame)
 
 
 def test_shapes_average_plots(clean_data, tmp_output_path):
     """Test that when data is passed to this function it is processed to
-        produce and return a set of timeseries plots."""
+        produce and return a pandas dataframe."""
     # NOTE: This test is really slow, presumably due to lots of processing
     # during cell weight evaluation.  Can we speed this up somehow?
     poly_one = Polygon([(0, 0), (10, 10), (10, 0)])
@@ -84,8 +84,8 @@ def test_shapes_average_plots(clean_data, tmp_output_path):
     shapes_data = dataset_renderer.TimeSeries(clean_data).\
         spatial_average(shapes)
     # One plot per shape, but side-by-side on same figure
-    shapes_plot, ax = dataset_renderer.Renderer(shapes_data).render()
-    assert isinstance(shapes_plot, mpl.figure.Figure)
+    shapes_plot = dataset_renderer.Renderer(shapes_data).render()
+    assert isinstance(shapes_plot, pandas.DataFrame)
 
 # def test_aircraft_data(aircraft_data, tmp_output_path):
 #     """Toy test to identify syntax errors in aircraft data."""
