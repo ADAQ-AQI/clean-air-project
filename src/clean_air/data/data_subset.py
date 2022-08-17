@@ -176,7 +176,7 @@ class DataSubset:
 
         return cubes
 
-    def average_time(self):
+    def average_time(self, aggregator):
         """
         Average the value of each hour across multiple days.
         """
@@ -185,7 +185,7 @@ class DataSubset:
         for hour in range(24):            
             constraint = iris.Constraint(time=lambda cell: cell.point.hour == hour)
             transverse_cube = cube.extract(constraint)
-            mean_cube = transverse_cube.collapsed('time', iris.analysis.MEAN)
+            mean_cube = transverse_cube.collapsed('time', aggregator)
 
             # Make the time dimension of the new cube equal to that of the first day
             mean_cube.coord('time').points = transverse_cube.coord('time').points[0]

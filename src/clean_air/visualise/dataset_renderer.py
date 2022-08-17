@@ -105,7 +105,7 @@ class TimeSeries:
         * data: full path of data file selected by user or DataSubset object
     """
     def __init__(self, data, x=None, y=None):
-        if isinstance(data, str or iris.cube.Cube):
+        if isinstance(data, (str, iris.cube.Cube)):
             self.dpath = data
             self.data = DataSubset(data)
         elif isinstance(data, DataSubset):
@@ -183,8 +183,7 @@ class TimeSeries:
                 shapes_data.append(collapsed)
             return shapes_data
 
-    def diurnal_average(self):
+    def diurnal_average(self, aggregator=iris.analysis.MEAN) -> iris.cube.Cube:
         """Generate a mean 24hr profile for data spanning multiple days."""
-        diurnal_cube = self.data.average_time()
 
-        return diurnal_cube
+        return self.data.average_time(aggregator)
