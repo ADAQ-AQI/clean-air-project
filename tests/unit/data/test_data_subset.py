@@ -98,7 +98,7 @@ class TestAverageTime:
 
     @staticmethod
     def test_as_cube(dataset):
-        cube = dataset.average_time()
+        cube = dataset.average_time(iris.analysis.MEAN)
 
         # check that the resulting cube has 24 hours
         assert cube.coord('time').points.shape == (24,)
