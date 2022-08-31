@@ -52,12 +52,10 @@ class TestExtractMetadata:
 
 	@staticmethod
 	def test_extract_cube(cube_1):
-		a = data.extract_metadata.extract_cube_metadata(cube_1)
-		print(a)
-		assert(a.title=="mass_concentration_of_ozone_in_air")
+		metadata = data.extract_metadata.extract_cubelist_metadata(cube_1, 1, [], ['cube'], ['netCDF'])
+		assert(metadata.title=="mass_concentration_of_ozone_in_air")
 
 	@staticmethod
 	def test_extract_cubelist(cube_list):
-		a = data.extract_metadata.extract_cubelist_metadata()
-		print(a)
-		assert(a.title=="mass_concentration_of_ozone_in_air")
+		metadata = data.extract_metadata.extract_cubelist_metadata(cube_list, 1, [], ['cube'], ['netCDF'], 'title', 'desc')
+		assert(metadata.title=="titlee")

@@ -1,6 +1,7 @@
 import iris
 from edr_server.core.models.metadata import CollectionMetadata
-from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExtent
+from edr_server.core.models.parameters import Parameter
+from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExtent, VerticalExtent
 from shapely.geometry import Polygon
 
 def _cube_to_polygon(cube):
@@ -53,18 +54,60 @@ def _cube_to_polygon(cube):
                 (x_bounds_lower, y_bounds_upper), 
                 (x_bounds_upper, y_bounds_upper)]
 
-    return Polygon(coords)
+    if x_coord.coord_system == y_coord.coord_system:
+        return Polygon(coords), x_coord.coord_system
 
-def extract_cube_metadata(cubes):
-    name = cubes.standard_name
+    else:
+        return Polygon(coords)
 
-    #convert iris geometry to polygon
-    spatial_extent = SpatialExtent(_cube_to_polygon(cubes)) #include crs? each Coord has coord_system
-    temporal_extent = TemporalExtent(cubes.coord('time').points)
-    total_extents = Extents(spatial_extent, temporal_extent)
+def extract_cubelist_metadata(cubes, id, keywords, supported_data_queries, output_formats, title=None, description=None):
+
+    #use the 'biggest' extents for total? or only present them in the case where they're all the same?
+    #A: Need to do this https://github.com/MetOffice/edr_server/issues/31. Also remember MultiPolygon class
+
+    if isinstance(cubes, iris.cube.Cube):
+        name = cubes.standard_name
+        summary = cubes.summary()
+
+        cubes = iris.cube.CubeList([cubes])
+
+    elif isinstance(cubes, iris.cube.CubeList):
+        name = title
+        summary = description
+
+    parameters = []
+    total_temporal_extent = [] # list of numpy ndarrays
+    total_vertical_extent = [] 
+
+    for cube in cubes:
+        spatial_extent = SpatialExtent(_cube_to_polygon(cube))
+        temporal_extent = TemporalExtent(cube.coord('time').points)
+        if len(cube.coords(axis='z')) == 1:
+            vertical_extent = VerticalExtent(cube.coord(axis='z').points)
+            total_vertical_extent.append(cube.coord(axis='z').points)
+        else:
+            vertical_extent = None
+        total_temporal_extent.append(cube.coord('time').points)
+        cube_extent = Extents(spatial_extent, temporal_extent, vertical_extent)
+
+        parameters.append(Parameter(id=cube.name, unit=cube.units, observed_property=cube.name, extent=cube_extent))
+
+    if len(cubes) == 1:
+        total_extent = cube_extent
+    else:
+        total_temporal_extent = TemporalExtent(total_temporal_extent)
+        total_vertical_extent = VerticalExtent(total_vertical_extent)
+        total_spatial_extent = Polygon([(0, 0), (1, 1), (1, 0)]) # placeholder
+        total_extent = Extents(total_spatial_extent, total_temporal_extent, total_vertical_extent)
+
     kwargs = {
-        "id": 1,
+        "id": id,
         "title": name,
-        "extent": total_extents
+        "description": summary,
+        "keywords": keywords,
+        "extent": total_extent,
+        "supported_data_queries": supported_data_queries,
+        "output_formats": output_formats,
+        "parameters": parameters
     }
     return CollectionMetadata(**kwargs)
