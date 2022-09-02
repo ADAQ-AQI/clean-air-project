@@ -60,15 +60,11 @@ def _cube_to_polygon(cube):
     else:
         return Polygon(coords)
 
-def extract_cubelist_metadata(cubes, id, keywords, supported_data_queries, output_formats, title=None, description=None):
-
-    #use the 'biggest' extents for total? or only present them in the case where they're all the same?
-    #A: Need to do this https://github.com/MetOffice/edr_server/issues/31. Also remember MultiPolygon class
+def extract_metadata(cubes, id, keywords, supported_data_queries, output_formats, title=None, description=None):
 
     if isinstance(cubes, iris.cube.Cube):
         name = cubes.standard_name
         summary = cubes.summary()
-
         cubes = iris.cube.CubeList([cubes])
 
     elif isinstance(cubes, iris.cube.CubeList):
@@ -76,18 +72,18 @@ def extract_cubelist_metadata(cubes, id, keywords, supported_data_queries, outpu
         summary = description
 
     parameters = []
-    total_temporal_extent = [] # list of numpy ndarrays
-    total_vertical_extent = [] 
+    total_temporal_extent_list = [] # list of numpy ndarrays
+    total_vertical_extent_list = [] 
 
     for cube in cubes:
         spatial_extent = SpatialExtent(_cube_to_polygon(cube))
         temporal_extent = TemporalExtent(cube.coord('time').points)
         if len(cube.coords(axis='z')) == 1:
             vertical_extent = VerticalExtent(cube.coord(axis='z').points)
-            total_vertical_extent.append(cube.coord(axis='z').points)
+            total_vertical_extent_list.append(cube.coord(axis='z').points)
         else:
             vertical_extent = None
-        total_temporal_extent.append(cube.coord('time').points)
+        total_temporal_extent_list.append(cube.coord('time').points)
         cube_extent = Extents(spatial_extent, temporal_extent, vertical_extent)
 
         parameters.append(Parameter(id=cube.name, unit=cube.units, observed_property=cube.name, extent=cube_extent))
@@ -95,9 +91,12 @@ def extract_cubelist_metadata(cubes, id, keywords, supported_data_queries, outpu
     if len(cubes) == 1:
         total_extent = cube_extent
     else:
-        total_temporal_extent = TemporalExtent(total_temporal_extent)
-        total_vertical_extent = VerticalExtent(total_vertical_extent)
-        total_spatial_extent = Polygon([(0, 0), (1, 1), (1, 0)]) # placeholder
+        total_temporal_extent = TemporalExtent(total_temporal_extent_list)
+        total_vertical_extent = VerticalExtent(total_vertical_extent_list)
+
+        # Placeholder for spatial extent until we do this https://github.com/MetOffice/edr_server/issues/31. 
+        # Also remember MultiPolygon class!
+        total_spatial_extent = Polygon([(0, 0), (1, 1), (1, 0)])
         total_extent = Extents(total_spatial_extent, total_temporal_extent, total_vertical_extent)
 
     kwargs = {
