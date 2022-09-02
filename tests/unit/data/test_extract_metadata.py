@@ -1,4 +1,3 @@
-import array
 import pytest
 from iris.coords import DimCoord
 from iris.cube import Cube, CubeList
