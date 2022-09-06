@@ -11,6 +11,8 @@ clean_air.util.file_converter.generate_dataframe(filepath)
 """
 
 import os
+from typing import List
+
 import pandas as pd
 import json
 import yaml
@@ -52,7 +54,7 @@ def generate_dataframe(filepath):
 
 
 def csv_reformatter(filepath):
-    """This function uses a template to reformat known-source CSV files into a
+    """This function uses a template to reformat AURN-style CSV files into a
     fixed format that we can then very easily read into a pandas dataframe
     (ready for conversion to netcdf files)."""
     # rules for csv format:
@@ -84,7 +86,7 @@ def csv_reformatter(filepath):
     # to those we are looking for:
     good_names = []
     bad_names = []
-    for n, name in enumerate(data_names.columns):
+    for name in data_names.columns:
         if name in (cap_converters.keys() or cap_converters.values()):
             good_names.append(name)
         else:
@@ -108,7 +110,7 @@ def csv_reformatter(filepath):
     return temp_dataframe
 
 
-def slice_data(dataframe):
+def slice_data(dataframe) -> List:
     """
     This function iterates through rows of a multiple-response dataframe and
     creates a more organised dataframe for each response.  This is a necessary
@@ -229,7 +231,7 @@ def save_as_yaml(data_object, r, output_location):
                   sort_keys=False)
 
 
-def save_as_csv(data_object, output_location):
+def save_as_csv(data_object: pd.DataFrame, output_location):
     """
     Convert pandas.DataFrame object to csv file and save in specified
     location.  Filename must be included as part of output_location.

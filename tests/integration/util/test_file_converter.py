@@ -67,8 +67,8 @@ def test_convert_excel_to_json(xl_input_path, json_filename):
     try:
         with open(json_filename) as file:
             file.read()
-    except FileNotFoundError as fnf_error:
-        raise fnf_error
+    except FileNotFoundError as exc:
+        pytest.fail(f"Unexpected exception: {exc}")
 
 
 def test_convert_excel_to_yaml(xl_input_path, yaml_filename):
@@ -81,8 +81,8 @@ def test_convert_excel_to_yaml(xl_input_path, yaml_filename):
     try:
         with open(yaml_filename) as file:
             file.read()
-    except FileNotFoundError as fnf_error:
-        raise fnf_error
+    except FileNotFoundError as exc:
+        pytest.fail(f"Unexpected exception: {exc}")
 
 
 def test_convert_netcdf_to_csv(netcdf_input_path, csv_filename):
@@ -92,8 +92,8 @@ def test_convert_netcdf_to_csv(netcdf_input_path, csv_filename):
     try:
         with open(csv_filename) as file:
             file.read()
-    except FileNotFoundError as fnf_error:
-        raise fnf_error
+    except FileNotFoundError as exc:
+        pytest.fail(f"Unexpected exception: {exc}")
 
 
 def test_convert_csv_to_netcdf(csv_input_path, netcdf_filename):
@@ -102,6 +102,7 @@ def test_convert_csv_to_netcdf(csv_input_path, netcdf_filename):
     fc.convert_csv(csv_input_path, netcdf_filename)
     try:
         netCDF4.Dataset(netcdf_filename)
-    except FileNotFoundError as fnf_error:
-        raise fnf_error
+    except FileNotFoundError as exc:
+        pytest.fail(f"Unexpected exception: {exc}")
+
 
