@@ -31,7 +31,7 @@ class DateTimeEncoder(JSONEncoder):
             return obj.isoformat()
 
 
-def generate_dataframe(filepath):
+def generate_dataframe(filepath) -> pd.DataFrame:
     """
     Reads in data from specified input type and holds as temporary
     pandas.DataFrame object.
@@ -53,7 +53,7 @@ def generate_dataframe(filepath):
     return pd.DataFrame(temp_dataframe)
 
 
-def csv_reformatter(filepath):
+def csv_reformatter(filepath) -> pd.DataFrame:
     """This function uses a template to reformat AURN-style CSV files into a
     fixed format that we can then very easily read into a pandas dataframe
     (ready for conversion to netcdf files)."""
