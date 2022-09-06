@@ -25,7 +25,7 @@ from pandas.errors import ParserError
 
 
 class DateTimeEncoder(JSONEncoder):
-    # Override default method so we can extract and encode datetimes:
+    # Override default method so that we can extract and encode datetimes:
     def default(self, obj):
         if isinstance(obj, (datetime.date, datetime.datetime)):
             return obj.isoformat()
@@ -150,7 +150,7 @@ def slice_data(dataframe) -> List:
     return form_responses
 
 
-def save_as_json(data_object, r, output_location):
+def save_as_json(data_object: pd.DataFrame, r, output_location):
     """
     Uses data held in pandas DataFrame to enter into form template and
     save as JSON string.
@@ -177,7 +177,7 @@ def save_as_json(data_object, r, output_location):
         json.dump(new_file, fp, indent=2, cls=DateTimeEncoder)
 
 
-def save_as_yaml(data_object, r, output_location):
+def save_as_yaml(data_object: pd.DataFrame, r, output_location):
     """
     Uses data held in pandas DataFrame to enter into form template and
     save as yaml.  Each data object entered here should be a single
@@ -239,7 +239,7 @@ def save_as_csv(data_object: pd.DataFrame, output_location):
     data_object.to_csv(output_location, index=False)
 
 
-def save_as_netcdf(data_object, output_location):
+def save_as_netcdf(data_object: pd.DataFrame, output_location):
     """
     Convert pandas.DataFrame object to netcdf file and save in specified
     location.  Filename must be included as part of output_location.
