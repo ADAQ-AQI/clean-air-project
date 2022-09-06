@@ -58,6 +58,11 @@ def timeseries_filepath(sampledir):
                                        "aqum_hourly_o3_20200520.nc")
     return timeseries_filepath
 
+@pytest.fixture()
+def diurnal_filepath(sampledir):
+    diurnal_filepath = os.path.join(sampledir, "model_full",
+                                       "aqum_hourly_o3_48_hours.nc")
+    return diurnal_filepath
 
 @pytest.fixture()
 def clean_data(timeseries_filepath):
@@ -66,6 +71,12 @@ def clean_data(timeseries_filepath):
     clean_df = DataSubset(timeseries_filepath)
     return clean_df
 
+@pytest.fixture()
+def multiday_data(diurnal_filepath):
+    # Note: This is a DataSubset object which can be used and adapted for later
+    # fixtures and tests.  These objects are NOT subscriptable.
+    multiday_df = DataSubset(diurnal_filepath)
+    return multiday_df
 
 @pytest.fixture()
 def tmp_output_path(tmp_path):
@@ -111,3 +122,9 @@ class TestTimeSeries:
         shapes = MultiPolygon([poly_one, poly_two])
         shape_data = dr.TimeSeries(clean_data).spatial_average(shape=shapes)
         assert isinstance(shape_data, CubeList)
+
+    def test_diurnal_averaged_data(self, multiday_data):
+        """Test that when data is passed to this function it is returned as a
+        timeseries Cube."""
+        diurnal_data = dr.TimeSeries(multiday_data).diurnal_average()
+        assert isinstance(diurnal_data, Cube)

@@ -86,15 +86,14 @@ class Renderer:
         elif self.x_coord is None and self.y_coord is None and \
                 self.t_coord is not None:
             self.img_type = 'timeseries'
-            fig, axes = render_plot.Plot(self.plot_list).render_timeseries()
+            fig = render_plot.Plot(self.plot_list).render_timeseries()
         # If we don't have any coords then something's gone wrong and we can't
         # plot anything:
         elif all(coord is None for coord in coords):
             raise ValueError('All dimension coordinates are either missing or '
                              'scalar, please choose a dataset with more '
                              'coordinate points.')
-
-        return fig, axes
+        return fig
 
 
 class TimeSeries:
@@ -106,7 +105,7 @@ class TimeSeries:
         * data: full path of data file selected by user or DataSubset object
     """
     def __init__(self, data, x=None, y=None):
-        if isinstance(data, str):
+        if isinstance(data, (str, iris.cube.Cube)):
             self.dpath = data
             self.data = DataSubset(data)
         elif isinstance(data, DataSubset):
@@ -152,7 +151,7 @@ class TimeSeries:
             the CRS of the dataset.
 
         Returns:
-            * An iris cube containing single-point timeseries data spacially
+            * An iris cube containing single-point timeseries data spatially
             averaged over shape passed in by user.
             """
         # This bit determines the shape required by the user and sends all the
@@ -184,6 +183,7 @@ class TimeSeries:
                 shapes_data.append(collapsed)
             return shapes_data
 
+    def diurnal_average(self, aggregator=iris.analysis.MEAN) -> iris.cube.Cube:
+        """Generate a mean 24hr profile for data spanning multiple days."""
 
-
-
+        return self.data.average_time(aggregator)
