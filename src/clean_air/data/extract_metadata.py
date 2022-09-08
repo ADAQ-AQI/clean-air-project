@@ -5,6 +5,7 @@ from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExten
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
 
+
 def _cube_to_polygon(cube):
     """
     Given a iris cube, this function returns a shapely geometry polygon of the spatial extent. 
@@ -50,16 +51,17 @@ def _cube_to_polygon(cube):
     if y_coord.ndim != 1:
         raise iris.exceptions.CoordinateMultiDimError(y_coord)
 
-    coords = [(x_bounds_lower, y_bounds_lower), 
-                (x_bounds_upper, y_bounds_lower), 
-                (x_bounds_lower, y_bounds_upper), 
-                (x_bounds_upper, y_bounds_upper)]
+    coords = [(x_bounds_lower, y_bounds_lower),
+              (x_bounds_upper, y_bounds_lower),
+              (x_bounds_lower, y_bounds_upper),
+              (x_bounds_upper, y_bounds_upper)]
 
     if x_coord.coord_system == y_coord.coord_system:
         return Polygon(coords), x_coord.coord_system
 
     else:
         return Polygon(coords)
+
 
 def extract_metadata(cubes, id, keywords, supported_data_queries, output_formats, title=None, description=None):
 
@@ -73,8 +75,8 @@ def extract_metadata(cubes, id, keywords, supported_data_queries, output_formats
         summary = description
 
     parameters = []
-    total_temporal_extent_list = [] # list of numpy ndarrays
-    total_vertical_extent_list = [] 
+    total_temporal_extent_list = []  # list of numpy ndarrays
+    total_vertical_extent_list = []
     total_polygon_list = []
 
     for cube in cubes:
@@ -90,7 +92,8 @@ def extract_metadata(cubes, id, keywords, supported_data_queries, output_formats
         total_temporal_extent_list.append(cube.coord('time').points)
         cube_extent = Extents(spatial_extent, temporal_extent, vertical_extent)
 
-        parameters.append(Parameter(id=cube.name, unit=cube.units, observed_property=cube.name, extent=cube_extent))
+        parameters.append(Parameter(id=cube.name, unit=cube.units,
+                          observed_property=cube.name, extent=cube_extent))
 
     if len(cubes) == 1:
         total_extent = cube_extent
@@ -98,10 +101,11 @@ def extract_metadata(cubes, id, keywords, supported_data_queries, output_formats
         total_temporal_extent = TemporalExtent(total_temporal_extent_list)
         total_vertical_extent = VerticalExtent(total_vertical_extent_list)
 
-        # Placeholder for spatial extent until we do this https://github.com/MetOffice/edr_server/issues/31. 
+        # Placeholder for spatial extent until we do this https://github.com/MetOffice/edr_server/issues/31.
         total_polygon_list = MultiPolygon(total_polygon_list)
         total_spatial_extent = SpatialExtent(total_polygon_list)
-        total_extent = Extents(total_spatial_extent, total_temporal_extent, total_vertical_extent)
+        total_extent = Extents(total_spatial_extent,
+                               total_temporal_extent, total_vertical_extent)
 
     kwargs = {
         "id": id,
