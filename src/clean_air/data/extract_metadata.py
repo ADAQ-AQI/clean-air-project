@@ -3,8 +3,6 @@ from edr_server.core.models.metadata import CollectionMetadata
 from edr_server.core.models.parameters import Parameter
 from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExtent, VerticalExtent
 from shapely.geometry import Polygon, MultiPolygon
-from shapely.ops import unary_union
-
 
 def _cube_to_polygon(cube):
     """
