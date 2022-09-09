@@ -61,7 +61,7 @@ def _cube_to_polygon(cube):
         return Polygon(coords)
 
 
-def extract_metadata(cubes, id, keywords, supported_data_queries, output_formats, title=None, description=None):
+def extract_metadata(cubes, id, keywords, data_queries, output_formats, title=None, description=None):
 
     if isinstance(cubes, iris.cube.Cube):
         name = cubes.standard_name
@@ -111,7 +111,7 @@ def extract_metadata(cubes, id, keywords, supported_data_queries, output_formats
         "description": summary,
         "keywords": keywords,
         "extent": total_extent,
-        "supported_data_queries": supported_data_queries,
+        "data_queries": data_queries,
         "output_formats": output_formats,
         "parameters": parameters
     }
