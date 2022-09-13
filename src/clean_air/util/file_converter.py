@@ -93,18 +93,19 @@ def csv_reformatter(filepath) -> pd.DataFrame:
             bad_names.append(name)
 
     # And then we need to produce a shorter conversion list containing only
-    # the conversions required in this file:
-    conv_list = {}
+    # the conversions required in this file.  This part also ensures that only
+    # readable (user-friendly) names are presented in the converted file:
+    conversion_list = {}
     for k, v in cap_converters.items():
         if (k or v) in good_names:
-            conv_list[k] = v
+            conversion_list[k] = v
 
     # Now that we have all these relevant lists, we can use them to read the
     # file into a dataframe, remove the columns we don't need and convert the
     # column names we do need into an appropriate format for netCDF4:
     temp_dataframe = pd.read_csv(filepath, header=4, engine='python')
     temp_dataframe.drop(columns=bad_names, inplace=True)
-    temp_dataframe.rename(columns=conv_list, inplace=True)
+    temp_dataframe.rename(columns=conversion_list, inplace=True)
     # This can now be passed back to our more general converter functions.
 
     return temp_dataframe
@@ -154,6 +155,9 @@ def save_as_json(data_object: pd.DataFrame, r, output_location):
     """
     Uses data held in pandas DataFrame to enter into form template and
     save as JSON string.
+
+    The variable 'r' represents the specific row of the temporary dataframe
+    being restructured in this instance.
     """
     # Pollutants(chemicals) must be organised into a useable structure before
     # being entered into the new file:
@@ -171,7 +175,9 @@ def save_as_json(data_object: pd.DataFrame, r, output_location):
                               "endDate": data_object.time_range_end}}
 
     # write the dictionary above (new_file) to a json with the addition of
-    # a unit to indicate the number of the metadata form response.
+    # a unit to indicate the number of the metadata form response (input
+    # metadata files can have multiple sets of data and will therefore output
+    # multiple files).
     filename = "form_response" + str(r) + ".json"
     with open(os.path.join(output_location, filename), 'w') as fp:
         json.dump(new_file, fp, indent=2, cls=DateTimeEncoder)
@@ -182,6 +188,9 @@ def save_as_yaml(data_object: pd.DataFrame, r, output_location):
     Uses data held in pandas DataFrame to enter into form template and
     save as yaml.  Each data object entered here should be a single
     response from the previous form input section.
+
+    The variable 'r' represents the specific row of the temporary dataframe
+    being restructured in this instance.
     """
     # First extract the shortname only for chemical species:
     chem_species = []
@@ -224,7 +233,8 @@ def save_as_yaml(data_object: pd.DataFrame, r, output_location):
 
     # write the dictionary above (new_file) to a yaml in the cap-sample-data
     # directory with the addition of a unit to indicate the number of the
-    # metadata form response.
+    # metadata form response (input metadata files can have multiple sets of
+    # data and will therefore output multiple files).
     filename = "form_response" + str(r) + ".yaml"
     with open(os.path.join(output_location, filename), 'w') as fp:
         yaml.dump(new_file, fp, indent=2, default_flow_style=False,

@@ -43,7 +43,7 @@ def json_filename(tmp_output_path):
 def yaml_filename(tmp_output_path):
     yaml_fname = os.path.join(tmp_output_path, "form_response0.yaml")
     return yaml_fname
-
+# TODO: For json and yaml filenames, extend to check for all three responses.
 
 @pytest.fixture
 def csv_filename(tmp_output_path):
@@ -64,11 +64,25 @@ def test_convert_excel_to_json(xl_input_path, json_filename):
     """
     # Run conversion and check for file in tmp_path:
     fc.convert_excel(xl_input_path, json_filename)
-    try:
+
+    def test_conversion():
+        """Check that the file has been converted to a new json file."""
+        try:
+            with open(json_filename) as file:
+                file.read()
+        except FileNotFoundError as exc:
+            pytest.fail(f"Unexpected exception: {exc}")
+
+    def test_content():
+        """Check that the contents of the converted file are as expected."""
+        required_items = ["pollutants", "environmentType", "dateRange"]
         with open(json_filename) as file:
-            file.read()
-    except FileNotFoundError as exc:
-        pytest.fail(f"Unexpected exception: {exc}")
+            json_file = file.read()  # This object is a string
+            for item in required_items:
+                assert item in json_file, f"{item} not found in json file."
+
+    test_conversion()
+    test_content()
 
 
 def test_convert_excel_to_yaml(xl_input_path, yaml_filename):
@@ -78,31 +92,71 @@ def test_convert_excel_to_yaml(xl_input_path, yaml_filename):
     """
     # Run conversion and check for file in tmp_path:
     fc.convert_excel(xl_input_path, yaml_filename)
-    try:
+
+    def test_conversion():
+        """Check that the file has been converted to a new yaml file."""
+        try:
+            with open(yaml_filename) as file:
+                file.read()
+        except FileNotFoundError as exc:
+            pytest.fail(f"Unexpected exception: {exc}")
+
+    def test_content():
+        """Check that the contents of the converted file are as expected."""
+        required_items = ["title", "description", "authors", "bbox",
+                          "chemical species", "observation level/model",
+                          "data source", "time range", "lineage", "quality",
+                          "docs"]
         with open(yaml_filename) as file:
-            file.read()
-    except FileNotFoundError as exc:
-        pytest.fail(f"Unexpected exception: {exc}")
+            yaml_file = file.read()
+            for item in required_items:
+                assert item in yaml_file, f"{item} not found in yaml file."
+
+    test_conversion()
+    test_content()
 
 
 def test_convert_netcdf_to_csv(netcdf_input_path, csv_filename):
     """Test to check end-to-end processing of netcdf files and their
     conversion into csv files."""
     fc.convert_netcdf(netcdf_input_path, csv_filename)
-    try:
-        with open(csv_filename) as file:
-            file.read()
-    except FileNotFoundError as exc:
-        pytest.fail(f"Unexpected exception: {exc}")
+
+    def test_conversion():
+        """Check that the file has been converted to a new csv file."""
+        try:
+            with open(csv_filename) as file:
+                file.read()
+        except FileNotFoundError as exc:
+            pytest.fail(f"Unexpected exception: {exc}")
+
+    def test_content():
+        """Check that the contents of the converted file are as expected."""
+        # read netcdf file, produce object
+        # check object for ? (what is needed in csv files?)
+        pass  # (until I have more info on required output)
+
+    test_conversion()
+    test_content()
 
 
 def test_convert_csv_to_netcdf(csv_input_path, netcdf_filename):
     """Test to check end-to-end processing of csv files and their
      conversion into netcdf files."""
     fc.convert_csv(csv_input_path, netcdf_filename)
-    try:
-        netCDF4.Dataset(netcdf_filename)
-    except FileNotFoundError as exc:
-        pytest.fail(f"Unexpected exception: {exc}")
 
+    def test_conversion():
+        """Check that the file has been converted to a new netcdf file."""
+        try:
+            netCDF4.Dataset(netcdf_filename)
+        except FileNotFoundError as exc:
+            pytest.fail(f"Unexpected exception: {exc}")
+
+    def test_content():
+        """Check that the contents of the converted file are as expected."""
+        # read csv file, produce object
+        # check object for ? (what is needed in netcdf files?)
+        pass  # (until I have more info on required output)
+
+    test_conversion()
+    test_content()
 
