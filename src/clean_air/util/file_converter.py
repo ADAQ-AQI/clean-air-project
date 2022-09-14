@@ -151,7 +151,7 @@ def slice_data(dataframe) -> List:
     return form_responses
 
 
-def save_as_json(data_object: pd.DataFrame, r, output_location):
+def save_as_json(data_object: pd.DataFrame, r, output_dir, fname):
     """
     Uses data held in pandas DataFrame to enter into form template and
     save as JSON string.
@@ -178,12 +178,12 @@ def save_as_json(data_object: pd.DataFrame, r, output_location):
     # a unit to indicate the number of the metadata form response (input
     # metadata files can have multiple sets of data and will therefore output
     # multiple files).
-    filename = "form_response" + str(r) + ".json"
-    with open(os.path.join(output_location, filename), 'w') as fp:
+    filename = fname + str(r) + ".json"
+    with open(os.path.join(output_dir, filename), 'w') as fp:
         json.dump(new_file, fp, indent=2, cls=DateTimeEncoder)
 
 
-def save_as_yaml(data_object: pd.DataFrame, r, output_location):
+def save_as_yaml(data_object: pd.DataFrame, r, output_dir, fname):
     """
     Uses data held in pandas DataFrame to enter into form template and
     save as yaml.  Each data object entered here should be a single
@@ -235,8 +235,8 @@ def save_as_yaml(data_object: pd.DataFrame, r, output_location):
     # directory with the addition of a unit to indicate the number of the
     # metadata form response (input metadata files can have multiple sets of
     # data and will therefore output multiple files).
-    filename = "form_response" + str(r) + ".yaml"
-    with open(os.path.join(output_location, filename), 'w') as fp:
+    filename = fname + str(r) + ".yaml"
+    with open(os.path.join(output_dir, filename), 'w') as fp:
         yaml.dump(new_file, fp, indent=2, default_flow_style=False,
                   sort_keys=False)
 
@@ -260,23 +260,24 @@ def save_as_netcdf(data_object: pd.DataFrame, output_location):
     xr_object.to_netcdf(output_location)
 
 
-def convert_excel(filepath, output_location):
+def convert_excel(filepath, output_dir, output_type):
     """
-    Convert excel metadata files to required output format.  Filename must be
-    included in the output_location parameter with a valid file extension of
+    Convert excel metadata files to required output format.  Output directory
+    must be included in the output_location parameter with a valid file type of
     either 'json', 'yml' or 'yaml'.
     """
     temp_dataframe = generate_dataframe(filepath)
     sliced_dataframes = slice_data(temp_dataframe)
-    output_dir = os.path.split(output_location)[0]
-    filetype = os.path.splitext(output_location)[1]
+    fname = os.path.split(filepath)[-1]
+    output_name = os.path.splitext(fname)[0]
+    filetype = output_type
     for df in sliced_dataframes:
-        if filetype == '.json':
+        if filetype == 'json':
             save_as_json(data_object=df[0], r=df[1],
-                         output_location=output_dir)
-        elif filetype == '.yaml' or filetype == '.yml':
+                         output_dir=output_dir, fname=output_name)
+        elif filetype == 'yaml' or filetype == 'yml':
             save_as_yaml(data_object=df[0], r=df[1],
-                         output_location=output_dir)
+                         output_dir=output_dir, fname=output_name)
         else:
             raise ValueError("Filetype not recognized.  Please specify output "
                              "type as either 'json', 'yml' or 'yaml'.")

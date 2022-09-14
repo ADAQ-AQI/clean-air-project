@@ -34,18 +34,6 @@ def tmp_output_path(tmp_path):
 
 
 @pytest.fixture
-def json_filename(tmp_output_path):
-    json_fname = os.path.join(tmp_output_path, "form_response0.json")
-    return json_fname
-
-
-@pytest.fixture
-def yaml_filename(tmp_output_path):
-    yaml_fname = os.path.join(tmp_output_path, "form_response0.yaml")
-    return yaml_fname
-# TODO: For json and yaml filenames, extend to check for all three responses.
-
-@pytest.fixture
 def csv_filename(tmp_output_path):
     csv_fname = os.path.join(tmp_output_path, "flightpath.csv")
     return csv_fname
@@ -57,26 +45,35 @@ def netcdf_filename(tmp_output_path):
     return netcdf_fname
 
 
-def test_convert_excel_to_json(xl_input_path, json_filename):
+def test_convert_excel_to_json(xl_input_path, tmp_output_path):
     """
-    Test to check end-to-end processing of excel metadata form responses and
+    Test to check end-to-end processing of Excel metadata form responses and
     their conversion to reformatted json files.
     """
-    # Run conversion and check for file in tmp_path:
-    fc.convert_excel(xl_input_path, json_filename)
+    input_filename = os.path.split(xl_input_path)[-1]
+    output_filename = os.path.splitext(input_filename)[0]
+    fc.convert_excel(xl_input_path, tmp_output_path, 'json')
 
     def test_conversion():
         """Check that the file has been converted to a new json file."""
-        try:
-            with open(json_filename) as file:
-                file.read()
-        except FileNotFoundError as exc:
-            pytest.fail(f"Unexpected exception: {exc}")
+        # input files for this conversion test have 3 rows, so return set of 3
+        # filenames to check for:
+        for i in range(3):
+            fname = output_filename + str(i) + ".json"
+            fpath = os.path.join(tmp_output_path, fname)
+            try:
+                with open(fpath) as file:
+                    file.read()
+            except FileNotFoundError as exc:
+                pytest.fail(f"Unexpected exception: {exc}")
 
     def test_content():
         """Check that the contents of the converted file are as expected."""
         required_items = ["pollutants", "environmentType", "dateRange"]
-        with open(json_filename) as file:
+        # Only test the first file here, can change later if deemed necessary:
+        fpath = os.path.join(tmp_output_path,
+                             output_filename + str(0) + ".json")
+        with open(fpath) as file:
             json_file = file.read()  # This object is a string
             for item in required_items:
                 assert item in json_file, f"{item} not found in json file."
@@ -85,21 +82,25 @@ def test_convert_excel_to_json(xl_input_path, json_filename):
     test_content()
 
 
-def test_convert_excel_to_yaml(xl_input_path, yaml_filename):
+def test_convert_excel_to_yaml(xl_input_path, tmp_output_path):
     """
-    Test to check end-to-end processing of excel metadata form responses and
+    Test to check end-to-end processing of Excel metadata form responses and
     their conversion to reformatted json files.
     """
-    # Run conversion and check for file in tmp_path:
-    fc.convert_excel(xl_input_path, yaml_filename)
+    input_filename = os.path.split(xl_input_path)[-1]
+    output_filename = os.path.splitext(input_filename)[0]
+    fc.convert_excel(xl_input_path, tmp_output_path, 'yaml')
 
     def test_conversion():
         """Check that the file has been converted to a new yaml file."""
-        try:
-            with open(yaml_filename) as file:
-                file.read()
-        except FileNotFoundError as exc:
-            pytest.fail(f"Unexpected exception: {exc}")
+        for i in range(3):
+            fname = output_filename + str(i) + ".yaml"
+            fpath = os.path.join(tmp_output_path, fname)
+            try:
+                with open(fpath) as file:
+                    file.read()
+            except FileNotFoundError as exc:
+                pytest.fail(f"Unexpected exception: {exc}")
 
     def test_content():
         """Check that the contents of the converted file are as expected."""
@@ -107,7 +108,10 @@ def test_convert_excel_to_yaml(xl_input_path, yaml_filename):
                           "chemical species", "observation level/model",
                           "data source", "time range", "lineage", "quality",
                           "docs"]
-        with open(yaml_filename) as file:
+        # Only test the first file here, can change later if deemed necessary:
+        fpath = os.path.join(tmp_output_path,
+                             output_filename + str(0) + ".yaml")
+        with open(fpath) as file:
             yaml_file = file.read()
             for item in required_items:
                 assert item in yaml_file, f"{item} not found in yaml file."
