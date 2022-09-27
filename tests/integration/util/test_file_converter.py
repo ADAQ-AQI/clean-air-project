@@ -4,7 +4,7 @@ import pytest
 import netCDF4
 
 from clean_air.util import file_converter as fc
-
+# TODO: Update tests to use newly-generated sample files (netcdf/csv)
 
 @pytest.fixture
 def xl_input_path(sampledir):
@@ -52,7 +52,8 @@ def test_convert_excel_to_json(xl_input_path, tmp_output_path):
     """
     input_filename = os.path.split(xl_input_path)[-1]
     output_filename = os.path.splitext(input_filename)[0]
-    fc.convert_excel(xl_input_path, tmp_output_path, 'json')
+    input_file = fc.Metadata(xl_input_path, tmp_output_path)
+    input_file.convert_excel('json')
 
     def test_conversion():
         """Check that the file has been converted to a new json file."""
@@ -89,7 +90,8 @@ def test_convert_excel_to_yaml(xl_input_path, tmp_output_path):
     """
     input_filename = os.path.split(xl_input_path)[-1]
     output_filename = os.path.splitext(input_filename)[0]
-    fc.convert_excel(xl_input_path, tmp_output_path, 'yaml')
+    input_file = fc.Metadata(xl_input_path, tmp_output_path)
+    input_file.convert_excel('yaml')
 
     def test_conversion():
         """Check that the file has been converted to a new yaml file."""
@@ -123,7 +125,8 @@ def test_convert_excel_to_yaml(xl_input_path, tmp_output_path):
 def test_convert_netcdf_to_csv(netcdf_input_path, csv_filename):
     """Test to check end-to-end processing of netcdf files and their
     conversion into csv files."""
-    fc.convert_netcdf(netcdf_input_path, csv_filename)
+    input_file = fc.Data(netcdf_input_path, csv_filename)
+    input_file.convert_netcdf()
 
     def test_conversion():
         """Check that the file has been converted to a new csv file."""
@@ -146,7 +149,8 @@ def test_convert_netcdf_to_csv(netcdf_input_path, csv_filename):
 def test_convert_csv_to_netcdf(csv_input_path, netcdf_filename):
     """Test to check end-to-end processing of csv files and their
      conversion into netcdf files."""
-    fc.convert_csv(csv_input_path, netcdf_filename)
+    input_file = fc.Data(csv_input_path, netcdf_filename)
+    input_file.convert_csv()
 
     def test_conversion():
         """Check that the file has been converted to a new netcdf file."""

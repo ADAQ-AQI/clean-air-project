@@ -1,13 +1,25 @@
 """
-This converts input metadata files to selected file types for processing,
-for example:
-convert_excel(filepath, output_location)
-convert_netcdf(filepath, output_location)
-convert_csv(filepath, output_location)
+This converts input metadata and data files to selected file types for
+processing.  For example, for converting metadata files from excel to either
+'json' or 'yaml':
+>> metadata_file = clean_air.util.file_converter.Metadata(input_filepath,
+output_directory_path)
+>> metadata_file.convert_excel(output_filetype)
+
+To convert data files there are two methods; if you want to convert a netCDF
+to a CSV:
+>> data_file = clean_air.util.file_converter.Data(input_filepath,
+output_directory_path)
+>> data_file.convert_netcdf()
+
+Or to convert a CSV to a netCDF:
+>> data_file = clean_air.util.file_converter.Data(input_filepath,
+output_directory_path)
+>> data_file.convert_csv()
 
 You can also use this module to access a pandas.DataFrame extracted from
 either an excel, netcdf or csv input file, for example:
-clean_air.util.file_converter.generate_dataframe(filepath)
+>> dataframe = clean_air.util.file_converter.generate_dataframe(filepath)
 """
 
 import os
@@ -31,32 +43,10 @@ class DateTimeEncoder(JSONEncoder):
             return obj.isoformat()
 
 
-def generate_dataframe(filepath) -> pd.DataFrame:
-    """
-    Reads in data from specified input type and holds as temporary
-    pandas.DataFrame object.
-    """
-    if filepath.endswith(".xlsx"):
-        temp_dataframe = pd.read_excel(filepath, engine='openpyxl')
-    elif filepath.endswith(".nc"):
-        # NOTE: We need to use xarray to open the netcdf dataset, then turn
-        # that into a pandas dataframe.
-        temp_dataset = xr.open_dataset(filepath)
-        temp_dataframe = temp_dataset.to_dataframe()
-    elif filepath.endswith(".csv"):
-        # Not only do we need to read this format into a dataframe, but we
-        # also need to reformat it into acceptable standards before passing
-        # it on to saving functions.
-        temp_dataframe = csv_reformatter(filepath)
-    else:
-        raise ValueError("No reader configured yet for this input format.")
-    return pd.DataFrame(temp_dataframe)
-
-
 def csv_reformatter(filepath) -> pd.DataFrame:
-    """This function uses a template to reformat AURN-style CSV files into a
-    fixed format that we can then very easily read into a pandas dataframe
-    (ready for conversion to netcdf files)."""
+    """This function uses a template to reformat AURN-style CSV metadata
+    files into a fixed format that we can then very easily read into a
+    pandas dataframe (ready for conversion to netcdf files)."""
     # rules for csv format:
     # - header line (column names) must be on row 4 of file (top row is 0)
     # - column names must be standard python strings.
@@ -93,16 +83,17 @@ def csv_reformatter(filepath) -> pd.DataFrame:
             bad_names.append(name)
 
     # And then we need to produce a shorter conversion list containing only
-    # the conversions required in this file.  This part also ensures that only
-    # readable (user-friendly) names are presented in the converted file:
+    # the conversions required in this file.  This part also ensures that
+    # only readable (user-friendly) names are presented in the converted
+    # file:
     conversion_list = {}
     for k, v in cap_converters.items():
         if (k or v) in good_names:
             conversion_list[k] = v
 
     # Now that we have all these relevant lists, we can use them to read the
-    # file into a dataframe, remove the columns we don't need and convert the
-    # column names we do need into an appropriate format for netCDF4:
+    # file into a dataframe, remove the columns we don't need and convert
+    # the column names we do need into an appropriate format for netCDF4:
     temp_dataframe = pd.read_csv(filepath, header=4, engine='python')
     temp_dataframe.drop(columns=bad_names, inplace=True)
     temp_dataframe.rename(columns=conversion_list, inplace=True)
@@ -111,21 +102,43 @@ def csv_reformatter(filepath) -> pd.DataFrame:
     return temp_dataframe
 
 
+def generate_dataframe(filepath) -> pd.DataFrame:
+    """
+    Reads in data from specified input type and holds as temporary
+    pandas.DataFrame object.
+    """
+    if filepath.endswith(".xlsx"):
+        temp_dataframe = pd.read_excel(filepath, engine='openpyxl')
+    elif filepath.endswith(".nc"):
+        # NOTE: We need to use xarray to open the netcdf dataset, then turn
+        # that into a pandas dataframe.
+        temp_dataset = xr.open_dataset(filepath)
+        temp_dataframe = temp_dataset.to_dataframe()
+    elif filepath.endswith(".csv"):
+        # Not only do we need to read this format into a dataframe, but we
+        # also need to reformat it into acceptable standards before passing
+        # it on to saving functions.
+        temp_dataframe = csv_reformatter(filepath)
+    else:
+        raise ValueError("No reader configured yet for this input format.")
+    return pd.DataFrame(temp_dataframe)
+
+
 def slice_data(dataframe) -> List:
     """
-    This function iterates through rows of a multiple-response dataframe and
-    creates a more organised dataframe for each response.  This is a necessary
-    step in the conversion between xlsx and json/yaml as it allows access to
-    some variables which are otherwise inaccessible due to the structure of the
-    original multi-level dataframe.
+    This function iterates through rows of a multiple-response dataframe
+    and creates a more organised dataframe for each response.  This is a
+    necessary step in the conversion between xlsx and json/yaml as it
+    allows access to some variables which are otherwise inaccessible due
+    to the structure of the original multi-level dataframe.
     """
-    # This dataframe will collect more information than is necessary for the
-    # json output, but may still be necessary for the yaml output or even for
-    # use as a dataframe.
+    # This dataframe will collect more information than is necessary for
+    # the json output, but may still be necessary for the yaml output or
+    # even for use as a dataframe.
     form_responses = list()
     for r, row in enumerate(dataframe.iterrows()):
-        # iterate through each row to split into separate dataframes and save
-        # all to appropriate location:
+        # iterate through each row to split into separate dataframes and
+        # save all to appropriate location:
         form_data = {'title': row[1].values[16],
                      'description': row[1].values[17],
                      'firstname1': row[1].values[6],
@@ -151,154 +164,156 @@ def slice_data(dataframe) -> List:
     return form_responses
 
 
-def save_as_json(data_object: pd.DataFrame, r, output_dir, fname):
-    """
-    Uses data held in pandas DataFrame to enter into form template and
-    save as JSON string.
+class Metadata:
+    """This class will handle conversions of metadata files from excel (as per
+    the 17-page input form created by our lovely scientists) into either json
+    files (for chemical metadata) or yaml files (for all other metadata)."""
 
-    The variable 'r' represents the specific row of the temporary dataframe
-    being restructured in this instance.
-    """
-    # Pollutants(chemicals) must be organised into a useable structure before
-    # being entered into the new file:
-    chemicals = []
-    for chem in data_object.chemicals:
-        if chem != "":
-            chems = {'name': chem,
-                     'shortname': chem[chem.find("(") + 1:chem.find(")")],
-                     'chart': "url/to/chart/image.(png|jpg|svg|etc)"}
-            chemicals.append(chems)
+    def __init__(self, input_filepath, output_dir_path):
+        self.filepath = input_filepath
+        self.output_dir = output_dir_path
 
-    new_file = {"pollutants": chemicals,
-                "environmentType": data_object.obs_level,
-                "dateRange": {"startDate": data_object.time_range_start,
-                              "endDate": data_object.time_range_end}}
+    def save_as_json(self, data_object: pd.DataFrame, r, fname):
+        """
+        Uses data held in pandas DataFrame to enter into form template and
+        save as JSON string.
 
-    # write the dictionary above (new_file) to a json with the addition of
-    # a unit to indicate the number of the metadata form response (input
-    # metadata files can have multiple sets of data and will therefore output
-    # multiple files).
-    filename = fname + str(r) + ".json"
-    with open(os.path.join(output_dir, filename), 'w') as fp:
-        json.dump(new_file, fp, indent=2, cls=DateTimeEncoder)
+        The variable 'r' represents the specific row of the temporary dataframe
+        being restructured in this instance.
 
+        The variable 'fname' represents the name associated with the input
+        file before it has been enumerated into output files.
+        """
+        # Pollutants(chemicals) must be organised into a useable structure
+        # before being entered into the new file:
+        chemicals = []
+        for chem in data_object.chemicals:
+            if chem != "":
+                chems = {'name': chem,
+                         'shortname': chem[chem.find("(") + 1:chem.find(")")],
+                         'chart': "url/to/chart/image.(png|jpg|svg|etc)"}
+                chemicals.append(chems)
 
-def save_as_yaml(data_object: pd.DataFrame, r, output_dir, fname):
-    """
-    Uses data held in pandas DataFrame to enter into form template and
-    save as yaml.  Each data object entered here should be a single
-    response from the previous form input section.
+        new_file = {"pollutants": chemicals,
+                    "environmentType": data_object.obs_level,
+                    "dateRange": {"startDate": data_object.time_range_start,
+                                  "endDate": data_object.time_range_end}}
 
-    The variable 'r' represents the specific row of the temporary dataframe
-    being restructured in this instance.
-    """
-    # First extract the shortname only for chemical species:
-    chem_species = []
-    for chem in data_object.chemicals:
-        if chem != "":
-            chem_shortname = chem[chem.find("(") + 1:chem.find(")")]
-            chem_species.append(chem_shortname)
+        # write the dictionary above (new_file) to a json with the addition of
+        # a unit to indicate the number of the metadata form response (input
+        # metadata files can have multiple sets of data and will therefore
+        # output multiple files).
+        filename = fname + str(r) + ".json"
+        with open(os.path.join(self.output_dir, filename), 'w') as fp:
+            json.dump(new_file, fp, indent=2, cls=DateTimeEncoder)
 
-    authors = []
-    for i in range(1, 3):
-        firstname = data_object.get(f"firstname{i}")
-        surname = data_object.get(f"surname{i}")
-        if firstname and surname:
-            if not isinstance((firstname and surname), str):
-                pass
+    def save_as_yaml(self, data_object: pd.DataFrame, r, fname):
+        """
+        Uses data held in pandas DataFrame to enter into form template and
+        save as yaml.  Each data object entered here should be a single
+        response from the previous form input section.
+
+        The variable 'r' represents the specific row of the temporary dataframe
+        being restructured in this instance.
+        """
+        # First extract the shortname only for chemical species:
+        chem_species = []
+        for chem in data_object.chemicals:
+            if chem != "":
+                chem_shortname = chem[chem.find("(") + 1:chem.find(")")]
+                chem_species.append(chem_shortname)
+
+        authors = []
+        for i in range(1, 3):
+            firstname = data_object.get(f"firstname{i}")
+            surname = data_object.get(f"surname{i}")
+            if firstname and surname:
+                if not isinstance((firstname and surname), str):
+                    pass
+                else:
+                    authors.append({"firstname": firstname,
+                                    "surname": surname})
+
+        bbox = {}
+        for way in ["north", "south", "east", "west"]:
+            direction = data_object.get(f"{way}")
+            bbox.update({f"{way}": direction})
+
+        time_range = {"start": data_object.get("time_range_start").isoformat(),
+                      "end": data_object.get("time_range_end").isoformat()}
+
+        # Now add all relevant data to a dictionary to save as yaml:
+        new_file = {"title": data_object.title,
+                    "description": data_object.description,
+                    "authors": authors,
+                    "bbox": bbox,
+                    "chemical species": chem_species,
+                    "observation level/model": data_object.obs_level,
+                    "data source": data_object.data_source,
+                    "time range": time_range,
+                    "lineage": data_object.lineage,
+                    "quality": data_object.quality,
+                    "docs": data_object.docs}
+
+        # write the dictionary above (new_file) to a yaml in the specified
+        # directory with the addition of a unit to indicate the number of the
+        # metadata form response (input metadata files can have multiple sets of
+        # data and will therefore output multiple files).
+        filename = fname + str(r) + ".yaml"
+        with open(os.path.join(self.output_dir, filename), 'w') as fp:
+            yaml.dump(new_file, fp, indent=2, default_flow_style=False,
+                      sort_keys=False)
+
+    def convert_excel(self, output_type):
+        """
+        Convert excel metadata files to required output format.  Output
+        directory must be included in the output_location parameter with a
+        valid file type of either 'json', 'yml' or 'yaml'.
+        """
+        temp_dataframe = generate_dataframe(self.filepath)
+        sliced_dataframes = slice_data(temp_dataframe)
+        fname = os.path.split(self.filepath)[-1]
+        output_name = os.path.splitext(fname)[0]
+        filetype = output_type
+        for df in sliced_dataframes:
+            if filetype == 'json':
+                self.save_as_json(data_object=df[0], r=df[1], fname=output_name)
+            elif filetype == 'yaml' or filetype == 'yml':
+                self.save_as_yaml(data_object=df[0], r=df[1], fname=output_name)
             else:
-                authors.append({"firstname": firstname,
-                                "surname": surname})
-
-    bbox = {}
-    for way in ["north", "south", "east", "west"]:
-        direction = data_object.get(f"{way}")
-        bbox.update({f"{way}": direction})
-
-    time_range = {"start": data_object.get("time_range_start").isoformat(),
-                  "end": data_object.get("time_range_end").isoformat()}
-
-    # Now add all relevant data to a dictionary to save as yaml:
-    new_file = {"title": data_object.title,
-                "description": data_object.description,
-                "authors": authors,
-                "bbox": bbox,
-                "chemical species": chem_species,
-                "observation level/model": data_object.obs_level,
-                "data source": data_object.data_source,
-                "time range": time_range,
-                "lineage": data_object.lineage,
-                "quality": data_object.quality,
-                "docs": data_object.docs}
-
-    # write the dictionary above (new_file) to a yaml in the cap-sample-data
-    # directory with the addition of a unit to indicate the number of the
-    # metadata form response (input metadata files can have multiple sets of
-    # data and will therefore output multiple files).
-    filename = fname + str(r) + ".yaml"
-    with open(os.path.join(output_dir, filename), 'w') as fp:
-        yaml.dump(new_file, fp, indent=2, default_flow_style=False,
-                  sort_keys=False)
+                raise ValueError("Filetype not recognized.  Please specify "
+                                 "output " "type as either 'json', 'yml' or "
+                                 "'yaml'.")
 
 
-def save_as_csv(data_object: pd.DataFrame, output_location):
-    """
-    Convert pandas.DataFrame object to csv file and save in specified
-    location.  Filename must be included as part of output_location.
-    """
-    data_object.to_csv(output_location, index=False)
+class Data:
+    """This class handles conversion of data files, which will either be in
+    the format of a netCDF or a csv.
 
+    To convert netCDF --> CSV, use:
+    >> convert_netcdf(input_path, output_path)
 
-def save_as_netcdf(data_object: pd.DataFrame, output_location):
-    """
-    Convert pandas.DataFrame object to netcdf file and save in specified
-    location.  Filename must be included as part of output_location.
-    """
-    # pandas can't convert to netcdf, so we will have to first convert
-    # to xarray (which can):
-    xr_object = data_object.to_xarray()
-    xr_object.to_netcdf(output_location)
+    To convert CSV --> netCDF, use:
+    >> convert_csv(input_path, output_path)"""
+    def __init__(self, input_file, output_dir_path):
+        self.filepath = input_file
+        self.output_location = output_dir_path
 
+    def convert_netcdf(self):
+        """
+        Convert netcdf files to required csv output format.  Output filename
+        must be included in output location.
+        """
+        temp_dataframe = generate_dataframe(self.filepath)
+        temp_dataframe.to_csv(self.output_location, index=False)
 
-def convert_excel(filepath, output_dir, output_type):
-    """
-    Convert excel metadata files to required output format.  Output directory
-    must be included in the output_location parameter with a valid file type of
-    either 'json', 'yml' or 'yaml'.
-    """
-    temp_dataframe = generate_dataframe(filepath)
-    sliced_dataframes = slice_data(temp_dataframe)
-    fname = os.path.split(filepath)[-1]
-    output_name = os.path.splitext(fname)[0]
-    filetype = output_type
-    for df in sliced_dataframes:
-        if filetype == 'json':
-            save_as_json(data_object=df[0], r=df[1],
-                         output_dir=output_dir, fname=output_name)
-        elif filetype == 'yaml' or filetype == 'yml':
-            save_as_yaml(data_object=df[0], r=df[1],
-                         output_dir=output_dir, fname=output_name)
-        else:
-            raise ValueError("Filetype not recognized.  Please specify output "
-                             "type as either 'json', 'yml' or 'yaml'.")
+    def convert_csv(self):
+        """Convert csv files to required netcdf output format.  Output filename
+        must be included in output location with a valid extension of either
+        '.txt' or '.nc'."""
+        temp_dataframe = generate_dataframe(self.filepath)
+        # pandas can't convert to netcdf, so we will have to first convert
+        # to xarray (which can):
+        xr_object = temp_dataframe.to_xarray()
+        xr_object.to_netcdf(self.output_location)
 
-
-def convert_netcdf(filepath, output_location):
-    """
-    Convert netcdf files to required csv output format.  Output filename must
-    be included in output location.
-    """
-    temp_dataframe = generate_dataframe(filepath)
-    save_as_csv(temp_dataframe, output_location)
-
-
-def convert_csv(filepath, output_location):
-    """Convert csv files to required netcdf output format.  Output filename
-    must be included in output location with a valid extension of either '.txt'
-    or '.nc'."""
-    temp_dataframe = generate_dataframe(filepath)
-    filetype = os.path.splitext(output_location)[1]
-    if filetype == ".nc":
-        save_as_netcdf(temp_dataframe, output_location)
-    elif filetype == ".txt":
-        pass
