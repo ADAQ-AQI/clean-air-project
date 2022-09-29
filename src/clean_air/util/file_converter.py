@@ -75,7 +75,7 @@ def csv_reformatter(filepath) -> pd.DataFrame:
     # We need to narrow down our own list of column names by matching them
     # to those we are looking for:
     good_names = []
-    bad_names = []
+    bad_names = []   # This contains any extra fields (not in list above)
     for name in data_names.columns:
         if name in (cap_converters.keys() or cap_converters.values()):
             good_names.append(name)

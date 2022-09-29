@@ -2,9 +2,10 @@
 import os
 import pytest
 import netCDF4
+import csv
 
 from clean_air.util import file_converter as fc
-# TODO: Update tests to use newly-generated sample files (netcdf/csv)
+
 
 @pytest.fixture
 def xl_input_path(sampledir):
@@ -138,9 +139,18 @@ def test_convert_netcdf_to_csv(netcdf_input_path, csv_filename):
 
     def test_content():
         """Check that the contents of the converted file are as expected."""
-        # read netcdf file, produce object
-        # check object for ? (what is needed in csv files?)
-        pass  # (until I have more info on required output)
+        field_names = {'Time', 'Latitude', 'Longitude', 'Altitude',
+                       'Pressure', 'Temperature', 'Relative_Humidity',
+                       'Wind_Speed', 'Wind_Direction', 'NO2', 'O3', 'SO2'}
+        with open(csv_filename, newline='') as new_file:
+            reader = csv.reader(new_file)
+            for row in reader:
+                # Only check first row for header names:
+                if row == row[0]:
+                    assert all(field_names) in row
+                # Check all other rows for data length:
+                else:
+                    assert len(row) == 12
 
     test_conversion()
     test_content()
@@ -161,9 +171,20 @@ def test_convert_csv_to_netcdf(csv_input_path, netcdf_filename):
 
     def test_content():
         """Check that the contents of the converted file are as expected."""
-        # read csv file, produce object
-        # check object for ? (what is needed in netcdf files?)
-        pass  # (until I have more info on required output)
+        # NOTE: The CSV file being used for this test only contains 9 of the
+        # accepted 13 variables, so we will only check for those:
+        field_names = {'PM10', 'Non-volatilePM10', 'Non-volatilePM2p5',
+                       'PM2p5', 'Volatile PM10', 'Volatile PM2p5', 'O3',
+                       'Date', 'time'}
+        new_file = netCDF4.Dataset(netcdf_filename)
+        with new_file:
+            # Check all fields are present in output file:
+            for name in field_names:
+                assert name in new_file.variables
+            # Also check that length of data fields is correct:
+            for variable in new_file.variables:
+                if variable in field_names:
+                    assert new_file[variable].size == 8784
 
     test_conversion()
     test_content()
