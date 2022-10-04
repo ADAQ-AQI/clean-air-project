@@ -53,7 +53,7 @@ def test_convert_excel_to_json(xl_input_path, tmp_output_path):
     """
     input_filename = os.path.split(xl_input_path)[-1]
     output_filename = os.path.splitext(input_filename)[0]
-    input_file = fc.Metadata(xl_input_path, tmp_output_path)
+    input_file = fc.MetadataForm(xl_input_path, tmp_output_path)
     input_file.convert_excel('json')
 
     def test_conversion():
@@ -91,7 +91,7 @@ def test_convert_excel_to_yaml(xl_input_path, tmp_output_path):
     """
     input_filename = os.path.split(xl_input_path)[-1]
     output_filename = os.path.splitext(input_filename)[0]
-    input_file = fc.Metadata(xl_input_path, tmp_output_path)
+    input_file = fc.MetadataForm(xl_input_path, tmp_output_path)
     input_file.convert_excel('yaml')
 
     def test_conversion():
@@ -126,7 +126,7 @@ def test_convert_excel_to_yaml(xl_input_path, tmp_output_path):
 def test_convert_netcdf_to_csv(netcdf_input_path, csv_filename):
     """Test to check end-to-end processing of netcdf files and their
     conversion into csv files."""
-    input_file = fc.Data(netcdf_input_path, csv_filename)
+    input_file = fc.DataFile(netcdf_input_path, csv_filename)
     input_file.convert_netcdf()
 
     def test_conversion():
@@ -159,7 +159,7 @@ def test_convert_netcdf_to_csv(netcdf_input_path, csv_filename):
 def test_convert_csv_to_netcdf(csv_input_path, netcdf_filename):
     """Test to check end-to-end processing of csv files and their
      conversion into netcdf files."""
-    input_file = fc.Data(csv_input_path, netcdf_filename)
+    input_file = fc.DataFile(csv_input_path, netcdf_filename)
     input_file.convert_csv()
 
     def test_conversion():

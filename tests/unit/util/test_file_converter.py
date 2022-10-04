@@ -47,7 +47,7 @@ def tmp_output_path(tmp_path):
 
 @pytest.fixture()
 def saved_json(excel_filepath, tmp_output_path):
-    new_json = fc.Metadata(excel_filepath, tmp_output_path)
+    new_json = fc.MetadataForm(excel_filepath, tmp_output_path)
     new_json.convert_excel('json')
     # Only name first response form for unit test:
     json_fname = tmp_output_path / "metadata_form_responses0.json"
@@ -57,7 +57,7 @@ def saved_json(excel_filepath, tmp_output_path):
 
 @pytest.fixture()
 def saved_yaml(excel_filepath, tmp_output_path):
-    new_yaml = fc.Metadata(excel_filepath, tmp_output_path)
+    new_yaml = fc.MetadataForm(excel_filepath, tmp_output_path)
     new_yaml.convert_excel('yaml')
     # Only name first response form for unit test:
     yaml_fname = tmp_output_path / "metadata_form_responses0.yaml"
@@ -196,7 +196,7 @@ def test_bad_output_type(excel_filepath, csv_filepath):
     """Test that an exception is raised when an invalid filetype is
     specified (or not specified at all)."""
     with pytest.raises(ValueError):
-        new_file = fc.Metadata(excel_filepath, tmp_output_path)
+        new_file = fc.MetadataForm(excel_filepath, tmp_output_path)
         new_file.convert_excel('yiml')
 
 
@@ -206,7 +206,7 @@ def test_csv_no_index(tmp_output_path, netcdf_filepath):
     # examined within the condition 'with open...', so more set-up tasks must
     # be performed here as opposed to inside a fixture.
     csv_fname = tmp_output_path / "flightpath.csv"
-    new_file = fc.Data(netcdf_filepath, csv_fname)
+    new_file = fc.DataFile(netcdf_filepath, csv_fname)
     new_file.convert_netcdf()
     with open(csv_fname, newline='') as csvfile:
         saved_csv = csv.reader(csvfile)

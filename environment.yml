@@ -25,3 +25,4 @@ dependencies:
     - tox<4.0.0 # The conda package didn't install correctly, but using the pip package did
     - moto>=3.0.1
     - -e .  # Install the source code in development mode. The argument is the path to the folder containing the setup.cfg
+    - https://github.com/ADAQ-AQI/cap-sample-data/archive/master.zip

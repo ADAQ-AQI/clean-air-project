@@ -2,18 +2,18 @@
 This converts input metadata and data files to selected file types for
 processing.  For example, for converting metadata files from excel to either
 'json' or 'yaml':
->> metadata_file = clean_air.util.file_converter.Metadata(input_filepath,
+>> metadata_file = clean_air.util.file_converter.MetadataForm(input_filepath,
 output_directory_path)
 >> metadata_file.convert_excel(output_filetype)
 
 To convert data files there are two methods; if you want to convert a netCDF
 to a CSV:
->> data_file = clean_air.util.file_converter.Data(input_filepath,
+>> data_file = clean_air.util.file_converter.DataFile(input_filepath,
 output_directory_path)
 >> data_file.convert_netcdf()
 
 Or to convert a CSV to a netCDF:
->> data_file = clean_air.util.file_converter.Data(input_filepath,
+>> data_file = clean_air.util.file_converter.DataFile(input_filepath,
 output_directory_path)
 >> data_file.convert_csv()
 
@@ -164,7 +164,7 @@ def slice_data(dataframe) -> List:
     return form_responses
 
 
-class Metadata:
+class MetadataForm:
     """This class will handle conversions of metadata files from excel (as per
     the 17-page input form created by our lovely scientists) into either json
     files (for chemical metadata) or yaml files (for all other metadata)."""
@@ -286,7 +286,7 @@ class Metadata:
                                  "'yaml'.")
 
 
-class Data:
+class DataFile:
     """This class handles conversion of data files, which will either be in
     the format of a netCDF or a csv.
 
