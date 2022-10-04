@@ -32,6 +32,8 @@ import datetime
 import xarray as xr
 from json import JSONEncoder
 
+from clean_air.util import conversion_lists
+
 # subclass JSONEncoder
 from pandas.errors import ParserError
 
@@ -53,21 +55,7 @@ def csv_reformatter(filepath) -> pd.DataFrame:
 
     # This is a dictionary containing names to look for and what to convert
     # them into.
-    cap_converters = dict(
-        {'PM<sub>10</sub> particulate matter (Hourly measured)': 'PM10',
-         'Non-volatile PM<sub>10</sub> (Hourly measured)': 'Non-volatilePM10',
-         'Non-volatile PM<sub>2.5</sub> (Hourly measured)': 'Non-volatilePM2p5',
-         'PM<sub>2.5</sub> particulate matter (Hourly measured)': 'PM2p5',
-         'Volatile PM<sub>10</sub> (Hourly measured)': 'Volatile PM10',
-         'Volatile PM<sub>2.5</sub> (Hourly measured)': 'Volatile PM2p5',
-         'Ozone': 'O3',
-         'Nitric Oxide': 'NO',
-         'Nitrogen Dioxide': 'NO2',
-         'Sulphur Dioxide': 'SO2',
-         'Carbon Monoxide': 'CO',
-         'Date': 'Date',
-         'time': 'time'})
-
+    field_names = conversion_lists.csv_convert()
     # Now that we have some things to look for we can read the header row of
     # the file to pull out the applicable column names:
     data_names = pd.read_csv(filepath, nrows=1, skiprows=4, delimiter=',')
@@ -77,7 +65,7 @@ def csv_reformatter(filepath) -> pd.DataFrame:
     good_names = []
     bad_names = []   # This contains any extra fields (not in list above)
     for name in data_names.columns:
-        if name in (cap_converters.keys() or cap_converters.values()):
+        if name in (field_names.keys() or field_names.values()):
             good_names.append(name)
         else:
             bad_names.append(name)
@@ -87,7 +75,7 @@ def csv_reformatter(filepath) -> pd.DataFrame:
     # only readable (user-friendly) names are presented in the converted
     # file:
     conversion_list = {}
-    for k, v in cap_converters.items():
+    for k, v in field_names.items():
         if (k or v) in good_names:
             conversion_list[k] = v
 
@@ -135,31 +123,7 @@ def slice_data(dataframe) -> List:
     # This dataframe will collect more information than is necessary for
     # the json output, but may still be necessary for the yaml output or
     # even for use as a dataframe.
-    form_responses = list()
-    for r, row in enumerate(dataframe.iterrows()):
-        # iterate through each row to split into separate dataframes and
-        # save all to appropriate location:
-        form_data = {'title': row[1].values[16],
-                     'description': row[1].values[17],
-                     'firstname1': row[1].values[6],
-                     'surname1': row[1].values[7],
-                     'firstname2': row[1].values[11],
-                     'surname2': row[1].values[12],
-                     'north': row[1].values[42],
-                     'south': row[1].values[41],
-                     'east': row[1].values[43],
-                     'west': row[1].values[44],
-                     'chemicals': row[1].values[46].split(';'),
-                     'obs_level': row[1].values[19],
-                     'data_source': row[1].values[20],
-                     'time_range_start': row[1].values[37],
-                     'time_range_end': row[1].values[38],
-                     'lineage': row[1].values[50],
-                     'quality': row[1].values[51],
-                     'docs': row[1].values[22]}
-
-        form = pd.Series(data=form_data)
-        form_responses.append([form, r])
+    form_responses = conversion_lists.excel_slice(dataframe)
 
     return form_responses
 
@@ -169,9 +133,9 @@ class MetadataForm:
     the 17-page input form created by our lovely scientists) into either json
     files (for chemical metadata) or yaml files (for all other metadata)."""
 
-    def __init__(self, input_filepath, output_dir_path):
+    def __init__(self, input_filepath, output_directory):
         self.filepath = input_filepath
-        self.output_dir = output_dir_path
+        self.output_dir = output_directory
 
     def save_as_json(self, data_object: pd.DataFrame, r, fname):
         """
@@ -194,10 +158,7 @@ class MetadataForm:
                          'chart': "url/to/chart/image.(png|jpg|svg|etc)"}
                 chemicals.append(chems)
 
-        new_file = {"pollutants": chemicals,
-                    "environmentType": data_object.obs_level,
-                    "dateRange": {"startDate": data_object.time_range_start,
-                                  "endDate": data_object.time_range_end}}
+        new_file = conversion_lists.to_json(data_object, chemicals)
 
         # write the dictionary above (new_file) to a json with the addition of
         # a unit to indicate the number of the metadata form response (input
@@ -243,17 +204,8 @@ class MetadataForm:
                       "end": data_object.get("time_range_end").isoformat()}
 
         # Now add all relevant data to a dictionary to save as yaml:
-        new_file = {"title": data_object.title,
-                    "description": data_object.description,
-                    "authors": authors,
-                    "bbox": bbox,
-                    "chemical species": chem_species,
-                    "observation level/model": data_object.obs_level,
-                    "data source": data_object.data_source,
-                    "time range": time_range,
-                    "lineage": data_object.lineage,
-                    "quality": data_object.quality,
-                    "docs": data_object.docs}
+        new_file = conversion_lists.to_yaml(data_object, chem_species,
+                                            authors, bbox, time_range)
 
         # write the dictionary above (new_file) to a yaml in the specified
         # directory with the addition of a unit to indicate the number of the
@@ -295,9 +247,9 @@ class DataFile:
 
     To convert CSV --> netCDF, use:
     >> convert_csv(input_path, output_path)"""
-    def __init__(self, input_file, output_dir_path):
+    def __init__(self, input_file, output_path):
         self.filepath = input_file
-        self.output_location = output_dir_path
+        self.output_location = output_path
 
     def convert_netcdf(self):
         """
