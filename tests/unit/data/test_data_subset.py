@@ -90,6 +90,19 @@ class TestBoxSubset:
         assert iris.util.array_equal(xcoord.points[[0, -1]], [258000, 344000])
         assert iris.util.array_equal(ycoord.points[[0, -1]], [56000, 146000])
 
+class TestAverageTime:
+    @staticmethod
+    @pytest.fixture
+    def dataset(sampledir):
+        return DataSubset(os.path.join(sampledir, "model_full", "aqum_hourly_o3_48_hours.nc"))
+
+    @staticmethod
+    def test_as_cube(dataset):
+        cube = dataset.average_time(iris.analysis.MEAN)
+
+        # check that the resulting cube has 24 hours
+        assert cube.coord('time').points.shape == (24,)
+
 
 # TODO: This test currently fails due to errors in cell weight calculations.
 # TODO: FIX THIS

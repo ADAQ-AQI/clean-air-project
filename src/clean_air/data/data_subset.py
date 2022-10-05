@@ -48,11 +48,13 @@ class DataSubset:
             constraints = constraints & iris.Constraint(
                 time=lambda cell: cell.point < self.end_time
             )
-
-        try:
-            cube = iris.load_cube(self.metadata, constraints)
-        except AttributeError:
-            cube = iris.load_cube(self.metadata['files'], constraints)
+        if isinstance(self.metadata, iris.cube.Cube):
+            cube = self.metadata
+        else:
+            try:
+                cube = iris.load_cube(self.metadata, constraints)
+            except AttributeError:
+                cube = iris.load_cube(self.metadata['files'], constraints)
 
         self._cube = cube
         return self._cube
@@ -101,7 +103,6 @@ class DataSubset:
                 dataset by default.
         """
         box = shapely.geometry.box(*box)
-
         cube = self._load_cube()
 
         # Ensure coordinate systems match
@@ -174,3 +175,21 @@ class DataSubset:
             cubes.append(self.extract_shape(geom, crs=crs))
 
         return cubes
+
+    def average_time(self, aggregator):
+        """
+        Average the value of each hour across multiple days.
+        """
+        cube_list = iris.cube.CubeList([])
+        cube = self._load_cube()
+        for hour in range(24):            
+            constraint = iris.Constraint(time=lambda cell: cell.point.hour == hour)
+            transverse_cube = cube.extract(constraint)
+            mean_cube = transverse_cube.collapsed('time', aggregator)
+
+            # Make the time dimension of the new cube equal to that of the first day
+            mean_cube.coord('time').points = transverse_cube.coord('time').points[0]
+            cube_list.append(mean_cube)
+
+        result_cube = cube_list.merge_cube()
+        return result_cube
