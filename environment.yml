@@ -22,8 +22,8 @@ dependencies:
   - flake8
   - boto3-stubs-essential
   - pip:
-    - https://github.com/MetOffice/edr_server/archive/refs/heads/main.zip#egg=edr_server
     - tox<4.0.0 # The conda package didn't install correctly, but using the pip package did
     - moto>=3.0.1
-    - -e .  # Install the source code in development mode. The argument is the path to the folder containing the setup.cfg
+    - https://github.com/MetOffice/edr_server/archive/refs/heads/main.zip#egg=edr_server
     - https://github.com/ADAQ-AQI/cap-sample-data/archive/main.zip#egg=cap_sample_data
+    - -e .  # Install the source code in development mode. The argument is the path to the folder containing the setup.cfg

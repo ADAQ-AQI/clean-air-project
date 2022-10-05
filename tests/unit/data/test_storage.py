@@ -1,28 +1,28 @@
-import json
-import os
-import unittest
-from datetime import date
-from decimal import Decimal
-from pathlib import Path
-from time import time
 from unittest import mock
-from unittest.mock import Mock
 
 import boto3
 import botocore
+import json
+import os
+import unittest
 from botocore.exceptions import ClientError, BotoCoreError
+from datetime import date
+from decimal import Decimal
 from moto import mock_s3
 # TODO: make this moto import work locally
-from mypy_boto3_s3.service_resource import Object
+from mypy_boto3_s3.service_resource import Object  # Used by moto to correctly mock object store requests
+from pathlib import Path
 from s3fs import S3FileSystem
 from shapely.geometry import box
+from time import time
+from unittest.mock import Mock
 
 from clean_air.data.storage import AURNSiteDataStoreException, DataStoreException, AURNSite, AURNSiteDataStore, \
     create_aurn_datastore, S3FSMetadataStore, S3FSDataSetStore
 from clean_air.exceptions import CleanAirFrameworkException
-# Used by moto to correctly mock object store requests
-from clean_air.models import Metadata, DataSet, TemporalExtent, Extent
-from clean_air.serialisation import MetadataYamlSerialiser
+from clean_air.models import Metadata, DataSet
+from clean_air.serialisation import MetadataJsonSerialiser
+from edr_server.core.models.extents import Extents, SpatialExtent
 
 os.environ["MOTO_S3_CUSTOM_ENDPOINTS"] = "https://caf-o.s3-ext.jc.rl.ac.uk"
 
@@ -38,6 +38,7 @@ class ExceptionsTest(unittest.TestCase):
 
     def test_AURNSiteDataStoreException_is_subclass_of_DataStoreException(self):
         self.assertTrue(issubclass(AURNSiteDataStoreException, DataStoreException))
+
 
 # TODO: Get mock_s3 working so I can reinstate these tests
 # I believe this is a conda issue in that we seem to all be running on
@@ -315,7 +316,8 @@ class DataSetStoreTest(unittest.TestCase):
         self.mock_fs.anon = False
         self.mock_storage_bucket_name = "test_bucket"
 
-        test_metadata = Metadata(f"test dataset-{time()}", box(-2, -2, 2, 2))
+        test_metadata = Metadata(
+            f"{time()}", f"test dataset-{time()}", "A Test", [], Extents(SpatialExtent(box(-1, -1, 1, 1))), [])
 
         self.mock_metadata_store = Mock(spec=S3FSMetadataStore)
         self.mock_metadata_store.get.return_value = test_metadata
@@ -420,7 +422,8 @@ class MetadataStoreTest(unittest.TestCase):
         self.mock_fs = Mock(spec=S3FileSystem)
         self.mock_fs.anon = False
         self.mock_storage_bucket_name = "test_bucket"
-        self.test_metadata = Metadata(f"Test-{time()}", Extent(box(-1, -1, 1, 1), TemporalExtent()))
+        self.test_metadata = Metadata(
+            f"{time()}", f"test dataset-{time()}", "A Test", [], Extents(SpatialExtent(box(-1, -1, 1, 1))), [])
 
         self.metadata_store = S3FSMetadataStore(self.mock_fs, self.mock_storage_bucket_name)
 
@@ -441,7 +444,7 @@ class MetadataStoreTest(unittest.TestCase):
         WHEN get is called
         THEN the metadata for that dataset is returned
         """
-        serialiser = MetadataYamlSerialiser()
+        serialiser = MetadataJsonSerialiser()
 
         def mock_get(_s3_key: str, download_path: str, _recursive=False):
             """Mocks S3FileSystem.get"""
@@ -473,7 +476,7 @@ class MetadataStoreTest(unittest.TestCase):
         AND the temporary file contains the correctly serialised form of the Metadata
         AND the s3 key is correct
         """
-        serialiser = MetadataYamlSerialiser()
+        serialiser = MetadataJsonSerialiser()
         expected_upload = serialiser.serialise(self.test_metadata)
         expected_s3_key = f"{self.mock_storage_bucket_name}/{self.test_metadata.id}/{self.test_metadata.id}.metadata"
 

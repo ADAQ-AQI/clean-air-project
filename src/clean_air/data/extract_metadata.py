@@ -1,12 +1,19 @@
+from typing import Union, List
+
 import iris
+import iris.cube
+import iris.exceptions
+from shapely.geometry import Polygon, MultiPolygon
+
+from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExtent, VerticalExtent
+from edr_server.core.models.links import DataQueryLink
 from edr_server.core.models.metadata import CollectionMetadata
 from edr_server.core.models.parameters import Parameter
-from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExtent, VerticalExtent
-from shapely.geometry import Polygon, MultiPolygon
+
 
 def _cube_to_polygon(cube):
     """
-    Given a iris cube, this function returns a shapely geometry polygon of the spatial extent. 
+    Given an iris cube, this function returns a shapely geometry polygon of the spatial extent.
     Adapted from iris.analysis.geometry._extract_relevant_cube_slice.
     """
 
@@ -24,7 +31,7 @@ def _cube_to_polygon(cube):
 
     x_coord = x_coords[0]
     y_coord = y_coords[0]
-    if (x_coord.has_bounds() and y_coord.has_bounds()):
+    if x_coord.has_bounds() and y_coord.has_bounds():
         # bounds of cube dimensions
         x_bounds = x_coord.bounds
         y_bounds = y_coord.bounds
@@ -61,8 +68,10 @@ def _cube_to_polygon(cube):
         return Polygon(coords)
 
 
-def extract_metadata(cubes, id, keywords, data_queries, output_formats, title=None, description=None):
-
+def extract_metadata(
+        cubes: Union[iris.cube.Cube, iris.cube.CubeList], metadata_id: str, keywords: List[str],
+        data_queries: List[DataQueryLink], output_formats: List[str], title: str = None, description: str = None
+):
     if isinstance(cubes, iris.cube.Cube):
         name = cubes.standard_name
         summary = cubes.summary()
@@ -71,11 +80,16 @@ def extract_metadata(cubes, id, keywords, data_queries, output_formats, title=No
     elif isinstance(cubes, iris.cube.CubeList):
         name = title
         summary = description
+    else:
+        raise TypeError(
+            f"cubes argument was a {type(cubes)!r}, but was expected to be an iris.cube.Cube or iris.cube.CubeList"
+        )
 
     parameters = []
     total_temporal_extent_list = []  # list of numpy ndarrays
     total_vertical_extent_list = []
     total_polygon_list = []
+    cube_extent = None
 
     for cube in cubes:
         bounding_polygon, bounding_polygon_crs = _cube_to_polygon(cube)
@@ -93,8 +107,9 @@ def extract_metadata(cubes, id, keywords, data_queries, output_formats, title=No
         total_temporal_extent_list.append(cube.coord('time').points)
         cube_extent = Extents(spatial_extent, temporal_extent, vertical_extent)
 
-        parameters.append(Parameter(id=cube.name, unit=cube.units,
-                          observed_property=cube.name, extent=cube_extent))
+        parameters.append(
+            Parameter(id=cube.name, unit=cube.units, observed_property=cube.name, extent=cube_extent)
+        )
 
     if len(cubes) == 1:
         total_extent = cube_extent
@@ -109,7 +124,7 @@ def extract_metadata(cubes, id, keywords, data_queries, output_formats, title=No
         total_extent = Extents(total_spatial_extent, total_temporal_extent, total_vertical_extent)
 
     kwargs = {
-        "id": id,
+        "id": metadata_id,
         "title": name,
         "description": summary,
         "keywords": keywords,
