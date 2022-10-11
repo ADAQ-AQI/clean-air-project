@@ -12,7 +12,7 @@ from clean_air.data.metadata_handler import MetadataHandler, dict_printer
 #('METADATA TEST', 'Build list of all metadata files and turn filters to on by default \n')
 @pytest.fixture()
 def mh(sampledir):
-    mh = MetadataHandler(os.path.join(sampledir))
+    mh = MetadataHandler(os.path.join(sampledir, "test_data"))
     dict_printer(mh.filters_dict)
     return mh
 
