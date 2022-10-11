@@ -8,11 +8,11 @@ from clean_air.data.metadata_handler import MetadataHandler, dict_printer
 # metadata_one.yaml
 # antartic_metedata.yaml
 
-
+# TODO: Tidy all this up!!!
 #('METADATA TEST', 'Build list of all metadata files and turn filters to on by default \n')
 @pytest.fixture()
 def mh(sampledir):
-    mh = MetadataHandler(os.path.join(sampledir,"test_data"))
+    mh = MetadataHandler(os.path.join(sampledir))
     dict_printer(mh.filters_dict)
     return mh
 
