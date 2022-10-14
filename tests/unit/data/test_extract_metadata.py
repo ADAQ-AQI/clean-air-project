@@ -35,10 +35,10 @@ class TestExtractMetadata:
     @staticmethod
     @pytest.fixture
     def cube_2():
-        latitude = DimCoord(np.linspace(1, 100, 200),
+        x = DimCoord(np.linspace(1, 100, 200),
                             standard_name='projection_x_coordinate',
                             units='meters')
-        longitude = DimCoord(np.linspace(1, 100, 200),
+        y = DimCoord(np.linspace(1, 100, 200),
                              standard_name='projection_y_coordinate',
                              units='meters')
         time = DimCoord(np.linspace(101, 148, 48),
@@ -47,8 +47,8 @@ class TestExtractMetadata:
         cube = Cube(np.zeros((200, 200, 48), np.float32),
                     standard_name="mass_fraction_of_carbon_dioxide_in_air",
                     units="l",
-                    dim_coords_and_dims=[(latitude, 0),
-                                         (longitude, 1),
+                    dim_coords_and_dims=[(x, 0),
+                                         (y, 1),
                                          (time, 2)])
         return cube
 
@@ -61,10 +61,10 @@ class TestExtractMetadata:
         longitude = DimCoord(np.linspace(-10, 400, 8),
                              standard_name='longitude',
                              units='degrees')
-        time = DimCoord(np.linspace(1, 24, 24),
+        time = DimCoord([1, 2, 3, 7, 8, 9],
                         standard_name='time',
                         units="hours since 1970-01-01 00:00:00")
-        cube = Cube(np.zeros((4, 8, 24), np.float32),
+        cube = Cube(np.zeros((4, 8, 6), np.float32),
                     standard_name="mass_concentration_of_ozone_in_air",
                     units="ug/m3",
                     dim_coords_and_dims=[(latitude, 0),
@@ -108,82 +108,88 @@ class TestExtractMetadata:
     def test_title_cube(cube_1):
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
-        assert (cube_metadata.title == "mass_concentration_of_ozone_in_air")
+        assert cube_metadata.title == "mass_concentration_of_ozone_in_air"
 
     @staticmethod
     def test_title_cubelist(cube_1, cube_2):
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
-        assert (cubelist_metadata.title == "title")
+        assert cubelist_metadata.title == "title"
 
     @staticmethod
     def test_total_time_extent(cube_1):
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
-        assert (np.allclose(cube_metadata.extent.temporal.values, np.linspace(1, 24, 24)))
+        assert np.allclose(cube_metadata.extent.temporal.values, np.linspace(1, 24, 24))
+
+    @staticmethod
+    def test_total_time_extent_gap(cube_3):
+        cube_metadata = data.extract_metadata.extract_metadata(
+            cube_3, 1, [], ['cube'], ['netCDF'])
+        assert np.allclose(cube_metadata.extent.temporal.values, [1, 2, 3, 7, 8, 9])
 
     @staticmethod
     def test_total_vertical_extent(cube_1):
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
-        assert (cube_metadata.extent.vertical.values == pytest.approx(3.5))
+        assert cube_metadata.extent.vertical.values == pytest.approx(3.5)
 
     @staticmethod
     def test_parameters_length_cube(cube_1):
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
-        assert (len(cube_metadata.parameters) == 1)
+        assert len(cube_metadata.parameters) == 1
 
     @staticmethod
     def test_parameters_length_cubelist(cube_1, cube_2):
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
-        assert (len(cubelist_metadata.parameters) == 2)
+        assert len(cubelist_metadata.parameters) == 2
 
     @staticmethod
     def test_containing_polygon_cube(cube_1):
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
-        assert (cube_metadata.extent.spatial.bbox.bounds == (45, -90, 360, 90))
+        assert cube_metadata.extent.spatial.bbox.bounds == (45, -90, 360, 90)
 
     @staticmethod
     def test_containing_polygon_equal(cube_1):
         # two equal polygons
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_1]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
-        assert (cubelist_metadata.extent.spatial.bbox.bounds == (45, -90, 360, 90))
+        assert cubelist_metadata.extent.spatial.bbox.bounds == (45, -90, 360, 90)
 
     @staticmethod
     def test_containing_polygon_overlapping(cube_1, cube_2):
         # two partially overlapping polygons
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
-        assert (cubelist_metadata.extent.spatial.bbox.bounds == (1, -90, 360, 100))
+        assert cubelist_metadata.extent.spatial.bbox.bounds == (1, -90, 360, 100)
 
     @staticmethod
     def test_containing_polygon_within(cube_1, cube_3):
         # one polygon completely within another polygon
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_3]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
-        assert (cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 400, 150))
+        assert cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 400, 150)
 
     @staticmethod
     def test_containing_polygon_overlapping_and_within(cube_1, cube_2, cube_3):
         # two partially overlapping polygons completely within a third polygon
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2, cube_3]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
-        assert (cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 400, 150))
+        assert cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 400, 150)
 
     @staticmethod
     def test_containing_polygon_separate(cube_1, cube_4):
         # two completely separate polygons
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_4]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
-        assert (cubelist_metadata.extent.spatial.bbox.bounds == (45, -90, 430, 175))
+        assert cubelist_metadata.extent.spatial.bbox.bounds == (45, -90, 430, 175)
 
     @staticmethod
     def test_containing_polygon_overlap_within_separate(cube_1, cube_2, cube_3, cube_4):
         # two partially overlapping polygons completely within a third polygon, and a completely separate fourth polygon
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2, cube_3, cube_4]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
-        assert (cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 430, 175))
+        assert cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 430, 175)
