@@ -3,7 +3,7 @@ Configuration for pytest - this file is automatically executed on startup.
 """
 
 from pathlib import Path
-
+import cap_sample_data
 import pytest
 
 
@@ -13,14 +13,12 @@ def pytest_addoption(parser):
     """
     Register custom command-line arguments that can be passed to `pytest`
     """
-    root = Path(__file__).parent
-    default = root.parent / "cap-sample-data"
+    default = Path(cap_sample_data.path)
     parser.addoption(
         "--sampledir",
         default=default,
         type=Path,
-        help="checkout of ADAQ-AQI/cap-sample-data.\n"
-        "Default: `cap-sample-data` as a sibling of this repository."
+        help="cap-sample-data package (https://github.com/ADAQ-AQI/cap-sample-data).\n"
     )
 
 
