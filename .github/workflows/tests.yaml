@@ -17,13 +17,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-#      - name: Check out data
-#        uses: actions/checkout@v2
-#        with:
-#          repository: ADAQ-AQI/cap-sample-data
-#          path: ./cap-sample-data
-#      - run: mv ./cap-sample-data ../cap-sample-data
-
       - name: Check cached environment
         id: cache
         uses: actions/cache@v2
