@@ -13,6 +13,7 @@ def pytest_addoption(parser):
     """
     Register custom command-line arguments that can be passed to `pytest`
     """
+
     # NOTE: The root path as defined in the cap_sample_data/__init__.py is
     # cap_sample_data/sample_data
     root = cap_sample_data.path
@@ -21,9 +22,7 @@ def pytest_addoption(parser):
         "--sampledir",
         default=default,
         type=Path,
-        help="cap-sample-data package "
-             "(https://github.com/ADAQ-AQI/cap-sample-data).\n"
-        "Default: `cap-sample-data` as a sibling of this repository."
+
     )
 
 
