@@ -23,7 +23,6 @@ def pytest_addoption(parser):
         type=Path,
         help="cap-sample-data package "
              "(https://github.com/ADAQ-AQI/cap-sample-data).\n"
-        "Default: `cap-sample-data` as a sibling of this repository."
     )
 
 
