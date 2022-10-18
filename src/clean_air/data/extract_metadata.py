@@ -80,7 +80,10 @@ def extract_metadata(cubes, id, keywords, data_queries, output_formats, title=No
     for cube in cubes:
         bounding_polygon, bounding_polygon_crs = _cube_to_polygon(cube)
         total_polygon_list.append(bounding_polygon)
-        spatial_extent = SpatialExtent(bounding_polygon, bounding_polygon_crs)
+        if bounding_polygon_crs:
+            spatial_extent = SpatialExtent(bounding_polygon, bounding_polygon_crs)
+        else:
+            spatial_extent = SpatialExtent(bounding_polygon)
         temporal_extent = TemporalExtent(cube.coord('time').points)
         if len(cube.coords(axis='z')) == 1:
             vertical_extent = VerticalExtent(cube.coord(axis='z').points)
