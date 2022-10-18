@@ -51,8 +51,8 @@ def _cube_to_polygon(cube):
 
     coords = [(x_bounds_lower, y_bounds_lower),
               (x_bounds_upper, y_bounds_lower),
-              (x_bounds_lower, y_bounds_upper),
-              (x_bounds_upper, y_bounds_upper)]
+              (x_bounds_upper, y_bounds_upper),
+              (x_bounds_lower, y_bounds_upper)]
 
     if x_coord.coord_system == y_coord.coord_system:
         return Polygon(coords), x_coord.coord_system
@@ -78,9 +78,12 @@ def extract_metadata(cubes, id, keywords, data_queries, output_formats, title=No
     total_polygon_list = []
 
     for cube in cubes:
-        bounding_polygon = _cube_to_polygon(cube)
-        total_polygon_list.append(bounding_polygon[0])
-        spatial_extent = SpatialExtent(bounding_polygon)
+        bounding_polygon, bounding_polygon_crs = _cube_to_polygon(cube)
+        total_polygon_list.append(bounding_polygon)
+        if bounding_polygon_crs:
+            spatial_extent = SpatialExtent(bounding_polygon, bounding_polygon_crs)
+        else:
+            spatial_extent = SpatialExtent(bounding_polygon)
         temporal_extent = TemporalExtent(cube.coord('time').points)
         if len(cube.coords(axis='z')) == 1:
             vertical_extent = VerticalExtent(cube.coord(axis='z').points)
@@ -101,9 +104,9 @@ def extract_metadata(cubes, id, keywords, data_queries, output_formats, title=No
 
         # Placeholder for spatial extent until we do this https://github.com/MetOffice/edr_server/issues/31.
         total_polygon_list = MultiPolygon(total_polygon_list)
-        total_spatial_extent = SpatialExtent(total_polygon_list)
-        total_extent = Extents(total_spatial_extent,
-                               total_temporal_extent, total_vertical_extent)
+        containing_polygon = total_polygon_list.convex_hull
+        total_spatial_extent = SpatialExtent(containing_polygon)
+        total_extent = Extents(total_spatial_extent, total_temporal_extent, total_vertical_extent)
 
     kwargs = {
         "id": id,
