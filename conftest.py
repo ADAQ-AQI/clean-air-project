@@ -22,6 +22,8 @@ def pytest_addoption(parser):
         "--sampledir",
         default=default,
         type=Path,
+        help="cap-sample-data package "
+             "(https://github.com/ADAQ-AQI/cap-sample-data).\n"
 
     )
 
