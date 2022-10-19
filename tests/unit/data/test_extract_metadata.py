@@ -1,6 +1,7 @@
 import pytest
 from iris.coords import DimCoord
 from iris.cube import Cube, CubeList
+import iris.coord_systems
 import numpy as np
 from clean_air import data
 from edr_server.core.models.metadata import CollectionMetadata
@@ -12,10 +13,12 @@ class TestExtractMetadata:
     def cube_1():
         latitude = DimCoord(np.linspace(-90, 90, 4),
                             standard_name='latitude',
-                            units='degrees')
+                            units='degrees',
+                            coord_system=iris.coord_systems.Mercator())
         longitude = DimCoord(np.linspace(45, 360, 8),
                              standard_name='longitude',
-                             units='degrees')
+                             units='degrees',
+                             coord_system=iris.coord_systems.Mercator())
         time = DimCoord(np.linspace(1, 24, 24),
                         standard_name='time',
                         units="hours since 1970-01-01 00:00:00")
@@ -77,10 +80,12 @@ class TestExtractMetadata:
     def cube_4():
         latitude = DimCoord(np.linspace(125, 175, 4),
                             standard_name='latitude',
-                            units='degrees')
+                            units='degrees',
+                            coord_system=iris.coord_systems.GeogCS(6371229))
         longitude = DimCoord(np.linspace(420, 430, 8),
                              standard_name='longitude',
-                             units='degrees')
+                             units='degrees',
+                             coord_system=iris.coord_systems.GeogCS(6371229))
         time = DimCoord(np.linspace(1, 24, 24),
                         standard_name='time',
                         units="hours since 1970-01-01 00:00:00")
