@@ -18,6 +18,14 @@ pip install .
 
 Remember to use the `-e` option to `pip install` for development work.
 
+### Dependency on edr_server
+We've decided to temporarily reuse the metadata implementation from [edr_server](https://github.com/ADAQ-AQI/edr_server) 
+as a time-saving measure because our metadata storage requirements are currently being driven by the EDR standard.
+
+For now, it's difficult to justify separately maintaining two different copies of the same functionality.
+We'll keep this under review to identify if/when the clean air project's metadata requirements diverge from
+`edr_server`
+
 ## Credentials
 Some code accesses resources held in an AWS S3 compatible object store.
 Credentials must be provided by 

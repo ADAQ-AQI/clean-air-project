@@ -1,26 +1,25 @@
 """Data access code for stored data"""
+import boto3
+import botocore.exceptions
 import csv
 import logging
 import shutil
 import tempfile
 import weakref
 from abc import ABC, abstractmethod
+from botocore import UNSIGNED
+from botocore.config import Config
 from dataclasses import dataclass
 from datetime import datetime, date
 from decimal import Decimal
-from pathlib import Path
-from typing import TypeVar, Generic, Iterable, Callable, List, Optional
-
-import boto3
-import botocore.exceptions
-from botocore import UNSIGNED
-from botocore.config import Config
 from mypy_boto3_s3.service_resource import Object
+from pathlib import Path
 from s3fs import S3FileSystem
+from typing import TypeVar, Generic, Iterable, Callable, List, Optional, Generator
 
 from ..exceptions import CleanAirFrameworkException
 from ..models import DataSet, Metadata
-from ..serialisation import MetadataYamlSerialiser, MetadataSerialiser
+from ..serialisation import MetadataSerialiser, MetadataJsonSerialiser
 
 LOGGER = logging.getLogger(__name__)
 T = TypeVar('T')
@@ -203,7 +202,7 @@ class BaseS3FSDataStore:
 
     def available_datasets(self) -> List[str]:
         """Returns a list of dataset names that are available"""
-        return [s.split("/", 1)[1] for s in self._fs.ls(self._storage_bucket_name, detail=False)]
+        return [s.split("/", 1)[1] for s in self._fs.ls(self._storage_bucket_name, detail=False, refresh=True)]
 
 
 class S3FSDataSetStore(BaseS3FSDataStore):
@@ -237,6 +236,14 @@ class S3FSDataSetStore(BaseS3FSDataStore):
 
     def _generate_cache_dir_path(self, dataset_id: str) -> Path:
         return (self._cache_dir / Path(dataset_id)).absolute()
+
+    def all(self) -> Generator[DataSet, None, None]:
+        """
+        Gets all datasets in the datastore, which could be a lot and could take a while, so we use a generator to keep
+        the memory requirements low and limit how much data we have in memory at any given time.
+        """
+        for ds_id in self.available_datasets():
+            yield self.get(ds_id)
 
     def get(self, dataset_id: str) -> DataSet:
         # TODO don't redownload if in cache? maybe add refresh/reload option
@@ -283,7 +290,7 @@ class S3FSMetadataStore(BaseS3FSDataStore):
 
     def __init__(self, fs: S3FileSystem, storage_bucket_name: str = "caf-data", cache_dir: Optional[Path] = None,
                  metadata_serialiser: Optional[MetadataSerialiser] = None):
-        self._metadata_serialiser = metadata_serialiser if metadata_serialiser else MetadataYamlSerialiser()
+        self._metadata_serialiser = metadata_serialiser if metadata_serialiser else MetadataJsonSerialiser()
         super().__init__(fs=fs, storage_bucket_name=storage_bucket_name, cache_dir=cache_dir)
 
     def _to_s3_key(self, dataset_id: str) -> str:
@@ -292,6 +299,16 @@ class S3FSMetadataStore(BaseS3FSDataStore):
     def _to_cached_file_path(self, dataset_id: str) -> Path:
         return (self._cache_dir / Path(dataset_id) / Path(f"{dataset_id}.metadata")).absolute()
 
+    def all(self) -> Generator[Metadata, None, None]:
+        """
+        Gets the metadata for all datasets in the datastore, which could be a lot and could take a while, so we use
+        a generator to keep the memory requirements O(1) (at least within this method, if the user decides to conver it
+        to a list, that'll be O(n), but that's outside the scope of this method). Processing time is expected to be O(n)
+        to load all metadata items.
+        """
+        for ds_id in self.available_datasets():
+            yield self.get(ds_id)
+
     def get(self, dataset_id: str) -> Metadata:
         metadata_key = self._to_s3_key(dataset_id)
         cached_metadata_file = self._to_cached_file_path(dataset_id)
@@ -299,8 +316,8 @@ class S3FSMetadataStore(BaseS3FSDataStore):
         cached_metadata_file.parent.mkdir(parents=True, exist_ok=True)
         try:
             self._fs.get(metadata_key, str(cached_metadata_file))
-        except PermissionError:
-            msg = f"PermissionError when accessing {metadata_key}."
+        except (PermissionError, FileNotFoundError) as exc:
+            msg = f"{exc.__class__.__name__} when accessing {metadata_key}."
             msg += " Object may not exist, or you may have incorrect/misconfigured credentials"
             raise DataStoreException(msg)
 
