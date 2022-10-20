@@ -9,6 +9,7 @@ from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExten
 from edr_server.core.models.links import DataQueryLink
 from edr_server.core.models.metadata import CollectionMetadata
 from edr_server.core.models.parameters import Parameter
+from edr_server.core.models.crs import CrsObject
 
 
 def _cube_to_polygon(cube):
@@ -61,12 +62,11 @@ def _cube_to_polygon(cube):
               (x_bounds_upper, y_bounds_upper),
               (x_bounds_lower, y_bounds_upper)]
 
-    if x_coord.coord_system == y_coord.coord_system:
-        return Polygon(coords), x_coord.coord_system
-
+    if x_coord.coord_system and x_coord.coord_system == y_coord.coord_system:
+        crs = CrsObject(x_coord.coord_system.as_cartopy_crs())
+        return Polygon(coords), crs
     else:
-        return Polygon(coords)
-
+        return Polygon(coords), None
 
 def extract_metadata(
         cubes: Union[iris.cube.Cube, iris.cube.CubeList], metadata_id: str, keywords: List[str],
