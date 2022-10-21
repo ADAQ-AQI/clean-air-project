@@ -1,4 +1,5 @@
 import pytest
+import unittest
 from iris.coords import DimCoord
 from iris.cube import Cube, CubeList
 import iris.coord_systems
@@ -39,11 +40,11 @@ class TestExtractMetadata:
     @pytest.fixture
     def cube_2():
         x = DimCoord(np.linspace(1, 100, 200),
-                            standard_name='projection_x_coordinate',
-                            units='meters')
+                     standard_name='projection_x_coordinate',
+                     units='meters')
         y = DimCoord(np.linspace(1, 100, 200),
-                             standard_name='projection_y_coordinate',
-                             units='meters')
+                     standard_name='projection_y_coordinate',
+                     units='meters')
         time = DimCoord(np.linspace(101, 148, 48),
                         standard_name='time',
                         units="hours since 1970-01-01 00:00:00")
@@ -198,3 +199,17 @@ class TestExtractMetadata:
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2, cube_3, cube_4]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 430, 175)
+
+
+class errorTest(unittest.TestCase):
+    def test_dimensionless_cube_error(self):
+        time = DimCoord(np.linspace(1, 24, 24),
+                        standard_name='time',
+                        units="hours since 1970-01-01 00:00:00")
+        cube = Cube(np.zeros((24), np.float32),
+                    standard_name="mass_concentration_of_ozone_in_air",
+                    units="ug/m3",
+                    dim_coords_and_dims=[(time, 0)])
+        with self.assertRaisesRegex(ValueError, 'The dataset must contain at least one variable with x and y axes.'):
+            data.extract_metadata.extract_metadata(
+                cube, 1, [], ['cube'], ['netCDF'])

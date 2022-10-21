@@ -18,20 +18,9 @@ def _cube_to_polygon(cube):
     Adapted from iris.analysis.geometry._extract_relevant_cube_slice.
     """
 
-    # Validate the input parameters
-    if not cube.coords(axis="x") or not cube.coords(axis="y"):
-        raise ValueError("The cube must contain x and y axes.")
+    x_coord = cube.coords(axis="x")[0]
+    y_coord = cube.coords(axis="y")[0]
 
-    x_coords = cube.coords(axis="x")
-    y_coords = cube.coords(axis="y")
-    if len(x_coords) != 1 or len(y_coords) != 1:
-        raise ValueError(
-            "The cube must contain one, and only one, coordinate "
-            "for each of the x and y axes."
-        )
-
-    x_coord = x_coords[0]
-    y_coord = y_coords[0]
     if x_coord.has_bounds() and y_coord.has_bounds():
         # bounds of cube dimensions
         x_bounds = x_coord.bounds
@@ -92,25 +81,29 @@ def extract_metadata(
     cube_extent = None
 
     for cube in cubes:
-        bounding_polygon, bounding_polygon_crs = _cube_to_polygon(cube)
-        total_polygon_list.append(bounding_polygon)
-        if bounding_polygon_crs:
-            spatial_extent = SpatialExtent(bounding_polygon, bounding_polygon_crs)
-        else:
-            spatial_extent = SpatialExtent(bounding_polygon)
-        temporal_extent = TemporalExtent(cube.coord('time').points)
+        spatial_extent = None
+        temporal_extent = None
+        vertical_extent = None
+        if len(cube.coords(axis="x")) == 1 and len(cube.coords(axis="y")) == 1:
+            bounding_polygon, bounding_polygon_crs = _cube_to_polygon(cube)
+            total_polygon_list.append(bounding_polygon)
+            if bounding_polygon_crs:
+                spatial_extent = SpatialExtent(bounding_polygon, bounding_polygon_crs)
+            else:
+                spatial_extent = SpatialExtent(bounding_polygon)
+        if len(cube.coords('time')) == 1:
+            temporal_extent = TemporalExtent(cube.coord('time').points)
+            total_temporal_extent_list.append(cube.coord('time').points)
         if len(cube.coords(axis='z')) == 1:
             vertical_extent = VerticalExtent(cube.coord(axis='z').points)
             total_vertical_extent_list.append(cube.coord(axis='z').points)
-        else:
-            vertical_extent = None
-        total_temporal_extent_list.append(cube.coord('time').points)
         cube_extent = Extents(spatial_extent, temporal_extent, vertical_extent)
 
         parameters.append(
             Parameter(id=cube.name, unit=cube.units, observed_property=cube.name, extent=cube_extent)
         )
-
+    if len(total_polygon_list) == 0:
+        raise ValueError('The dataset must contain at least one variable with x and y axes.')
     if len(cubes) == 1:
         total_extent = cube_extent
     else:
