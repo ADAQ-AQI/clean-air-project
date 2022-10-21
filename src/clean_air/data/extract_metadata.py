@@ -81,7 +81,9 @@ def extract_metadata(
     cube_extent = None
 
     for cube in cubes:
-        spatial_extent = temporal_extent = vertical_extent = None
+        spatial_extent = None
+        temporal_extent = None
+        vertical_extent = None
         if len(cube.coords(axis="x")) == 1 and len(cube.coords(axis="y")) == 1:
             bounding_polygon, bounding_polygon_crs = _cube_to_polygon(cube)
             total_polygon_list.append(bounding_polygon)
