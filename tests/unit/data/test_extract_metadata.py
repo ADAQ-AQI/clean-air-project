@@ -4,6 +4,7 @@ from iris.coords import DimCoord
 from iris.cube import Cube, CubeList
 import iris.coord_systems
 import numpy as np
+from datetime import datetime, timedelta
 from clean_air import data
 from edr_server.core.models.metadata import CollectionMetadata
 
@@ -126,13 +127,17 @@ class TestExtractMetadata:
     def test_total_time_extent(cube_1):
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
-        assert np.allclose(cube_metadata.extent.temporal.values, np.linspace(1, 24, 24))
+        test_array = np.arange(datetime(1970,1,1,1), datetime(1970,1,2,1), timedelta(hours=1)).astype(datetime)
+        assert cube_metadata.extent.temporal.values == test_array.tolist()
 
     @staticmethod
     def test_total_time_extent_gap(cube_3):
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_3, 1, [], ['cube'], ['netCDF'])
-        assert np.allclose(cube_metadata.extent.temporal.values, [1, 2, 3, 7, 8, 9])
+        lower = np.arange(datetime(1970,1,1,1), datetime(1970,1,1,4), timedelta(hours=1)).astype(datetime)
+        upper = np.arange(datetime(1970,1,1,7), datetime(1970,1,1,10), timedelta(hours=1)).astype(datetime)
+        test_array = np.concatenate((lower, upper))
+        assert cube_metadata.extent.temporal.values == test_array.tolist()
 
     @staticmethod
     def test_total_vertical_extent(cube_1):

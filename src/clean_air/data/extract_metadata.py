@@ -4,6 +4,7 @@ import iris
 import iris.cube
 import iris.exceptions
 from shapely.geometry import Polygon, MultiPolygon
+from cftime import num2pydate
 
 from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExtent, VerticalExtent
 from edr_server.core.models.links import DataQueryLink
@@ -75,7 +76,7 @@ def extract_metadata(
         )
 
     parameters = []
-    total_temporal_extent_list = []  # list of numpy ndarrays
+    total_temporal_extent_list = set()
     total_vertical_extent_list = []
     total_polygon_list = []
     cube_extent = None
@@ -92,8 +93,10 @@ def extract_metadata(
             else:
                 spatial_extent = SpatialExtent(bounding_polygon)
         if len(cube.coords('time')) == 1:
-            temporal_extent = TemporalExtent(cube.coord('time').points)
-            total_temporal_extent_list.append(cube.coord('time').points)
+
+            time_list = num2pydate(times=cube.coord('time').points, units=cube.coord('time').units.cftime_unit, calendar=cube.coord('time').units.calendar).tolist()
+            temporal_extent = TemporalExtent(time_list)
+            total_temporal_extent_list.update(time_list)
         if len(cube.coords(axis='z')) == 1:
             vertical_extent = VerticalExtent(cube.coord(axis='z').points)
             total_vertical_extent_list.append(cube.coord(axis='z').points)
@@ -107,7 +110,7 @@ def extract_metadata(
     if len(cubes) == 1:
         total_extent = cube_extent
     else:
-        total_temporal_extent = TemporalExtent(total_temporal_extent_list)
+        total_temporal_extent = TemporalExtent(list(total_temporal_extent_list))
         total_vertical_extent = VerticalExtent(total_vertical_extent_list)
 
         # Placeholder for spatial extent until we do this https://github.com/MetOffice/edr_server/issues/31.
