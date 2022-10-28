@@ -9,7 +9,7 @@ from cftime import num2pydate
 from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExtent, VerticalExtent
 from edr_server.core.models.links import DataQueryLink
 from edr_server.core.models.metadata import CollectionMetadata
-from edr_server.core.models.parameters import Parameter
+from edr_server.core.models.parameters import Parameter, ObservedProperty, Unit
 from edr_server.core.models.crs import CrsObject
 
 
@@ -58,6 +58,7 @@ def _cube_to_polygon(cube):
     else:
         return Polygon(coords), None
 
+
 def extract_metadata(
         cubes: Union[iris.cube.Cube, iris.cube.CubeList], metadata_id: str, keywords: List[str],
         data_queries: List[DataQueryLink], output_formats: List[str], title: str = None, description: str = None
@@ -78,6 +79,8 @@ def extract_metadata(
     parameters = []
     total_temporal_extent_list = set()
     total_vertical_extent_list = []
+    total_temporal_extent = None
+    total_vertical_extent = None
     total_polygon_list = []
     cube_extent = None
 
@@ -92,26 +95,32 @@ def extract_metadata(
                 spatial_extent = SpatialExtent(bounding_polygon, bounding_polygon_crs)
             else:
                 spatial_extent = SpatialExtent(bounding_polygon)
-        if len(cube.coords('time')) == 1:
 
-            time_list = num2pydate(times=cube.coord('time').points, units=cube.coord('time').units.cftime_unit, calendar=cube.coord('time').units.calendar).tolist()
+        if len(cube.coords('time')) == 1:
+            time_list = num2pydate(times=cube.coord('time').points, units=cube.coord(
+                'time').units.cftime_unit, calendar=cube.coord('time').units.calendar).tolist()
             temporal_extent = TemporalExtent(time_list)
             total_temporal_extent_list.update(time_list)
+
         if len(cube.coords(axis='z')) == 1:
             vertical_extent = VerticalExtent(cube.coord(axis='z').points)
             total_vertical_extent_list.append(cube.coord(axis='z').points)
-        cube_extent = Extents(spatial_extent, temporal_extent, vertical_extent)
 
+        cube_extent = Extents(spatial_extent, temporal_extent, vertical_extent)
+        unit = Unit(labels=cube.units.name, symbol=cube.units.symbol)
+        obs = ObservedProperty(cube.name())
         parameters.append(
-            Parameter(id=cube.name, unit=cube.units, observed_property=cube.name, extent=cube_extent)
+            Parameter(id=cube.name(), unit=unit, observed_property=obs, extent=cube_extent)
         )
     if len(total_polygon_list) == 0:
         raise ValueError('The dataset must contain at least one variable with x and y axes.')
     if len(cubes) == 1:
         total_extent = cube_extent
     else:
-        total_temporal_extent = TemporalExtent(list(total_temporal_extent_list))
-        total_vertical_extent = VerticalExtent(total_vertical_extent_list)
+        if not len(total_temporal_extent_list) == 0:
+            total_temporal_extent = TemporalExtent(list(total_temporal_extent_list))
+        if not len(total_vertical_extent_list) == 0:
+            total_vertical_extent = VerticalExtent(total_vertical_extent_list)
 
         # Placeholder for spatial extent until we do this https://github.com/MetOffice/edr_server/issues/31.
         total_polygon_list = MultiPolygon(total_polygon_list)
