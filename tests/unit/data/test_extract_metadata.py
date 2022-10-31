@@ -4,6 +4,7 @@ from iris.coords import DimCoord
 from iris.cube import Cube, CubeList
 import iris.coord_systems
 import numpy as np
+from datetime import datetime, timedelta
 from clean_air import data
 from edr_server.core.models.metadata import CollectionMetadata
 
@@ -100,102 +101,181 @@ class TestExtractMetadata:
 
     @staticmethod
     def test_return_type_cube(cube_1):
+        """
+        GIVEN a single cube
+        WHEN metadata is extracted
+        THEN the metadata is an instance of CollectionMetadata
+        """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
         assert isinstance(cube_metadata, CollectionMetadata)
 
     @staticmethod
     def test_return_type_cubelist(cube_1, cube_2):
+        """
+        GIVEN a cubelist
+        WHEN metadata is extracted
+        THEN the metadata is an instance of CollectionMetadata
+        """
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert isinstance(cubelist_metadata, CollectionMetadata)
 
     @staticmethod
     def test_title_cube(cube_1):
+        """
+        GIVEN a single cube
+        WHEN metadata is extracted
+        THEN the metadata.title is the cube title
+        """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
         assert cube_metadata.title == "mass_concentration_of_ozone_in_air"
 
     @staticmethod
     def test_title_cubelist(cube_1, cube_2):
+        """
+        GIVEN a cubelist and provided title
+        WHEN metadata is extracted
+        THEN the metadata.title is the title given
+        """
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert cubelist_metadata.title == "title"
 
     @staticmethod
     def test_total_time_extent(cube_1):
+        """
+        GIVEN a single cube
+        WHEN metadata is extracted
+        THEN the temporal extent is the cube's time range
+        """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
-        assert np.allclose(cube_metadata.extent.temporal.values, np.linspace(1, 24, 24))
+        test_array = np.arange(datetime(1970,1,1,1), datetime(1970,1,2,1), timedelta(hours=1)).astype(datetime)
+        assert cube_metadata.extent.temporal.values == test_array.tolist()
 
     @staticmethod
     def test_total_time_extent_gap(cube_3):
+        """
+        GIVEN a single cube with a non-continuous time extent
+        WHEN metadata is extracted
+        THEN the temporal extent is the cube's time range
+        """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_3, 1, [], ['cube'], ['netCDF'])
-        assert np.allclose(cube_metadata.extent.temporal.values, [1, 2, 3, 7, 8, 9])
+        lower = np.arange(datetime(1970,1,1,1), datetime(1970,1,1,4), timedelta(hours=1)).astype(datetime)
+        upper = np.arange(datetime(1970,1,1,7), datetime(1970,1,1,10), timedelta(hours=1)).astype(datetime)
+        test_array = np.concatenate((lower, upper))
+        assert cube_metadata.extent.temporal.values == test_array.tolist()
 
     @staticmethod
     def test_total_vertical_extent(cube_1):
+        """
+        GIVEN a single cube with a height dimension
+        WHEN metadata is extracted
+        THEN the vertical extent is the same as the cube
+        """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
         assert cube_metadata.extent.vertical.values == pytest.approx(3.5)
 
     @staticmethod
     def test_parameters_length_cube(cube_1):
+        """
+        GIVEN a single cube
+        WHEN metadata is extracted
+        THEN metadata.parameters has length 1
+        """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
         assert len(cube_metadata.parameters) == 1
 
     @staticmethod
     def test_parameters_length_cubelist(cube_1, cube_2):
+        """
+        GIVEN a cubelist of two cubes
+        WHEN metadata is extracted
+        THEN metadata.parameters has length 2
+        """
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert len(cubelist_metadata.parameters) == 2
 
     @staticmethod
     def test_containing_polygon_cube(cube_1):
+        """
+        GIVEN a single cube
+        WHEN metadata is extracted
+        THEN the bounds of the spatial extent matches the cube
+        """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
         assert cube_metadata.extent.spatial.bbox.bounds == (45, -90, 360, 90)
 
     @staticmethod
     def test_containing_polygon_equal(cube_1):
-        # two equal polygons
+        """
+        GIVEN a cubelist of two identical cubes
+        WHEN metadata is extracted
+        THEN the bounds of the spatial extent matches both cubes
+        """
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_1]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert cubelist_metadata.extent.spatial.bbox.bounds == (45, -90, 360, 90)
 
     @staticmethod
     def test_containing_polygon_overlapping(cube_1, cube_2):
-        # two partially overlapping polygons
+        """
+        GIVEN a cubelist of two cubes that partially overlap
+        WHEN metadata is extracted
+        THEN the bounds of the spatial extent matches the group's total extent
+        """
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert cubelist_metadata.extent.spatial.bbox.bounds == (1, -90, 360, 100)
 
     @staticmethod
     def test_containing_polygon_within(cube_1, cube_3):
-        # one polygon completely within another polygon
+        """
+        GIVEN a cubelist of two cubes, one completely within another
+        WHEN metadata is extracted
+        THEN the bounds of the spatial extent matches the group's total extent
+        """
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_3]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 400, 150)
 
     @staticmethod
     def test_containing_polygon_overlapping_and_within(cube_1, cube_2, cube_3):
-        # two partially overlapping polygons completely within a third polygon
+        """
+        GIVEN a cubelist of three cubes; two partially overlapping cubes completely within a third
+        WHEN metadata is extracted
+        THEN the bounds of the spatial extent matches the group's total extent
+        """
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2, cube_3]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 400, 150)
 
     @staticmethod
     def test_containing_polygon_separate(cube_1, cube_4):
-        # two completely separate polygons
+        """
+        GIVEN a cubelist of two spatially separate cubes
+        WHEN metadata is extracted
+        THEN the bounds of the spatial extent matches the group's total extent
+        """
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_4]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert cubelist_metadata.extent.spatial.bbox.bounds == (45, -90, 430, 175)
 
     @staticmethod
     def test_containing_polygon_overlap_within_separate(cube_1, cube_2, cube_3, cube_4):
-        # two partially overlapping polygons completely within a third polygon, and a completely separate fourth polygon
+        """
+        GIVEN a cubelist of four cubes;
+        two partially overlapping cubes completely within a third, and a completely separate fourth
+        WHEN metadata is extracted
+        THEN the bounds of the spatial extent matches the group's total extent
+        """        
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2, cube_3, cube_4]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 430, 175)
@@ -203,6 +283,11 @@ class TestExtractMetadata:
 
 class errorTest(unittest.TestCase):
     def test_dimensionless_cube_error(self):
+        """
+        GIVEN a single cube with no spatial dimensions
+        WHEN metadata is extracted
+        THEN the correct error is raised
+        """
         time = DimCoord(np.linspace(1, 24, 24),
                         standard_name='time',
                         units="hours since 1970-01-01 00:00:00")
