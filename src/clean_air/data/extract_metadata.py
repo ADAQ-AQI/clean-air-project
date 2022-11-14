@@ -1,5 +1,4 @@
 from typing import Union, List
-import cf_units
 
 import iris
 import iris.cube
