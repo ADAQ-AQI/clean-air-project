@@ -144,6 +144,18 @@ class TestExtractMetadata:
         assert cubelist_metadata.title == "title"
 
     @staticmethod
+    def test_unit(cube_1):
+        """
+        GIVEN a single cube
+        WHEN metadata is extracted
+        THEN the metadata unit information matches the cube and is in correct format
+        """
+        cube_metadata = data.extract_metadata.extract_metadata(
+            cube_1, 1, [], ['cube'], ['netCDF'])
+        assert cube_metadata.parameters[0].unit.labels == "1e-09 meter^-3-kilogram"
+        assert cube_metadata.parameters[0].unit.symbol == "1e-09 m-3.kg"
+
+    @staticmethod
     def test_total_time_extent(cube_1):
         """
         GIVEN a single cube
@@ -152,7 +164,7 @@ class TestExtractMetadata:
         """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
-        test_array = np.arange(datetime(1970,1,1,1), datetime(1970,1,2,1), timedelta(hours=1)).astype(datetime)
+        test_array = np.arange(datetime(1970, 1, 1, 1), datetime(1970, 1, 2, 1), timedelta(hours=1)).astype(datetime)
         assert cube_metadata.extent.temporal.values == test_array.tolist()
 
     @staticmethod
@@ -164,8 +176,8 @@ class TestExtractMetadata:
         """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_3, 1, [], ['cube'], ['netCDF'])
-        lower = np.arange(datetime(1970,1,1,1), datetime(1970,1,1,4), timedelta(hours=1)).astype(datetime)
-        upper = np.arange(datetime(1970,1,1,7), datetime(1970,1,1,10), timedelta(hours=1)).astype(datetime)
+        lower = np.arange(datetime(1970, 1, 1, 1), datetime(1970, 1, 1, 4), timedelta(hours=1)).astype(datetime)
+        upper = np.arange(datetime(1970, 1, 1, 7), datetime(1970, 1, 1, 10), timedelta(hours=1)).astype(datetime)
         test_array = np.concatenate((lower, upper))
         assert cube_metadata.extent.temporal.values == test_array.tolist()
 
@@ -275,7 +287,7 @@ class TestExtractMetadata:
         two partially overlapping cubes completely within a third, and a completely separate fourth
         WHEN metadata is extracted
         THEN the bounds of the spatial extent matches the group's total extent
-        """        
+        """
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2, cube_3, cube_4]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 430, 175)

@@ -12,6 +12,7 @@ dependencies:
   - xarray
   - pandas
   - geopandas
+  - cftime=1.2
 
   # Plotting
   - hvplot

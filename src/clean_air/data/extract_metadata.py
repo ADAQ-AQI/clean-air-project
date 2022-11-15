@@ -98,7 +98,7 @@ def extract_metadata(
 
         if len(cube.coords('time')) == 1:
             time_list = num2pydate(times=cube.coord('time').points,
-                                   units=cube.coord('time').units.cftime_unit,
+                                   units=cube.coord('time').units.name,
                                    calendar=cube.coord('time').units.calendar).tolist()
             temporal_extent = TemporalExtent(time_list)
             total_temporal_extent_list.update(time_list)
