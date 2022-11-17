@@ -11,7 +11,7 @@ from edr_server.core.models.links import DataQueryLink
 from edr_server.core.models.metadata import CollectionMetadata
 from edr_server.core.models.parameters import Parameter, ObservedProperty, Unit
 from edr_server.core.models.crs import CrsObject
-
+from edr_server.core.models.time import DateTimeInterval
 
 def _cube_to_polygon(cube):
     """
@@ -100,7 +100,12 @@ def extract_metadata(
             time_list = num2pydate(times=cube.coord('time').points,
                                    units=cube.coord('time').units.name,
                                    calendar=cube.coord('time').units.calendar).tolist()
-            temporal_extent = TemporalExtent(time_list)
+            if min(time_list) < max(time_list):
+                time_interval = []
+                time_interval.append(DateTimeInterval(start=min(time_list), end=max(time_list)))
+                temporal_extent = TemporalExtent(intervals=time_interval)
+            else:
+                temporal_extent = TemporalExtent(values=time_list)
             total_temporal_extent_list.update(time_list)
 
         if len(cube.coords(axis='z')) == 1:
@@ -119,7 +124,12 @@ def extract_metadata(
         total_extent = cube_extent
     else:
         if not len(total_temporal_extent_list) == 0:
-            total_temporal_extent = TemporalExtent(list(total_temporal_extent_list))
+            if min(total_temporal_extent_list) < max(total_temporal_extent_list):
+                total_test_interval = []
+                total_test_interval.append(DateTimeInterval(start=min(total_temporal_extent_list), end=max(total_temporal_extent_list)))
+                total_temporal_extent = TemporalExtent(intervals=total_test_interval)
+            else:
+                total_temporal_extent = TemporalExtent(values=list(total_temporal_extent_list))
         if not len(total_vertical_extent_list) == 0:
             total_vertical_extent = VerticalExtent(total_vertical_extent_list)
 

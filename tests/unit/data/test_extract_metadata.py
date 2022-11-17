@@ -164,8 +164,8 @@ class TestExtractMetadata:
         """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_1, 1, [], ['cube'], ['netCDF'])
-        test_array = np.arange(datetime(1970, 1, 1, 1), datetime(1970, 1, 2, 1), timedelta(hours=1)).astype(datetime)
-        assert cube_metadata.extent.temporal.values == test_array.tolist()
+        assert cube_metadata.extent.temporal.intervals[0].start == datetime(1970, 1, 1, 1)
+        assert cube_metadata.extent.temporal.intervals[0].end == datetime(1970, 1, 2, 0)
 
     @staticmethod
     def test_total_time_extent_gap(cube_3):
@@ -176,10 +176,8 @@ class TestExtractMetadata:
         """
         cube_metadata = data.extract_metadata.extract_metadata(
             cube_3, 1, [], ['cube'], ['netCDF'])
-        lower = np.arange(datetime(1970, 1, 1, 1), datetime(1970, 1, 1, 4), timedelta(hours=1)).astype(datetime)
-        upper = np.arange(datetime(1970, 1, 1, 7), datetime(1970, 1, 1, 10), timedelta(hours=1)).astype(datetime)
-        test_array = np.concatenate((lower, upper))
-        assert cube_metadata.extent.temporal.values == test_array.tolist()
+        assert cube_metadata.extent.temporal.intervals[0].start == datetime(1970, 1, 1, 1)
+        assert cube_metadata.extent.temporal.intervals[0].end == datetime(1970, 1, 1, 9)
 
     @staticmethod
     def test_total_vertical_extent(cube_1):
