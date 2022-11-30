@@ -16,6 +16,7 @@ from edr_server.core.models.time import DateTimeInterval
 
 import numpy
 
+
 def _cube_to_polygon(cube):
     """
     Given an iris cube, this function returns a shapely geometry polygon of the spatial extent.
@@ -25,21 +26,6 @@ def _cube_to_polygon(cube):
     x_coord = cube.coords(axis="x")[0]
     y_coord = cube.coords(axis="y")[0]
 
-    # print(x_coord.has_bounds())
-    # print(y_coord.has_bounds())
-    # print(x_coord)
-    # print(x_coord.points)
-    # print(numpy.ma.MaskedArray.min(x_coord.points))
-    # print(numpy.ma.MaskedArray.max(x_coord.points))
-    # print(type(numpy.ma.MaskedArray.min(x_coord.points)))
-    # print(type(numpy.ma.MaskedArray.max(x_coord.points)))
-
-    # print(y_coord)
-    # print(y_coord.points)
-    # print(numpy.ma.MaskedArray.min(y_coord.points))
-    # print(numpy.ma.MaskedArray.max(y_coord.points))
-    # print(type(numpy.ma.MaskedArray.min(y_coord.points)))
-    # print(type(numpy.ma.MaskedArray.max(y_coord.points)))
     if x_coord.has_bounds() and y_coord.has_bounds():
         # bounds of cube dimensions
         x_bounds = x_coord.bounds
@@ -55,10 +41,10 @@ def _cube_to_polygon(cube):
         x_bounds_upper = x_bounds[:, 1] if x_ascending else x_bounds[:, 0]
         y_bounds_upper = y_bounds[:, 1] if y_ascending else y_bounds[:, 0]
     else:
-        x_bounds_lower = numpy.ma.MaskedArray.min(x_coord.points)
-        x_bounds_upper = numpy.ma.MaskedArray.max(x_coord.points)
-        y_bounds_lower = numpy.ma.MaskedArray.min(y_coord.points)
-        y_bounds_upper = numpy.ma.MaskedArray.max(y_coord.points)
+        x_bounds_lower = numpy.ma.min(x_coord.points)
+        x_bounds_upper = numpy.ma.max(x_coord.points)
+        y_bounds_lower = numpy.ma.min(y_coord.points)
+        y_bounds_upper = numpy.ma.max(y_coord.points)
 
     if x_coord.ndim != 1:
         raise iris.exceptions.CoordinateMultiDimError(x_coord)
@@ -69,7 +55,7 @@ def _cube_to_polygon(cube):
               (x_bounds_upper, y_bounds_lower),
               (x_bounds_upper, y_bounds_upper),
               (x_bounds_lower, y_bounds_upper)]
-    print(coords)
+
     if x_coord.coord_system and x_coord.coord_system == y_coord.coord_system:
         crs = CrsObject(x_coord.coord_system.as_cartopy_crs())
         return Polygon(coords), crs
@@ -144,7 +130,8 @@ def extract_metadata(
         if not len(total_temporal_extent_list) == 0:
             if min(total_temporal_extent_list) < max(total_temporal_extent_list):
                 total_test_interval = []
-                total_test_interval.append(DateTimeInterval(start=min(total_temporal_extent_list), end=max(total_temporal_extent_list)))
+                total_test_interval.append(DateTimeInterval(
+                    start=min(total_temporal_extent_list), end=max(total_temporal_extent_list)))
                 total_temporal_extent = TemporalExtent(intervals=total_test_interval)
             else:
                 total_temporal_extent = TemporalExtent(values=list(total_temporal_extent_list))
