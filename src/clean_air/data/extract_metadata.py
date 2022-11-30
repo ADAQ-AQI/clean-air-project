@@ -3,7 +3,6 @@ from typing import Union, List
 import iris
 import iris.cube
 import iris.exceptions
-import iris.util
 from shapely.geometry import Polygon, MultiPolygon
 from cftime import num2pydate
 
