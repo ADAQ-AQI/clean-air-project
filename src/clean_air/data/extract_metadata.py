@@ -5,6 +5,7 @@ import iris.cube
 import iris.exceptions
 from shapely.geometry import Polygon, MultiPolygon
 from cftime import num2pydate
+import numpy as np
 
 from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExtent, VerticalExtent
 from edr_server.core.models.links import DataQueryLink
@@ -12,8 +13,6 @@ from edr_server.core.models.metadata import CollectionMetadata
 from edr_server.core.models.parameters import Parameter, ObservedProperty, Unit
 from edr_server.core.models.crs import CrsObject
 from edr_server.core.models.time import DateTimeInterval
-
-import numpy
 
 
 def _cube_to_polygon(cube):
@@ -40,10 +39,10 @@ def _cube_to_polygon(cube):
         x_bounds_upper = x_bounds[:, 1] if x_ascending else x_bounds[:, 0]
         y_bounds_upper = y_bounds[:, 1] if y_ascending else y_bounds[:, 0]
     else:
-        x_bounds_lower = numpy.ma.min(x_coord.points)
-        x_bounds_upper = numpy.ma.max(x_coord.points)
-        y_bounds_lower = numpy.ma.min(y_coord.points)
-        y_bounds_upper = numpy.ma.max(y_coord.points)
+        x_bounds_lower = np.ma.min(x_coord.points)
+        x_bounds_upper = np.ma.max(x_coord.points)
+        y_bounds_lower = np.ma.min(y_coord.points)
+        y_bounds_upper = np.ma.max(y_coord.points)
 
     if x_coord.ndim != 1:
         raise iris.exceptions.CoordinateMultiDimError(x_coord)
