@@ -7,6 +7,7 @@ import numpy as np
 from datetime import datetime
 from clean_air import data
 from edr_server.core.models.metadata import CollectionMetadata
+from cap_sample_data.sample_data import aircraft
 
 
 class TestExtractMetadata:
