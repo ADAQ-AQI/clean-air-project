@@ -103,14 +103,12 @@ def extract_metadata(
             time_list = num2pydate(times=cube.coord('time').points,
                                    units=cube.coord('time').units.name,
                                    calendar=cube.coord('time').units.calendar).tolist()
-            print(time_list)
             if min(time_list) < max(time_list):
                 time_interval = []
                 time_interval.append(DateTimeInterval(start=min(time_list), end=max(time_list)))
                 temporal_extent = TemporalExtent(intervals=time_interval)
             else:
                 temporal_extent = TemporalExtent(values=time_list)
-            print(temporal_extent)
             total_temporal_extent_set.update(time_list)
 
         #TODO: Currently parameter vert ext is array of all non-NaN values,
