@@ -103,29 +103,29 @@ def extract_metadata(
             time_list = num2pydate(times=cube.coord('time').points,
                                    units=cube.coord('time').units.name,
                                    calendar=cube.coord('time').units.calendar).tolist()
+            print(time_list)
             if min(time_list) < max(time_list):
                 time_interval = []
                 time_interval.append(DateTimeInterval(start=min(time_list), end=max(time_list)))
                 temporal_extent = TemporalExtent(intervals=time_interval)
             else:
                 temporal_extent = TemporalExtent(values=time_list)
+            print(temporal_extent)
             total_temporal_extent_set.update(time_list)
 
         #TODO: Currently parameter vert ext is array of all non-NaN values,
-        # total vert extent is list of unique values 
+        # total vert extent is list of unique values.
+
+        # list of coords that may represent z axis, in ascending order of preference
         z_options = [cube.coords('altitude'), cube.coords(axis='z')]
         for item in z_options:
             if len(item) == 1:
-                z_coord = item[0]
-        if z_coord:
-            print(type(z_coord.points))
-            print(z_coord.points)
-            if isinstance(z_coord, np.ma.core.MaskedArray):
-                vertical_extent = VerticalExtent(z_coord.points.compressed())
-                total_vertical_extent_set.update(z_coord.points.compressed())
-            else:
-                vertical_extent = VerticalExtent(z_coord.points)
-                total_vertical_extent_set.update(z_coord.points)
+                z_coord = item[0].points
+        if z_coord is not None:
+            if np.ma.isMaskedArray(z_coord):
+                z_coord = z_coord.compressed()
+            vertical_extent = VerticalExtent(z_coord)
+            total_vertical_extent_set.update(z_coord)
 
         cube_extent = Extents(spatial_extent, temporal_extent, vertical_extent)
         unit = Unit(labels=cube.units.name, symbol=cube.units.symbol)

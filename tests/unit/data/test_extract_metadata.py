@@ -309,6 +309,7 @@ class TestExtractMetadata:
         WHEN metadata is extracted
         THEN the metadata is an instance of CollectionMetadata
         """
+        #TODO: compare all metadata values?
         cube_metadata = data.extract_metadata.extract_metadata(
             aircraft_cube, 'M285', ['clean_air:type=aircraft', 'clean_air:aircraft_platform=MOASA', 'clean_air:location=UK'], [], [], 'example aircraft')
 
