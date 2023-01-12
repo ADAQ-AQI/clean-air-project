@@ -12,6 +12,7 @@ dependencies:
   - xarray
   - pandas
   - geopandas
+  - "shapely<2"
   - cftime=1.2
   - cf-units==2.1.5
 
