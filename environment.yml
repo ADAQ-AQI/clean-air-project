@@ -8,6 +8,7 @@ dependencies:
 
 
   # Main data handling
+  - pyproj==3.4.0
   - iris
   - xarray
   - pandas
