@@ -4,7 +4,8 @@ from iris.coords import DimCoord
 from iris.cube import Cube, CubeList
 import iris.coord_systems
 import numpy as np
-from datetime import datetime, timedelta
+import os
+from datetime import datetime
 from clean_air import data
 from edr_server.core.models.metadata import CollectionMetadata
 
@@ -98,6 +99,17 @@ class TestExtractMetadata:
                                          (longitude, 1),
                                          (time, 2)])
         return cube
+
+    @staticmethod
+    @pytest.fixture
+    def aircraft_cube(sampledir):
+        """
+        Data cube 
+        'Corrected_(Virkkula_et_al,_2010)_blue_(wavelength_=_467nm)_absorption_coefficient,_measured_by_TAP.' 
+        from flight M285
+        """
+        path = os.path.join(sampledir, "aircraft", "M285_sample.nc")
+        return iris.load(path)
 
     @staticmethod
     def test_return_type_cube(cube_1):
@@ -289,6 +301,18 @@ class TestExtractMetadata:
         cubelist_metadata = data.extract_metadata.extract_metadata(
             CubeList([cube_1, cube_2, cube_3, cube_4]), 1, [], ['cube'], ['netCDF'], 'title', 'desc')
         assert cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 430, 175)
+
+    @staticmethod
+    def test_aircraft_cube(aircraft_cube):
+        """
+        GIVEN a single cube
+        WHEN metadata is extracted
+        THEN the metadata is an instance of CollectionMetadata
+        """
+        #TODO: compare all metadata values?
+        cube_metadata = data.extract_metadata.extract_metadata(
+            aircraft_cube, 'M285', ['clean_air:type=aircraft', 'clean_air:aircraft_platform=MOASA', 'clean_air:location=UK'], [], [], 'example aircraft')
+        assert isinstance(cube_metadata, CollectionMetadata)
 
 
 class errorTest(unittest.TestCase):

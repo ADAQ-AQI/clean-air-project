@@ -171,7 +171,7 @@ class DataSubset:
         """
         crs = crs or getattr(shapes, "crs", None)
         cubes = iris.cube.CubeList()
-        for geom in shapes:
+        for geom in shapes.geoms:
             cubes.append(self.extract_shape(geom, crs=crs))
 
         return cubes

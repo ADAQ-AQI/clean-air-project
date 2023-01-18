@@ -5,6 +5,7 @@ import iris.cube
 import iris.exceptions
 from shapely.geometry import Polygon, MultiPolygon
 from cftime import num2pydate
+import numpy as np
 
 from edr_server.core.models.extents import Extents, SpatialExtent, TemporalExtent, VerticalExtent
 from edr_server.core.models.links import DataQueryLink
@@ -12,6 +13,7 @@ from edr_server.core.models.metadata import CollectionMetadata
 from edr_server.core.models.parameters import Parameter, ObservedProperty, Unit
 from edr_server.core.models.crs import CrsObject
 from edr_server.core.models.time import DateTimeInterval
+
 
 def _cube_to_polygon(cube):
     """
@@ -37,10 +39,10 @@ def _cube_to_polygon(cube):
         x_bounds_upper = x_bounds[:, 1] if x_ascending else x_bounds[:, 0]
         y_bounds_upper = y_bounds[:, 1] if y_ascending else y_bounds[:, 0]
     else:
-        x_bounds_lower = x_coord.points[0]
-        x_bounds_upper = x_coord.points[-1]
-        y_bounds_lower = y_coord.points[0]
-        y_bounds_upper = y_coord.points[-1]
+        x_bounds_lower = np.ma.min(x_coord.points)
+        x_bounds_upper = np.ma.max(x_coord.points)
+        y_bounds_lower = np.ma.min(y_coord.points)
+        y_bounds_upper = np.ma.max(y_coord.points)
 
     if x_coord.ndim != 1:
         raise iris.exceptions.CoordinateMultiDimError(x_coord)
@@ -77,14 +79,15 @@ def extract_metadata(
         )
 
     parameters = []
-    total_temporal_extent_list = set()
-    total_vertical_extent_list = []
+    total_temporal_extent_set = set()
+    total_vertical_extent_set = set()
     total_temporal_extent = None
     total_vertical_extent = None
     total_polygon_list = []
     cube_extent = None
 
     for cube in cubes:
+        z_coord = None
         spatial_extent = None
         temporal_extent = None
         vertical_extent = None
@@ -106,11 +109,21 @@ def extract_metadata(
                 temporal_extent = TemporalExtent(intervals=time_interval)
             else:
                 temporal_extent = TemporalExtent(values=time_list)
-            total_temporal_extent_list.update(time_list)
+            total_temporal_extent_set.update(time_list)
 
-        if len(cube.coords(axis='z')) == 1:
-            vertical_extent = VerticalExtent(cube.coord(axis='z').points)
-            total_vertical_extent_list.append(cube.coord(axis='z').points)
+        #TODO: Currently parameter vert ext is array of all non-NaN values,
+        # total vert extent is list of unique values.
+
+        # list of coords that may represent z axis, in ascending order of preference
+        z_options = [cube.coords('altitude'), cube.coords(axis='z')]
+        for item in z_options:
+            if len(item) == 1:
+                z_coord = item[0].points
+        if z_coord is not None:
+            if np.ma.isMaskedArray(z_coord):
+                z_coord = z_coord.compressed()
+            vertical_extent = VerticalExtent(z_coord)
+            total_vertical_extent_set.update(z_coord)
 
         cube_extent = Extents(spatial_extent, temporal_extent, vertical_extent)
         unit = Unit(labels=cube.units.name, symbol=cube.units.symbol)
@@ -120,18 +133,20 @@ def extract_metadata(
         )
     if len(total_polygon_list) == 0:
         raise ValueError('The dataset must contain at least one variable with x and y axes.')
+
     if len(cubes) == 1:
         total_extent = cube_extent
     else:
-        if not len(total_temporal_extent_list) == 0:
-            if min(total_temporal_extent_list) < max(total_temporal_extent_list):
+        if not len(total_temporal_extent_set) == 0:
+            if min(total_temporal_extent_set) < max(total_temporal_extent_set):
                 total_test_interval = []
-                total_test_interval.append(DateTimeInterval(start=min(total_temporal_extent_list), end=max(total_temporal_extent_list)))
+                total_test_interval.append(DateTimeInterval(
+                    start=min(total_temporal_extent_set), end=max(total_temporal_extent_set)))
                 total_temporal_extent = TemporalExtent(intervals=total_test_interval)
             else:
-                total_temporal_extent = TemporalExtent(values=list(total_temporal_extent_list))
-        if not len(total_vertical_extent_list) == 0:
-            total_vertical_extent = VerticalExtent(total_vertical_extent_list)
+                total_temporal_extent = TemporalExtent(values=list(total_temporal_extent_set))
+        if not len(total_vertical_extent_set) == 0:
+            total_vertical_extent = VerticalExtent(total_vertical_extent_set)
 
         # Placeholder for spatial extent until we do this https://github.com/MetOffice/edr_server/issues/31.
         total_polygon_list = MultiPolygon(total_polygon_list)
