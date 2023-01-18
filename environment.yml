@@ -8,12 +8,10 @@ dependencies:
 
 
   # Main data handling
-  - pyproj==3.4.0
   - iris
   - xarray
   - pandas
   - geopandas
-  - "shapely<2"
   - cftime=1.2
   - cf-units==2.1.5
 
