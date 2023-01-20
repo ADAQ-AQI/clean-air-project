@@ -4,9 +4,11 @@ Top-level module for rendering datasets.
 
 import geopandas
 import iris
+import iris.pandas
 import xarray
 from iris.cube import Cube, CubeList
 from shapely.geometry import Polygon, MultiPolygon
+import pandas as pd
 
 from clean_air import util
 from clean_air.data import DataSubset
@@ -24,7 +26,9 @@ class Renderer:
         # First we put all datasets in a cubelist so that we can plot them
         # together if necessary without too much extra coding:
         self.plot_list = CubeList()
-
+        if isinstance(dataset, pd.Series):
+            # from cubes.extract_series
+                    self.dataset = iris.pandas.as_cube(dataset) #this will be depreciated
         if isinstance(dataset, CubeList):
             # Here we have to collect metadata from just the first Cube in a
             # CubeList (assuming that multiple datasets such as shapes files
@@ -77,7 +81,7 @@ class Renderer:
         appropriate renderer in render_plot.py or render_map.py.
         """
         coords = (self.x_coord, self.y_coord, self.z_coord, self.t_coord)
-
+        print(coords)
         # If we have both an x-coord and y-coord then we can draw a map:
         if self.x_coord is not None and self.y_coord is not None:
             self.img_type = 'map'
@@ -132,9 +136,9 @@ class TimeSeries:
 
         return point_cube
 
-    def track(self, crs=None):
+    def track(self, start=None, end=None, crs=None):
         """Generate time series containing data along a track."""
-        track_cube = self.data.extract_track(self.data, crs=crs)
+        track_cube = self.data.extract_track(self.data, start, end, crs=crs)
 
         return track_cube
 

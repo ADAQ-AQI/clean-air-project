@@ -3,11 +3,12 @@ Objects representing data subsets
 """
 import os.path
 
+import pandas as pd
 import numpy as np
 import iris
 import shapely.geometry
 import shapely.ops
-
+import xarray as xr
 from .. import util
 
 
@@ -114,7 +115,7 @@ class DataSubset:
 
         return cube
 
-    def extract_track(self, track, crs=None):
+    def extract_track(self, track, start=None, end=None, crs=None):
         """
         Extract a track
 
@@ -122,8 +123,25 @@ class DataSubset:
             track: timeseries of the track, as a dataframe
         """
         cube = self._load_cube()
+        print(type(track.metadata))
+        print(track.category)
+        print(track.parameter)
 
-        return util.cubes.extract_series(cube, track)
+        #fri afternoon, check this again!
+        if isinstance(track.metadata, str):
+            ds = xr.open_dataset(track.metadata)
+        elif isinstance(track.metadata, iris.cube.Cube):
+            ds = xr.DataArray.from_iris(track.metadata)
+
+        df = ds.to_dataframe()
+        if start and end:
+            df = df.between_time(start, end) # extracting time
+            if df.empty:
+                raise ValueError('Empty dataframe, likely due to time bounds being out of range')
+        print(df)
+
+        return util.cubes.extract_series(cube, df, column_mapping={'time':'time'})
+        #return cube
 
     def extract_shape(self, shape, crs=None):
         """
