@@ -5,10 +5,35 @@ Unit tests for test_dataset_renderer.py
 import os
 
 import pytest
-# import geopandas
-# import xarray
+import geopandas
+import xarray
 
 import clean_air.visualise.dataset_renderer as dr
+
+
+@pytest.fixture
+def tmp_output_path(tmp_path):
+    tmp_output_path = tmp_path / "tmp_output_path"
+    tmp_output_path.mkdir()
+    return tmp_output_path
+
+
+@pytest.fixture
+def model_data_path(sampledir):
+    model_data_path = os.path.join(sampledir, 'model_full', 'aqum_daily_daqi_mean_20200520.nc')
+    return model_data_path
+
+
+@pytest.fixture
+def timeseries_path(sampledir):
+    timeseries_path = os.path.join(sampledir, "model_full", "aqum_hourly_o3_20200520.nc")
+    return timeseries_path
+
+# @pytest.fixture
+# def scalar_path(sampledir):
+#     # TODO: This file no longer exists. Replace with file that does exist in cap-sample-data and works for this test.
+#     scalar_path = os.path.join(sampledir, "???", "aqum_no2_modified.nc")
+#     return scalar_path
 
 
 class TestDatasetRenderer:
@@ -18,11 +43,7 @@ class TestDatasetRenderer:
 
     @pytest.fixture(scope="class")
     def renderer(self, sampledir):
-        path = os.path.join(
-            sampledir,
-            "model_full",
-            "aqum_daily_daqi_mean_20200520.nc"
-        )
+        path = model_data_path
         return dr.Renderer(path)
 
     def test_lazy_iris_data(self, renderer):
@@ -49,13 +70,7 @@ class TestDatasetRenderer:
 #     Class to test 'render' method of Renderer when producing maps.
 #     """
 #     def setup_class(self):
-#         self.model_path = os.path.join(MODEL_DATA_PATH,
-#                                        'aqum_daily_daqi_mean_20200520.nc')
-#         self.timeseries_path = os.path.join(TIMESERIES_PATH,
-#                                             'aqum_hourly_no2_modified.nc')
-#         self.scalar_path = os.path.join(SCALAR_PATH,
-#                                         'aqum_no2_modified.nc')
-#         self.dframe = dr.Renderer(self.model_path)
+#         self.dframe = dr.Renderer(model_data_path)
 #         self.dframe.render()
 #
 #     def test_render_map(self):
@@ -69,19 +84,14 @@ class TestDatasetRenderer:
 #         assert isinstance(self.dframe, geopandas.GeoDataFrame)
 
 
+# TODO: Find suitable test files for this setup (i.e. fixtures; see top of file).
 # class TestRenderPlotCall:
 #     """
 #     Class to test 'render' method of Renderer when producing plots.
 #     """
 #
 #     def setup_class(self):
-#         self.model_path = os.path.join(MODEL_DATA_PATH,
-#                                        'aqum_daily_daqi_mean_20200520.nc')
-#         self.timeseries_path = os.path.join(TIMESERIES_PATH,
-#                                             'aqum_hourly_no2_modified.nc')
-#         self.scalar_path = os.path.join(SCALAR_PATH,
-#                                         'aqum_no2_modified.nc')
-#         self.dframe = dr.Renderer(self.timeseries_path)
+#         self.dframe = dr.Renderer(timeseries_path)
 #         self.dframe.render()
 #
 #     def test_render_timeseries(self):
@@ -94,7 +104,7 @@ class TestDatasetRenderer:
 #     def test_plot_dataframe_is_xarray(self):
 #         # Check that the dataframe itself is an xarray object:
 #         assert isinstance(self.dframe, xarray.Dataset)
-
+#
 
 def test_render_error():
     # Check that if all our coordinates end up set as None, then an

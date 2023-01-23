@@ -1,14 +1,63 @@
 """
-Integration tests for the test_dataset_renderer.py visualisations.
+Integration tests for the test_dr.py visualisations.
 """
 
 import os
 import pytest
 
+import pandas as pd
 from iris.cube import Cube, CubeList
 from shapely.geometry import Polygon, MultiPolygon
 from clean_air.visualise import dataset_renderer as dr
 from clean_air.data import DataSubset
+
+
+@pytest.fixture
+def timeseries_filepath(sampledir):
+    timeseries_filepath = os.path.join(sampledir, "model_full", "aqum_hourly_o3_20200520.nc")
+    return timeseries_filepath
+
+
+@pytest.fixture
+def diurnal_filepath(sampledir):
+    diurnal_filepath = os.path.join(sampledir, "model_full", "aqum_hourly_o3_48_hours.nc")
+    return diurnal_filepath
+
+
+@pytest.fixture
+def clean_data(timeseries_filepath):
+    # Note: This is a DataSubset object which can be used and adapted for later
+    # fixtures and tests.  These objects are NOT subscriptable.
+    clean_df = DataSubset(timeseries_filepath)
+    return clean_df
+
+
+@pytest.fixture
+def multiday_data(diurnal_filepath):
+    # Note: This is a DataSubset object which can be used and adapted for later
+    # fixtures and tests.  These objects are NOT subscriptable.
+    multiday_df = DataSubset(diurnal_filepath)
+    return multiday_df
+
+
+@pytest.fixture
+def aircraft_filepath(sampledir):
+    aircraft_filepath = os.path.join(sampledir, "aircraft",
+                                     "MOCCA_M264_20200120.nc")
+    return aircraft_filepath
+
+
+@pytest.fixture
+def aircraft_data(aircraft_filepath):
+    aircraft_dataset = DataSubset(aircraft_filepath)
+    return aircraft_dataset
+
+
+@pytest.fixture
+def tmp_output_path(tmp_path):
+    tmp_output_path = tmp_path / "tmp_output_path"
+    tmp_output_path.mkdir()
+    return tmp_output_path
 
 
 # NOTE: This test now also fails because geopandas cannot load netcdf and iris
@@ -16,7 +65,7 @@ from clean_air.data import DataSubset
 # these tests.
 # class TestDatasetRenderer:
 #     """
-#     Class to test integration properties of test_dataset_renderer.py
+#     Class to test integration properties of test_dr.py
 #     """
 #
 #     def setup_class(self):
@@ -51,38 +100,6 @@ from clean_air.data import DataSubset
 #         # TODO: fix aircraft data
 #         img = dr.Renderer(self.aircraft_path)
 #         img.render()
-
-@pytest.fixture()
-def timeseries_filepath(sampledir):
-    timeseries_filepath = os.path.join(sampledir, "model_full",
-                                       "aqum_hourly_o3_20200520.nc")
-    return timeseries_filepath
-
-@pytest.fixture()
-def diurnal_filepath(sampledir):
-    diurnal_filepath = os.path.join(sampledir, "model_full",
-                                       "aqum_hourly_o3_48_hours.nc")
-    return diurnal_filepath
-
-@pytest.fixture()
-def clean_data(timeseries_filepath):
-    # Note: This is a DataSubset object which can be used and adapted for later
-    # fixtures and tests.  These objects are NOT subscriptable.
-    clean_df = DataSubset(timeseries_filepath)
-    return clean_df
-
-@pytest.fixture()
-def multiday_data(diurnal_filepath):
-    # Note: This is a DataSubset object which can be used and adapted for later
-    # fixtures and tests.  These objects are NOT subscriptable.
-    multiday_df = DataSubset(diurnal_filepath)
-    return multiday_df
-
-@pytest.fixture()
-def tmp_output_path(tmp_path):
-    tmp_output_path = tmp_path / "tmp_output_path"
-    tmp_output_path.mkdir()
-    return tmp_output_path
 
 
 class TestTimeSeries:
@@ -128,3 +145,52 @@ class TestTimeSeries:
         timeseries Cube."""
         diurnal_data = dr.TimeSeries(multiday_data).diurnal_average()
         assert isinstance(diurnal_data, Cube)
+
+
+class TestRenderPlot:
+    def test_linear_interpolate_3d_plot(self, clean_data, tmp_output_path):
+        """Test that when data is passed to this function it is processed to
+        produce and return a pandas dataframe."""
+        interpreted_data = dr.TimeSeries(clean_data, 150, 150).\
+            linear_interpolate()
+        interpreted_plot = dr.Renderer(interpreted_data).render()
+        assert isinstance(interpreted_plot, pd.DataFrame)
+
+    def test_box_average_plot(self, clean_data, tmp_output_path):
+        """Test that when data is passed to this function it is processed to
+            produce and return a pandas dataframe."""
+        boxed_data = dr.TimeSeries(clean_data).\
+            spatial_average(shape='box', coords=[10000, 10000, 15000, 15000])
+        boxed_plot = dr.Renderer(boxed_data).render()
+        assert isinstance(boxed_plot, pd.DataFrame)
+
+    def test_shape_average_plot(self, clean_data, tmp_output_path):
+        """Test that when data is passed to this function it is processed to
+        produce and return a pandas dataframe."""
+        shape = Polygon([(0, 0), (100, 100), (100, 0)])
+        shape_data = dr.TimeSeries(clean_data).spatial_average(shape)
+        shape_plot = dr.Renderer(shape_data).render()
+        assert isinstance(shape_plot, pd.DataFrame)
+
+    def test_shapes_average_plots(self, clean_data, tmp_output_path):
+        """Test that when data is passed to this function it is processed to
+            produce and return a pandas dataframe."""
+        # NOTE: This test is really slow, presumably due to lots of processing
+        # during cell weight evaluation.  Can we speed this up somehow?
+        poly_one = Polygon([(0, 0), (10, 10), (10, 0)])
+        poly_two = Polygon([(-100, -100), (-90, -90), (-90, 0)])
+        shapes = MultiPolygon([poly_one, poly_two])
+        shapes_data = dr.TimeSeries(clean_data).\
+            spatial_average(shapes)
+        # One plot per shape, but side-by-side on same figure
+        shapes_plot = dr.Renderer(shapes_data).render()
+        assert isinstance(shapes_plot, pd.DataFrame)
+
+    # def test_aircraft_data(self, aircraft_data, tmp_output_path):
+    #     """Toy test to identify syntax errors in aircraft data."""
+    #     data = aircraft_data
+    #     track_subset = dr.TimeSeries(data).track()
+    #     track_plot = dr.Renderer(track_subset).render()
+    #     track_plot.show()
+
+
