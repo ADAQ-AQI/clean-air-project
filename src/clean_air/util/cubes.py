@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import iris
 import iris.analysis.trajectory as iris_traj
-import iris.pandas
 import shapely
 
 

@@ -134,7 +134,7 @@ class DataSubset:
             if df.empty:
                 raise ValueError('Empty dataframe, likely due to time bounds being out of range')
 
-        series = util.cubes.extract_series(cube, df, column_mapping={'time':'time'})
+        series = util.cubes.extract_series(cube, df, column_mapping={'time': 'time'})
         output_cube = iris.pandas.as_cube(series)
         output_cube.rename(cube.name())
         output_cube.units = cube.units
@@ -198,7 +198,7 @@ class DataSubset:
         """
         cube_list = iris.cube.CubeList([])
         cube = self._load_cube()
-        for hour in range(24):            
+        for hour in range(24):
             constraint = iris.Constraint(time=lambda cell: cell.point.hour == hour)
             transverse_cube = cube.extract(constraint)
             mean_cube = transverse_cube.collapsed('time', aggregator)

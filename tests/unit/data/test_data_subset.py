@@ -1,5 +1,4 @@
 import os
-import unittest
 
 import pytest
 import iris
@@ -89,6 +88,7 @@ class TestBoxSubset:
         assert iris.util.array_equal(xcoord.points[[0, -1]], [258000, 344000])
         assert iris.util.array_equal(ycoord.points[[0, -1]], [56000, 146000])
 
+
 class TestTrackSubset:
     @staticmethod
     @pytest.fixture
@@ -109,6 +109,7 @@ class TestTrackSubset:
     def test_time_bound_error(dataset):
         with pytest.raises(ValueError, match='Empty dataframe, likely due to time bounds being out of range'):
             dataset.extract_track('20:00', '21:00')
+
 
 class TestAverageTime:
     @staticmethod
@@ -163,4 +164,3 @@ class TestAverageTime:
 #         # Simple data check, which, as the mask is taken into account, should
 #         # be a pretty reliable test
 #         assert round(cube.data.mean(), 8) == 57.66388811
-
