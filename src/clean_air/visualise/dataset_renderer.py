@@ -26,8 +26,7 @@ class Renderer:
         # together if necessary without too much extra coding:
         self.plot_list = CubeList()
         if isinstance(dataset, pd.Series):
-            # from cubes.extract_series
-            self.dataset = iris.pandas.as_cube(dataset)  # this will be depreciated
+            self.dataset = iris.pandas.as_cube(dataset)
         if isinstance(dataset, CubeList):
             # Here we have to collect metadata from just the first Cube in a
             # CubeList (assuming that multiple datasets such as shapes files
