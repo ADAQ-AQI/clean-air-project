@@ -1,9 +1,7 @@
 """
 Objects representing data subsets
 """
-import os.path
 
-import pandas as pd
 import numpy as np
 import iris
 import shapely.geometry
@@ -115,33 +113,33 @@ class DataSubset:
 
         return cube
 
-    def extract_track(self, track, start=None, end=None, crs=None):
+    def extract_track(self, start=None, end=None):
         """
         Extract a track
 
         Arguments:
-            track: timeseries of the track, as a dataframe
+            start (datetime.time or str): initial time filter limit
+            end (datetime.time or str): end time filter limit
         """
         cube = self._load_cube()
-        print(type(track.metadata))
-        print(track.category)
-        print(track.parameter)
 
-        #fri afternoon, check this again!
-        if isinstance(track.metadata, str):
-            ds = xr.open_dataset(track.metadata)
-        elif isinstance(track.metadata, iris.cube.Cube):
-            ds = xr.DataArray.from_iris(track.metadata)
+        if isinstance(self.metadata, str):
+            ds = xr.open_dataset(self.metadata)
+        elif isinstance(self.metadata, iris.cube.Cube):
+            ds = xr.DataArray.from_iris(self.metadata)
 
         df = ds.to_dataframe()
         if start and end:
-            df = df.between_time(start, end) # extracting time
+            df = df.between_time(start, end)
             if df.empty:
                 raise ValueError('Empty dataframe, likely due to time bounds being out of range')
-        print(df)
 
-        return util.cubes.extract_series(cube, df, column_mapping={'time':'time'})
-        #return cube
+        series = util.cubes.extract_series(cube, df, column_mapping={'time':'time'})
+        output_cube = iris.pandas.as_cube(series)
+        output_cube.rename(cube.name())
+        output_cube.units = cube.units
+
+        return output_cube
 
     def extract_shape(self, shape, crs=None):
         """

@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import iris
 import iris.analysis.trajectory as iris_traj
+import iris.pandas
 import shapely
 
 
@@ -100,15 +101,11 @@ def extract_series(cube, dataframe, column_mapping=None):
         # Try to determine the mapping, with a simple case-insensitive
         # comparison of column/coord names
         column_mapping = {}
-        print(f'index {dataframe.index.name}')
         for col_name in dataframe:
-            print(f'col {col_name}')
             for coord in cube.dim_coords:
-                print(coord.name())
                 coord_name = coord.name()
                 if col_name.lower() == coord_name.lower():
                     column_mapping[col_name] = coord_name
-        print(column_mapping)
 
     if len(column_mapping) < cube.ndim:
         missing = [
@@ -121,14 +118,13 @@ def extract_series(cube, dataframe, column_mapping=None):
     sample_points = []
     for col_name, coord_name in column_mapping.items():
         try:
-            sample_points.append((coord_name, np.array(dataframe[col_name]))) # original line...
+            sample_points.append((coord_name, np.array(dataframe[col_name])))
         except:
             sample_points.append((coord_name, dataframe.index))
+
     series_cube = iris_traj.interpolate(cube, sample_points, method="linear")
     series = pd.Series(series_cube.data, index=dataframe.index, name=cube.name())
-    series = iris.pandas.as_cube(series) #this will be depreciated
-    print('series:')
-    print(series)
+
     return series
 
 

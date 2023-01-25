@@ -305,14 +305,14 @@ class TestExtractMetadata:
     @staticmethod
     def test_aircraft_cube(aircraft_cube):
         """
-        GIVEN a single cube
+        GIVEN a cubelist of aircraft data
         WHEN metadata is extracted
         THEN the metadata is an instance of CollectionMetadata
         """
         #TODO: compare all metadata values?
-        cube_metadata = data.extract_metadata.extract_metadata(
+        cubelist_metadata = data.extract_metadata.extract_metadata(
             aircraft_cube, 'M285', ['clean_air:type=aircraft', 'clean_air:aircraft_platform=MOASA', 'clean_air:location=UK'], [], [], 'example aircraft')
-        assert isinstance(cube_metadata, CollectionMetadata)
+        assert isinstance(cubelist_metadata, CollectionMetadata)
 
 
 class errorTest(unittest.TestCase):

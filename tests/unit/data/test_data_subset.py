@@ -1,9 +1,8 @@
 import os
+import unittest
 
 import pytest
-import numpy as np
 import iris
-import shapely.geometry
 import cartopy.crs as ccrs
 
 from clean_air.data import DataSubset
@@ -90,6 +89,27 @@ class TestBoxSubset:
         assert iris.util.array_equal(xcoord.points[[0, -1]], [258000, 344000])
         assert iris.util.array_equal(ycoord.points[[0, -1]], [56000, 146000])
 
+class TestTrackSubset:
+    @staticmethod
+    @pytest.fixture
+    def dataset(sampledir):
+        path = os.path.join(sampledir, "aircraft", "M285_sample.nc")
+        sample_cube = iris.load_cube(path, 'NO2_concentration_ug_m3')
+        return DataSubset(sample_cube)
+
+    @staticmethod
+    def test_as_cube(dataset):
+        cube = dataset.extract_track('13:00', '14:00')
+
+        # Check we have the correct time bounds (in hours since epoch)
+        assert cube.coord('index').points[0] == int(449197)
+        assert cube.coord('index').points[-1] == int(449198)
+
+    @staticmethod
+    def test_time_bound_error(dataset):
+        with pytest.raises(ValueError, match='Empty dataframe, likely due to time bounds being out of range'):
+            dataset.extract_track('20:00', '21:00')
+
 class TestAverageTime:
     @staticmethod
     @pytest.fixture
@@ -143,3 +163,4 @@ class TestAverageTime:
 #         # Simple data check, which, as the mask is taken into account, should
 #         # be a pretty reliable test
 #         assert round(cube.data.mean(), 8) == 57.66388811
+

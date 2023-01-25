@@ -81,7 +81,6 @@ class Renderer:
         appropriate renderer in render_plot.py or render_map.py.
         """
         coords = (self.x_coord, self.y_coord, self.z_coord, self.t_coord)
-        print(coords)
         # If we have both an x-coord and y-coord then we can draw a map:
         if self.x_coord is not None and self.y_coord is not None:
             self.img_type = 'map'
@@ -136,9 +135,17 @@ class TimeSeries:
 
         return point_cube
 
-    def track(self, start=None, end=None, crs=None):
-        """Generate time series containing data along a track."""
-        track_cube = self.data.extract_track(self.data, start, end, crs=crs)
+    def track(self, start=None, end=None):
+        """Generate time series containing data along a track.
+        
+        Args:
+            * start (datetime.time or str): initial time filter limit, if needed.
+            * end (datetime.time or str): end time filter limit, if needed.
+            
+        Returns:
+            * A 1-D iris cube of the data along the track.
+            """
+        track_cube = self.data.extract_track(start, end)
 
         return track_cube
 
