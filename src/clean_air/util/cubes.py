@@ -97,6 +97,7 @@ def get_intersection_weights(cube, geom, match_cube_dims=False):
     """
     # Determine output shape
     xcoord, ycoord = get_xy_coords(cube)
+
     ndim = 2
     xdim = 0
     ydim = 1
@@ -105,9 +106,25 @@ def get_intersection_weights(cube, geom, match_cube_dims=False):
         ndim = cube.ndim
         xdim = cube.coord_dims(xcoord)[0]
         ydim = cube.coord_dims(ycoord)[0]
+
+    # The cells must have bounds for shape intersections to have much
+    # meaning, especially for shapes that are small compared to the
+    # grid size
+    if not xcoord.has_bounds():
+        xcoord.guess_bounds()
+    if not ycoord.has_bounds():
+        ycoord.guess_bounds()
+
     shape = [1] * ndim
     shape[xdim] = len(xcoord.points)
     shape[ydim] = len(ycoord.points)
+
+    # reduce cube coords to only those near shape
+    reduced_xcoord = [x for x in xcoord if (geom.bounds[0] <= x.bounds[0][-1] and x.bounds[0][0] <= geom.bounds[2])]
+    reduced_ycoord = [y for y in ycoord if (geom.bounds[1] <= y.bounds[0][-1] and y.bounds[0][0] <= geom.bounds[3])]
+    reduced_shape = shape.copy()
+    reduced_shape[xdim] = len(reduced_xcoord)
+    reduced_shape[ydim] = len(reduced_ycoord)
 
     # Calculate the weights
     # TODO:
@@ -118,12 +135,14 @@ def get_intersection_weights(cube, geom, match_cube_dims=False):
     #   bounding boxes, and is likely the only way of achieving any speed
     #   up for large complex shapes at all.
     weights = np.zeros(shape)
-    indices = [range(n) for n in shape]
+    indices = [range(n) for n in reduced_shape]  # [range(0, 1), range(0, 704), range(0, 548)]
     for i in itertools.product(*indices):
-        x0, x1 = xcoord.bounds[i[xdim]]
-        y0, y1 = ycoord.bounds[i[ydim]]
+        x0, x1 = reduced_xcoord[i[xdim]].bounds[0]  # aqum x range is -238000 to 856000
+        y0, y1 = reduced_ycoord[i[ydim]].bounds[0]  # aqum y range is -184000 to 1222000
+        # POLYGON ((-237000 -185000, -237000 -183000, -239000 -183000, -239000 -185000, -237000 -185000))
         cell = shapely.geometry.box(x0, y0, x1, y1)
-        weight = cell.intersection(geom).area / cell.area
+        # if not cell.intersection(geom).is_empty:
+        # print(cell.intersection(geom).area / cell.area) # POLYGON EMPTY
+        weight = cell.intersection(geom).area / cell.area  # 0.0 / 4000000.0
         weights[i] = weight
-
     return weights
