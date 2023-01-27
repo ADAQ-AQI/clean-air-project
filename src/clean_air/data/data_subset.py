@@ -160,7 +160,6 @@ class DataSubset:
         # reluctant to do it, no matter which of the many ways of creating
         # a masked array we try
         weights = util.cubes.get_intersection_weights(cube, shape, True)
-
         mask = np.broadcast_to(weights == 0, cube.shape)
         data = np.ma.array(cube.data, mask=mask)
         cube = cube.copy(data=data)

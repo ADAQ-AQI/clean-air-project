@@ -79,6 +79,86 @@ def extract_box(cube, box):
     return cube
 
 
+<<<<<<< HEAD
+=======
+def extract_series(cube, dataframe, column_mapping=None):
+    """
+    Create a new dataframe column by interpolating a Cube.
+
+    Arguments:
+        cube (Cube): cube to extract data from
+        dataframe (DataFrame): dataframe to match. Must have a column
+            corresponding to each data dimension in the cube.
+        column_mapping (dict?): mapping from dataframe column names to cube
+            coord names, in case there are any differences or ambiguities.
+
+    Returns:
+        (Series): interpolated data, as a pandas series with the same length
+            and index as the dataframe.
+    """
+    if column_mapping is None:
+        # Try to determine the mapping, with a simple case-insensitive
+        # comparison of column/coord names
+        column_mapping = {}
+        for col_name in dataframe:
+            for coord in cube.dim_coords:
+                coord_name = coord.name()
+                if col_name.lower() == coord_name.lower():
+                    column_mapping[col_name] = coord_name
+
+    if len(column_mapping) < cube.ndim:
+        missing = [
+            coord.name()
+            for coord in cube.dim_coords
+            if coord.name() not in column_mapping
+        ]
+        raise ValueError(f"Some columns not matched to cube coords: {missing}")
+
+    sample_points = []
+    for col_name, coord_name in column_mapping.items():
+        try:
+            sample_points.append((coord_name, np.array(dataframe[col_name])))
+        except:
+            sample_points.append((coord_name, dataframe.index))
+
+    series_cube = iris_traj.interpolate(cube, sample_points, method="linear")
+    series = pd.Series(series_cube.data, index=dataframe.index, name=cube.name())
+
+    return series
+
+def _reduce_coord(coord, geom, direction):
+    """
+    Helper function to reduce a coordinate to the section
+    only within a shape's bounding box.
+
+    Args:
+        coord (iris dimCoord): 1-D dimensional coordinate being reduced
+        geom (shapely polygon): intersecting shape
+        direction (str): direction of coord, 'x' or 'y'
+
+    Returns:
+        reduced (iris dimCoord): reduced coordinate
+        index_ref (int): starting point of the reduced coord, in terms of the original coord's index
+    """
+    index_ref = None
+    reduced = []
+
+    # As geom.bounds returns (minx, miny, maxx, maxy) tuple,
+    # need to specify x or y
+    if direction == 'y':
+        n = 1
+    elif direction == 'x':
+        n = 0
+
+    for i in range(len(coord.points)):
+        if (geom.bounds[0 + n] <= coord[i].bounds[0][-1] and coord[i].bounds[0][0] <= geom.bounds[2 + n]):
+            if index_ref is None:
+                index_ref = i
+            reduced.append(coord[i])
+
+    return reduced, index_ref
+
+>>>>>>> fixed indexing error
 def get_intersection_weights(cube, geom, match_cube_dims=False):
     """
     Calculate what proportion of each grid cell intersects a given shape.
@@ -97,7 +177,6 @@ def get_intersection_weights(cube, geom, match_cube_dims=False):
     """
     # Determine output shape
     xcoord, ycoord = get_xy_coords(cube)
-
     ndim = 2
     xdim = 0
     ydim = 1
@@ -120,29 +199,28 @@ def get_intersection_weights(cube, geom, match_cube_dims=False):
     shape[ydim] = len(ycoord.points)
 
     # reduce cube coords to only those near shape
-    reduced_xcoord = [x for x in xcoord if (geom.bounds[0] <= x.bounds[0][-1] and x.bounds[0][0] <= geom.bounds[2])]
-    reduced_ycoord = [y for y in ycoord if (geom.bounds[1] <= y.bounds[0][-1] and y.bounds[0][0] <= geom.bounds[3])]
+    starts = [0] * ndim
+    reduced_xcoord, starts[xdim] = _reduce_coord(xcoord, geom, 'x')
+    reduced_ycoord, starts[ydim] = _reduce_coord(ycoord, geom, 'y')
+
     reduced_shape = shape.copy()
     reduced_shape[xdim] = len(reduced_xcoord)
     reduced_shape[ydim] = len(reduced_ycoord)
-
     # Calculate the weights
     # TODO:
-    # - consider looping over only the bounding box of the geometry.
-    #   Currently, if the cube is much larger than the shape, the loop
-    #   itself vastly outweighs any actual intersection calculations.
     # - investigate parallelisation. Would reduce the above need for using
     #   bounding boxes, and is likely the only way of achieving any speed
     #   up for large complex shapes at all.
     weights = np.zeros(shape)
-    indices = [range(n) for n in reduced_shape]  # [range(0, 1), range(0, 704), range(0, 548)]
+    indices = [range(starts[i], starts[i] + reduced_shape[i]) for i in range(len(starts))]
     for i in itertools.product(*indices):
-        x0, x1 = reduced_xcoord[i[xdim]].bounds[0]  # aqum x range is -238000 to 856000
-        y0, y1 = reduced_ycoord[i[ydim]].bounds[0]  # aqum y range is -184000 to 1222000
+        x0, x1 = xcoord.bounds[i[xdim]]  # aqum x range is -238000 to 856000
+        y0, y1 = ycoord.bounds[i[ydim]]  # aqum y range is -184000 to 1222000
         # POLYGON ((-237000 -185000, -237000 -183000, -239000 -183000, -239000 -185000, -237000 -185000))
         cell = shapely.geometry.box(x0, y0, x1, y1)
         # if not cell.intersection(geom).is_empty:
         # print(cell.intersection(geom).area / cell.area) # POLYGON EMPTY
         weight = cell.intersection(geom).area / cell.area  # 0.0 / 4000000.0
         weights[i] = weight
+
     return weights
