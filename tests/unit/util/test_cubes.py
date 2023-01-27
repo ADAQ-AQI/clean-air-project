@@ -71,3 +71,18 @@ class TestExtract:
     def test_extract_series(self, aircraft_cube, track_dataframe):
         series = cubes_module.extract_series(aircraft_cube, track_dataframe, column_mapping={'time': 'time'})
         assert isinstance(series, pd.Series)
+
+    def test_extract_box(self, cube_1):
+        coords = (-0.25, -0.75, 2.6, 1.4)
+        box = cubes_module.extract_box(cube_1, coords)
+        assert isinstance(box, iris.cube.Cube)
+        assert box.shape == (3, 2, 24)
+
+"""
+integration tests ideas:
+
+get_xy_coords is used by: renderer.spatial_average, subset.extract_point, cubes.extract_box, converter.convert_to_geodf 
+extract_box used by: subset.extract_box (check these are different?)
+extract_series used by: subset.extract_track
+intersection_weights used by: subset.extract_shape
+"""

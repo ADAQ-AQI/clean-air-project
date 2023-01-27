@@ -39,8 +39,8 @@ def extract_box(cube, box):
         Create a callback function that checks whether a cell is contained
         in a given range.
 
-        For bounded cells, the cell is included iff its bounded region
-        has nonempty intersection with the requested interval. Otherwise
+        For bounded cells, the cell is included if its bounded region
+        has non-empty intersection with the requested interval. Otherwise
         falls back to simply checking the point.
         """
         def cb(cell):
