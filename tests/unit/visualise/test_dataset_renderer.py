@@ -3,10 +3,10 @@ Unit tests for test_dataset_renderer.py
 """
 
 import os
-
 import pytest
-# import geopandas
-# import xarray
+import pandas
+import iris
+import iris.cube
 
 import clean_air.visualise.dataset_renderer as dr
 
@@ -69,35 +69,50 @@ class TestDatasetRenderer:
 #         assert isinstance(self.dframe, geopandas.GeoDataFrame)
 
 
-# class TestRenderPlotCall:
-#     """
-#     Class to test 'render' method of Renderer when producing plots.
-#     """
-#
-#     def setup_class(self):
-#         self.model_path = os.path.join(MODEL_DATA_PATH,
-#                                        'aqum_daily_daqi_mean_20200520.nc')
-#         self.timeseries_path = os.path.join(TIMESERIES_PATH,
-#                                             'aqum_hourly_no2_modified.nc')
-#         self.scalar_path = os.path.join(SCALAR_PATH,
-#                                         'aqum_no2_modified.nc')
-#         self.dframe = dr.Renderer(self.timeseries_path)
-#         self.dframe.render()
-#
-#     def test_render_timeseries(self):
-#         # Check that if we have scalar x and y coordinates but a full time
-#         # coord, the renderer will choose to make a timeseries:
-#         # dframe = dr.Renderer(self.timeseries_path)
-#         # dframe.render()
-#         assert self.dframe.img_type == 'timeseries'
-#
-#     def test_plot_dataframe_is_xarray(self):
-#         # Check that the dataframe itself is an xarray object:
-#         assert isinstance(self.dframe, xarray.Dataset)
+class TestRenderPlotCall:
+    """
+    Class to test 'render' method of Renderer when producing plots.  Specifically, renderer needs to be able to
+    identify timeseries datasets and map datasets.  A timeseries dataset will have only one dimension coordinate
+    (aligned with output from all Timeseries functions in dataset_renderer.py) whereas a map will have multiple
+    dimension coordinates.
+    """
+    @pytest.yield_fixture(autouse=True)
+    def setup_class(self, sampledir):
+        """SET UP all inputs to tests."""
+        self.timeseries_path = os.path.join(sampledir, "timeseries", "aqum_hourly_no2_timeseries.nc")
+        self.dframe = dr.Renderer(self.timeseries_path)
+        self.dframe.render()
+
+        cube_zero = iris.load(os.path.join(sampledir, "timeseries", "aqum_hourly_no2_timeseries.nc"))
+        # copy cube, add 10 to all values to distinguish copy from original.
+        cube_one = cube_zero[0].copy()
+        for value in cube_one.data:
+            value += 10
+        self.cubelist = iris.cube.CubeList([cube_zero, cube_one])
+
+    def test_render_timeseries(self):
+        """GIVEN a dataset with only one dimension coordinate (time),
+        WHEN dataset_renderer.Renderer(dataset).render() is called,
+        THEN a pandas dataframe ready for plotting a timeseries graph is produced"""
+        assert self.dframe.img_type == 'timeseries'
+
+    def test_plot_dataframe_is_pandas(self):
+        """GIVEN a dataset with only one dimension coordinate (time),
+        WHEN dataset_renderer.Renderer(dataset).render() is called,
+        THEN the resulting dataframe is a pandas object."""
+        assert isinstance(self.dframe, pandas.Dataset)
+
+    def test_multipolygon_is_pandas(self):
+        """GIVEN a dataset with one dimension coordinate (time) and multiple cubes in a cubelist,
+        WHEN dataset_renderer.Renderer(dataset).render() is called,
+        THEN the resulting dataframe is a pandas object."""
+        dframe_list = dr.Renderer(self.cubelist).render()
+        assert isinstance(dframe_list, pandas.Dataset)
 
 
 def test_render_error():
-    # Check that if all our coordinates end up set as None, then an
-    # error is raised.
+    """GIVEN a null input (no cubes, no pathstring),
+    WHEN the renderer is called to identify coordinates,
+    THEN an error is raised as no coordinates can be found."""
     with pytest.raises(ValueError):
         dr.Renderer(None).render()

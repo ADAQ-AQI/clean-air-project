@@ -12,32 +12,19 @@ class Plot:
         # one Cube.  This is just for simplification of the code.
         self.dataset = dataset
     def render_timeseries(self):
-        for i, cube in enumerate(self.dataset):
-            # First check that cube is 1-dimensional, otherwise reduce
-            # dimensions:
-            if cube.ndim > 1:
-                for coord in cube.dim_coords:
-                    if coord.points.size == 1:
-                        cube = cube.collapsed(coord, iris.analysis.MEAN)
-
-            # Now check again to make sure cube is 1D, otherwise raise error:
-            if cube.ndim != 1:
-                raise ValueError('There are too many coordinates to plot this '
-                                 'cube as a timeseries.  Please pass in a cube '
-                                 'containing only one dimension (i.e. time).')
-            # For a single cube, convert to pandas dataframe and give suitable axis names.
-            if i == 0:
-                df_main = iris.pandas.as_data_frame(cube)
-                df_main.columns = [f'{cube.standard_name} \n in {cube.units}']
-                df_main.index.names = ['Time']
-
-            # For subsequent cubes provided by multipolygon, add them as dataframe columns.
-            elif i > 0:
-                df_main.columns = ['Polygon 1'] # rename to match pattern
-                df = iris.pandas.as_data_frame(cube)
-                col_name = f'Polygon {i+1}'
-                df.columns = [col_name]
-                extracted_col = df[col_name]
-                df_main = df_main.join(extracted_col)
+            # # For a single cube, convert to pandas dataframe and give suitable axis names.
+            # if i == 0:
+            #     df_main = iris.pandas.as_data_frame(cube)
+            #     df_main.columns = [f'{cube.standard_name} \n in {cube.units}']
+            #     df_main.index.names = ['Time']
+            #
+            # # For subsequent cubes provided by multipolygon, add them as dataframe columns.
+            # elif i > 0:
+            #     df_main.columns = ['Polygon 1'] # rename to match pattern
+            #     df = iris.pandas.as_data_frame(cube)
+            #     col_name = f'Polygon {i+1}'
+            #     df.columns = [col_name]
+            #     extracted_col = df[col_name]
+            #     df_main = df_main.join(extracted_col)
 
         return df_main

@@ -2,9 +2,8 @@
 Top-level module for rendering datasets.
 """
 
-import geopandas
 import iris
-import xarray
+import iris.pandas
 from iris.cube import Cube, CubeList
 from shapely.geometry import Polygon, MultiPolygon
 
@@ -41,7 +40,7 @@ class Renderer:
             # Use iris to read in dataset as lazy array and add to CubeList
             # here:
             self.path = dataset
-            self.dataset = iris.load_cube(dataset)
+            self.dataset = iris.load(dataset)
             self.dims = self.dataset.dim_coords
             self.plot_list.append(self.dataset)
         elif isinstance(dataset, Cube):
@@ -86,14 +85,29 @@ class Renderer:
         elif self.x_coord is None and self.y_coord is None and \
                 self.t_coord is not None:
             self.img_type = 'timeseries'
-            fig = render_plot.Plot(self.plot_list).render_timeseries()
+
+            # For a single cube, convert to pandas dataframe and give suitable axis names.
+            for i, cube in enumerate(self.dataset):
+                if i == 0:
+                    df_main = iris.pandas.as_data_frame(cube)
+                    df_main.columns = [f'{cube.standard_name} \n in {cube.units}']
+                    df_main.index.names = ['Time']
+
+                # For subsequent cubes provided by multipolygon, add them as dataframe columns.
+                elif i > 0:
+                    df_main.columns = ['Polygon 1']  # rename to match pattern
+                    df = iris.pandas.as_data_frame(cube)
+                    col_name = f'Polygon {i + 1}'
+                    df.columns = [col_name]
+                    extracted_col = df[col_name]
+                    df_main = df_main.join(extracted_col)
         # If we don't have any coords then something's gone wrong and we can't
         # plot anything:
         elif all(coord is None for coord in coords):
             raise ValueError('All dimension coordinates are either missing or '
                              'scalar, please choose a dataset with more '
                              'coordinate points.')
-        return fig
+        return fig  # TODO: Call this something more relevant i.e. df
 
 
 class TimeSeries:
