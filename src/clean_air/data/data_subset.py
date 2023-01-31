@@ -6,7 +6,6 @@ import numpy as np
 import iris
 import shapely.geometry
 import shapely.ops
-import xarray as xr
 from .. import util
 
 
@@ -123,23 +122,22 @@ class DataSubset:
         """
         cube = self._load_cube()
 
-        if isinstance(self.metadata, str):
-            ds = xr.open_dataset(self.metadata)
-        elif isinstance(self.metadata, iris.cube.Cube):
-            ds = xr.DataArray.from_iris(self.metadata)
-
-        df = ds.to_dataframe()
         if start and end:
-            df = df.between_time(start, end)
-            if df.empty:
-                raise ValueError('Empty dataframe, likely due to time bounds being out of range')
+            timerange = iris.Constraint(time=lambda cell: start <= cell.point < end)
+            cube = cube.extract(timerange)
+            if cube is None:
+                raise ValueError('Empty cube, likely due to time bounds being out of range')
 
-        series = util.cubes.extract_series(cube, df, column_mapping={'time': 'time'})
-        output_cube = iris.pandas.as_cube(series)
-        output_cube.rename(cube.name())
-        output_cube.units = cube.units
+        # remove all coords except for time DimCoord
+        for coord in cube.aux_coords:
+            cube.remove_coord(coord)
+        if len(cube.dim_coords) != 1:
+            print('Found extra dimensions, attempting to remove...')
+            for coord in cube.dim_coords:
+                if coord.standard_name != 'time':
+                    cube.remove_coord(coord)
 
-        return output_cube
+        return cube
 
     def extract_shape(self, shape, crs=None):
         """

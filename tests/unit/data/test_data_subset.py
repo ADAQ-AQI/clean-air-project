@@ -2,6 +2,8 @@ import os
 
 import pytest
 import iris
+from iris.cube import Cube
+from iris.time import PartialDateTime
 import cartopy.crs as ccrs
 
 from clean_air.data import DataSubset
@@ -90,6 +92,7 @@ class TestBoxSubset:
 
 
 class TestTrackSubset:
+    """Tests for data_subset.extract_track method"""
     @staticmethod
     @pytest.fixture
     def dataset(sampledir):
@@ -98,17 +101,67 @@ class TestTrackSubset:
         return DataSubset(sample_cube)
 
     @staticmethod
-    def test_as_cube(dataset):
-        cube = dataset.extract_track('13:00', '14:00')
+    @pytest.fixture
+    def model_dataset(sampledir):
+        path = os.path.join(sampledir, "model_full", "aqum_hourly_o3_20200521.nc")
+        return DataSubset(path)
 
-        # Check we have the correct time bounds (in hours since epoch)
-        assert cube.coord('index').points[0] == int(449197)
-        assert cube.coord('index').points[-1] == int(449198)
+    @staticmethod
+    def test_as_cube(dataset):
+        """
+        GIVEN a cube of aircraft data
+        WHEN the track is extracted
+        THEN the track is an instance of an iris cube
+        """
+        cube = dataset.extract_track()
+        assert isinstance(cube, Cube)
+
+    @staticmethod
+    def test_dimensions(dataset):
+        """
+        GIVEN a cube of aircraft data
+        WHEN the track is extracted
+        THEN the track has no auxillary coordinates and a single dimensional coordinate
+        """
+        cube = dataset.extract_track()
+        assert len(cube.aux_coords) == 0
+        assert len(cube.dim_coords) == 1
+
+    @staticmethod
+    def test_time_bound(dataset):
+        """
+        GIVEN a cube of aircraft data
+        WHEN the track is extracted for a specified time period
+        THEN the track's time coordinate matches this period
+        """
+        cube = dataset.extract_track(PartialDateTime(hour=13), PartialDateTime(hour=14))
+        # integer values are in seconds since 2021-03-30 00:00:00
+        assert cube.coord('time').points[0] == int(46800)
+        assert cube.coord('time').points[-1] == int(50399)
 
     @staticmethod
     def test_time_bound_error(dataset):
-        with pytest.raises(ValueError, match='Empty dataframe, likely due to time bounds being out of range'):
-            dataset.extract_track('20:00', '21:00')
+        """
+        GIVEN a cube of aircraft data
+        WHEN the track is extracted for a specified time period out of data range
+        THEN the appropriate error is raised
+        """
+        with pytest.raises(ValueError, match='Empty cube, likely due to time bounds being out of range'):
+            dataset.extract_track(PartialDateTime(hour=20), PartialDateTime(hour=21))
+
+    @staticmethod
+    def test_multidim_data(model_dataset, capsys):
+        """
+        GIVEN a cube of multidimensional model data
+        WHEN the track is extracted
+        THEN the appropriate statement is printed and the coordinates are reduced, 
+        even if the resulting data doesn't make sense
+        """
+        cube = model_dataset.extract_track()
+        captured = capsys.readouterr()
+        assert captured.out.strip() == "Found extra dimensions, attempting to remove..."
+        assert len(cube.aux_coords) == 0
+        assert len(cube.dim_coords) == 1
 
 
 class TestAverageTime:

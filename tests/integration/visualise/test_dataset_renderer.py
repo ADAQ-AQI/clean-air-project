@@ -7,6 +7,7 @@ import pytest
 
 import iris
 from iris.cube import Cube, CubeList
+from iris.time import PartialDateTime
 from shapely.geometry import Polygon, MultiPolygon
 from clean_air.visualise import dataset_renderer as dr
 from clean_air.data import DataSubset
@@ -150,7 +151,10 @@ class TestTimeSeries:
         assert isinstance(diurnal_data, Cube)
 
     def test_track_data(self, flight_data):
-        """Test that when data is passed to this function it is returned as a
-        timeseries Cube."""
-        track_data = dr.TimeSeries(flight_data).track('13:00', '14:00')
+        """
+        GIVEN a cube of aircraft data
+        WHEN Timeseries.track() is called for valid time bounds
+        THEN an iris cube is returned
+        """
+        track_data = dr.TimeSeries(flight_data).track(PartialDateTime(hour=13), PartialDateTime(hour=14))
         assert isinstance(track_data, Cube)
