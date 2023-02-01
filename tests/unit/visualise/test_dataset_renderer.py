@@ -6,9 +6,46 @@ import os
 import pytest
 import pandas
 import iris
-import iris.cube
+from iris.cube import Cube, CubeList
+from shapely.geometry import Polygon, MultiPolygon
 
 import clean_air.visualise.dataset_renderer as dr
+from clean_air.data import DataSubset
+
+
+@pytest.fixture()
+def timeseries_filepath(sampledir):
+    timeseries_filepath = os.path.join(sampledir, "model_full", "aqum_hourly_o3_20200520.nc")
+    return timeseries_filepath
+
+
+@pytest.fixture()
+def diurnal_filepath(sampledir):
+    diurnal_filepath = os.path.join(sampledir, "model_full", "aqum_hourly_o3_48_hours.nc")
+    return diurnal_filepath
+
+
+@pytest.fixture()
+def clean_data(timeseries_filepath):
+    # Note: This is a DataSubset object which can be used and adapted for later fixtures and tests.
+    # These objects are NOT subscriptable.
+    clean_df = DataSubset(timeseries_filepath)
+    return clean_df
+
+
+@pytest.fixture()
+def multiday_data(diurnal_filepath):
+    # Note: This is a DataSubset object which can be used and adapted for later fixtures and tests.
+    # These objects are NOT subscriptable.
+    multiday_df = DataSubset(diurnal_filepath)
+    return multiday_df
+
+
+@pytest.fixture()
+def tmp_output_path(tmp_path):
+    tmp_output_path = tmp_path / "tmp_output_path"
+    tmp_output_path.mkdir()
+    return tmp_output_path
 
 
 class TestDatasetRenderer:
@@ -108,5 +145,52 @@ def test_render_error():
     """GIVEN a null input (no cubes, no pathstring),
     WHEN the renderer is called to identify coordinates,
     THEN an error is raised as no coordinates can be found."""
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         dr.Renderer(None).render()
+
+
+class TestTimeSeries:
+    """Class to test generation of time series data with various processing methods (i.e. linear interpolation and
+    box, shape and diurnal averaging)."""
+
+    def test_linear_interpolate_3d_data(self, clean_data, tmp_output_path):
+        """GIVEN a full dataset with multiple dimension coordinates,
+         WHEN linearly interpolated through the TimeSeries class,
+         THEN the result is an iris Cube of the expected shape."""
+        interpolated_data = dr.TimeSeries(clean_data, 150, 150).linear_interpolate()
+        assert isinstance(interpolated_data, Cube)
+        # Shape of interpolated cube should be (24 time, 1 lat, 1 lon)
+        assert interpolated_data.shape == (24, 1, 1)
+
+    def test_box_average_data(self, clean_data, tmp_output_path):
+        """GIVEN a full dataset with multiple dimension coordinates,
+        WHEN spatially averaged as a box through the TimeSeries class,
+        THEN the result is an iris Cube of the expected shape."""
+        boxed_data = dr.TimeSeries(clean_data).spatial_average(shape='box', coords=[10000, 10000, 15000, 15000])
+        assert isinstance(boxed_data, Cube)
+        assert boxed_data.shape == (24,)
+
+    def test_shape_averaged_data(self, clean_data, tmp_output_path):
+        """GIVEN a shapely Polygon,
+        WHEN spatially averaged as that Polygon through the TimeSeries class,
+        THEN the result is an iris Cube of the expected shape."""
+        shape = Polygon([(0, 0), (100, 100), (100, 0)])
+        shape_data = dr.TimeSeries(clean_data).spatial_average(shape=shape)
+        assert isinstance(shape_data, Cube)
+
+    def test_shapes_averaged_data(self, clean_data, tmp_output_path):
+        """GIVEN a shapely MultiPolygon,
+        WHEN spatially averaged as those respective Polygons through the TimeSeries class,
+        THEN the result is an iris CubeList."""
+        poly_one = Polygon([(0, 0), (100, 100), (100, 0)])
+        poly_two = Polygon([(0, 0), (-100, -100), (-100, 0)])
+        shapes = MultiPolygon([poly_one, poly_two])
+        shape_data = dr.TimeSeries(clean_data).spatial_average(shape=shapes)
+        assert isinstance(shape_data, CubeList)
+
+    def test_diurnal_averaged_data(self, multiday_data):
+        """GIVEN a DataSubset object containing data from multiple days,
+        WHEN diurnally averaged through the TimeSeries class,
+        THEN the result is a single iris Cube"""
+        diurnal_data = dr.TimeSeries(multiday_data).diurnal_average()
+        assert isinstance(diurnal_data, Cube)

@@ -145,7 +145,13 @@ class TimeSeries:
             interpolated data.
             """
         point_cube = self.data.extract_point((self.x, self.y))
-
+        # Identify and remove any single-point coordinates:
+        scalar_coords = []
+        for coord in point_cube.dim_coords:
+            if len(coord.points) == 1:
+                scalar_coords.append(coord)
+        for coord in scalar_coords:
+            point_cube = point_cube.collapsed(coord.standard_name, iris.analysis.MEAN)
         return point_cube
 
     def track(self, crs=None):
