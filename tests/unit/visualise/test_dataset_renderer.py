@@ -159,8 +159,9 @@ class TestTimeSeries:
          THEN the result is an iris Cube of the expected shape."""
         interpolated_data = dr.TimeSeries(clean_data, 150, 150).linear_interpolate()
         assert isinstance(interpolated_data, Cube)
-        # Shape of interpolated cube should be (24 time, 1 lat, 1 lon)
-        assert interpolated_data.shape == (24, 1, 1)
+        # Shape of interpolated cube should be (24 time, 1 lat, 1 lon), however scalar coords will be collapsed to
+        # assist plot rendering process, so final shape should be (24,).
+        assert interpolated_data.shape == (24,)
 
     def test_box_average_data(self, clean_data, tmp_output_path):
         """GIVEN a full dataset with multiple dimension coordinates,

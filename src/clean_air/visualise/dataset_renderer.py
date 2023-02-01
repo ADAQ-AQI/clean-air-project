@@ -154,12 +154,6 @@ class TimeSeries:
             point_cube = point_cube.collapsed(coord.standard_name, iris.analysis.MEAN)
         return point_cube
 
-    def track(self, crs=None):
-        """Generate time series containing data along a track."""
-        track_cube = self.data.extract_track(self.data, crs=crs)
-
-        return track_cube
-
     def spatial_average(self, shape, coords=None, crs=None):
         """Generate time series containing spatially averaged data.
 
