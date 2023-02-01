@@ -128,3 +128,52 @@ class TestTimeSeries:
         timeseries Cube."""
         diurnal_data = dr.TimeSeries(multiday_data).diurnal_average()
         assert isinstance(diurnal_data, Cube)
+
+
+def test_linear_interpolate_3d_plot(clean_data, tmp_output_path):
+    """Test that when data is passed to this function it is processed to
+    produce and return a pandas dataframe."""
+    interpreted_data = dataset_renderer.TimeSeries(clean_data, 150, 150).\
+        linear_interpolate()
+    interpreted_plot = dataset_renderer.Renderer(interpreted_data).render()
+    assert isinstance(interpreted_plot, pandas.DataFrame)
+
+
+def test_box_average_plot(clean_data, tmp_output_path):
+    """Test that when data is passed to this function it is processed to
+        produce and return a pandas dataframe."""
+    boxed_data = dataset_renderer.TimeSeries(clean_data).\
+        spatial_average(shape='box', coords=[10000, 10000, 15000, 15000])
+    boxed_plot = dataset_renderer.Renderer(boxed_data).render()
+    assert isinstance(boxed_plot, pandas.DataFrame)
+
+
+def test_shape_average_plot(clean_data, tmp_output_path):
+    """Test that when data is passed to this function it is processed to
+    produce and return a pandas dataframe."""
+    shape = Polygon([(0, 0), (100, 100), (100, 0)])
+    shape_data = dataset_renderer.TimeSeries(clean_data).spatial_average(shape)
+    shape_plot = dataset_renderer.Renderer(shape_data).render()
+    assert isinstance(shape_plot, pandas.DataFrame)
+
+
+def test_shapes_average_plots(clean_data, tmp_output_path):
+    """Test that when data is passed to this function it is processed to
+        produce and return a pandas dataframe."""
+    # NOTE: This test is really slow, presumably due to lots of processing
+    # during cell weight evaluation.  Can we speed this up somehow?
+    poly_one = Polygon([(0, 0), (10, 10), (10, 0)])
+    poly_two = Polygon([(-100, -100), (-90, -90), (-90, 0)])
+    shapes = MultiPolygon([poly_one, poly_two])
+    shapes_data = dataset_renderer.TimeSeries(clean_data).\
+        spatial_average(shapes)
+    # One plot per shape, but side-by-side on same figure
+    shapes_plot = dataset_renderer.Renderer(shapes_data).render()
+    assert isinstance(shapes_plot, pandas.DataFrame)
+
+# def test_aircraft_data(aircraft_data, tmp_output_path):
+#     """Toy test to identify syntax errors in aircraft data."""
+#     data = aircraft_data
+#     track_subset = dataset_renderer.TimeSeries(data).track()
+#     track_plot = dataset_renderer.Renderer(track_subset).render()
+#     track_plot.show()
