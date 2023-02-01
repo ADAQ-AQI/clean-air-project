@@ -5,9 +5,7 @@ Helper functions for Iris Cubes
 import itertools
 
 import numpy as np
-import pandas as pd
 import iris
-import iris.analysis.trajectory as iris_traj
 import shapely
 
 
@@ -79,49 +77,6 @@ def extract_box(cube, box):
         cube = cube.extract(constraint)
 
     return cube
-
-
-def extract_series(cube, dataframe, column_mapping=None):
-    """
-    Create a new dataframe column by interpolating a Cube.
-
-    Arguments:
-        cube (Cube): cube to extract data from
-        dataframe (DataFrame): dataframe to match. Must have a column
-            corresponding to each data dimension in the cube.
-        column_mapping (dict?): mapping from dataframe column names to cube
-            coord names, in case there are any differences or ambiguities.
-
-    Returns:
-        (Series): interpolated data, as a pandas series with the same length
-            and index as the dataframe.
-    """
-    if column_mapping is None:
-        # Try to determine the mapping, with a simple case-insensitive
-        # comparison of column/coord names
-        column_mapping = {}
-        for col_name in dataframe:
-            for coord in cube.dim_coords:
-                coord_name = coord.name()
-                if col_name.lower() == coord_name.lower():
-                    column_mapping[col_name] = coord_name
-
-    if len(column_mapping) < cube.ndim:
-        missing = [
-            coord.name()
-            for coord in cube.dim_coords
-            if coord.name() not in column_mapping
-        ]
-        raise ValueError(f"Some columns not matched to cube coords: {missing}")
-
-    sample_points = []
-    for col_name, coord_name in column_mapping.items():
-        sample_points.append((coord_name, np.array(dataframe[col_name])))
-
-    series_cube = iris_traj.interpolate(cube, sample_points, method="linear")
-    series = pd.Series(series_cube.data, index=dataframe.index, name=cube.name())
-
-    return series
 
 
 def get_intersection_weights(cube, geom, match_cube_dims=False):

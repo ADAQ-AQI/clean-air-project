@@ -5,7 +5,9 @@ Integration tests for the test_dataset_renderer.py visualisations.
 import os
 import pytest
 
+import iris
 from iris.cube import Cube, CubeList
+from iris.time import PartialDateTime
 from shapely.geometry import Polygon, MultiPolygon
 from clean_air.visualise import dataset_renderer as dr
 from clean_air.data import DataSubset
@@ -58,11 +60,20 @@ def timeseries_filepath(sampledir):
                                        "aqum_hourly_o3_20200520.nc")
     return timeseries_filepath
 
+
 @pytest.fixture()
 def diurnal_filepath(sampledir):
     diurnal_filepath = os.path.join(sampledir, "model_full",
-                                       "aqum_hourly_o3_48_hours.nc")
+                                    "aqum_hourly_o3_48_hours.nc")
     return diurnal_filepath
+
+
+@pytest.fixture()
+def aircraft_filepath(sampledir):
+    aircraft_filepath = os.path.join(sampledir, "aircraft",
+                                     "M285_sample.nc")
+    return aircraft_filepath
+
 
 @pytest.fixture()
 def clean_data(timeseries_filepath):
@@ -71,12 +82,22 @@ def clean_data(timeseries_filepath):
     clean_df = DataSubset(timeseries_filepath)
     return clean_df
 
+
 @pytest.fixture()
 def multiday_data(diurnal_filepath):
     # Note: This is a DataSubset object which can be used and adapted for later
     # fixtures and tests.  These objects are NOT subscriptable.
     multiday_df = DataSubset(diurnal_filepath)
     return multiday_df
+
+
+@pytest.fixture()
+def flight_data(aircraft_filepath):
+    # Note: This is a DataSubset object which can be used and adapted for later
+    # fixtures and tests.  These objects are NOT subscriptable.
+    flight_df = DataSubset(iris.load_cube(aircraft_filepath, 'NO2_concentration_ug_m3'))
+    return flight_df
+
 
 @pytest.fixture()
 def tmp_output_path(tmp_path):
@@ -128,3 +149,12 @@ class TestTimeSeries:
         timeseries Cube."""
         diurnal_data = dr.TimeSeries(multiday_data).diurnal_average()
         assert isinstance(diurnal_data, Cube)
+
+    def test_track_data(self, flight_data):
+        """
+        GIVEN a cube of aircraft data
+        WHEN Timeseries.track() is called for valid time bounds
+        THEN an iris cube is returned
+        """
+        track_data = dr.TimeSeries(flight_data).track(PartialDateTime(hour=13), PartialDateTime(hour=14))
+        assert isinstance(track_data, Cube)
