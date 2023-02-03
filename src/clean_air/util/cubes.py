@@ -78,6 +78,7 @@ def extract_box(cube, box):
 
     return cube
 
+
 def _reduce_coord(coord, geom, direction):
     """
     Helper function to reduce a coordinate to the section
@@ -109,6 +110,7 @@ def _reduce_coord(coord, geom, direction):
             reduced.append(coord[i])
 
     return reduced, index_ref
+
 
 def get_intersection_weights(cube, geom, match_cube_dims=False):
     """
@@ -156,7 +158,7 @@ def get_intersection_weights(cube, geom, match_cube_dims=False):
     reduced_shape[ydim] = len(reduced_ycoord)
     # Calculate the weights
     # TODO:
-    # - investigate parallelisation. Would reduce the above need for using
+    # - investigate parallelisation. Would reduce the need for using
     #   bounding boxes, and is likely the only way of achieving any speed
     #   up for large complex shapes at all.
     weights = np.zeros(shape)
