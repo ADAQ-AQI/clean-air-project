@@ -39,8 +39,8 @@ def extract_box(cube, box):
         Create a callback function that checks whether a cell is contained
         in a given range.
 
-        For bounded cells, the cell is included if its bounded region
-        has non-empty intersection with the requested interval. Otherwise
+        For bounded cells, the cell is included iff its bounded region
+        has nonempty intersection with the requested interval. Otherwise
         falls back to simply checking the point.
         """
         def cb(cell):
@@ -51,9 +51,8 @@ def extract_box(cube, box):
                 # a requested range is entirely contained by a cell, as
                 # this is just a < low < high < b
                 return a <= high and low <= b
-
             return low <= cell.point <= high
-    
+
         return cb
 
     xcoord, ycoord = get_xy_coords(cube)
@@ -78,54 +77,6 @@ def extract_box(cube, box):
         cube = cube.extract(constraint)
 
     return cube
-
-
-<<<<<<< HEAD
-=======
-def extract_series(cube, dataframe, column_mapping=None):
-    """
-    Create a new dataframe column by interpolating a Cube.
-
-    Arguments:
-        cube (Cube): cube to extract data from
-        dataframe (DataFrame): dataframe to match. Must have a column
-            corresponding to each data dimension in the cube.
-        column_mapping (dict?): mapping from dataframe column names to cube
-            coord names, in case there are any differences or ambiguities.
-
-    Returns:
-        (Series): interpolated data, as a pandas series with the same length
-            and index as the dataframe.
-    """
-    if column_mapping is None:
-        # Try to determine the mapping, with a simple case-insensitive
-        # comparison of column/coord names
-        column_mapping = {}
-        for col_name in dataframe:
-            for coord in cube.dim_coords:
-                coord_name = coord.name()
-                if col_name.lower() == coord_name.lower():
-                    column_mapping[col_name] = coord_name
-
-    if len(column_mapping) < cube.ndim:
-        missing = [
-            coord.name()
-            for coord in cube.dim_coords
-            if coord.name() not in column_mapping
-        ]
-        raise ValueError(f"Some columns not matched to cube coords: {missing}")
-
-    sample_points = []
-    for col_name, coord_name in column_mapping.items():
-        try:
-            sample_points.append((coord_name, np.array(dataframe[col_name])))
-        except:
-            sample_points.append((coord_name, dataframe.index))
-
-    series_cube = iris_traj.interpolate(cube, sample_points, method="linear")
-    series = pd.Series(series_cube.data, index=dataframe.index, name=cube.name())
-
-    return series
 
 def _reduce_coord(coord, geom, direction):
     """
@@ -156,23 +107,19 @@ def _reduce_coord(coord, geom, direction):
             if index_ref is None:
                 index_ref = i
             reduced.append(coord[i])
-    
+
     return reduced, index_ref
 
->>>>>>> fixed indexing error
 def get_intersection_weights(cube, geom, match_cube_dims=False):
     """
     Calculate what proportion of each grid cell intersects a given shape.
-
     Arguments:
         cube (Cube): cube defining a grid
         geom (BaseGeometry): shape to intersect
         match_cube_dims (bool?):
             Whether to match cube shape or not:
-
             - If False (the default), the returned array will have shape (x, y)
             - If True, its shape will be compatible with the cube
-
     Returns:
         (np.array): intersection weights
     """
