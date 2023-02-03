@@ -51,8 +51,9 @@ def extract_box(cube, box):
                 # a requested range is entirely contained by a cell, as
                 # this is just a < low < high < b
                 return a <= high and low <= b
-            return low <= cell.point <= high
 
+            return low <= cell.point <= high
+    
         return cb
 
     xcoord, ycoord = get_xy_coords(cube)
@@ -155,7 +156,7 @@ def _reduce_coord(coord, geom, direction):
             if index_ref is None:
                 index_ref = i
             reduced.append(coord[i])
-
+    
     return reduced, index_ref
 
 >>>>>>> fixed indexing error
@@ -212,15 +213,18 @@ def get_intersection_weights(cube, geom, match_cube_dims=False):
     #   bounding boxes, and is likely the only way of achieving any speed
     #   up for large complex shapes at all.
     weights = np.zeros(shape)
+
+    # return array of zeros if shape does not overlap data
+    if None in starts:
+        print('No intersection found, returning zero array')
+        return weights
+
     indices = [range(starts[i], starts[i] + reduced_shape[i]) for i in range(len(starts))]
     for i in itertools.product(*indices):
-        x0, x1 = xcoord.bounds[i[xdim]]  # aqum x range is -238000 to 856000
-        y0, y1 = ycoord.bounds[i[ydim]]  # aqum y range is -184000 to 1222000
-        # POLYGON ((-237000 -185000, -237000 -183000, -239000 -183000, -239000 -185000, -237000 -185000))
+        x0, x1 = xcoord.bounds[i[xdim]]
+        y0, y1 = ycoord.bounds[i[ydim]]
         cell = shapely.geometry.box(x0, y0, x1, y1)
-        # if not cell.intersection(geom).is_empty:
-        # print(cell.intersection(geom).area / cell.area) # POLYGON EMPTY
-        weight = cell.intersection(geom).area / cell.area  # 0.0 / 4000000.0
+        weight = cell.intersection(geom).area / cell.area
         weights[i] = weight
 
     return weights
