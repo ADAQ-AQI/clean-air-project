@@ -79,19 +79,49 @@ def extract_box(cube, box):
     return cube
 
 
+def _reduce_coord(coord, geom, direction):
+    """
+    Helper function to reduce a coordinate to the section
+    only within a shape's bounding box.
+
+    Args:
+        coord (iris dimCoord): 1-D dimensional coordinate being reduced
+        geom (shapely polygon): intersecting shape
+        direction (str): direction of coord, 'x' or 'y'
+
+    Returns:
+        reduced (iris dimCoord): reduced coordinate
+        index_ref (int): starting point of the reduced coord, in terms of the original coord's index
+    """
+    index_ref = None
+    reduced = []
+
+    # As geom.bounds returns (minx, miny, maxx, maxy) tuple,
+    # need to specify x or y
+    if direction == 'y':
+        n = 1
+    elif direction == 'x':
+        n = 0
+
+    for i in range(len(coord.points)):
+        if (geom.bounds[0 + n] <= coord[i].bounds[0][-1] and coord[i].bounds[0][0] <= geom.bounds[2 + n]):
+            if index_ref is None:
+                index_ref = i
+            reduced.append(coord[i])
+
+    return reduced, index_ref
+
+
 def get_intersection_weights(cube, geom, match_cube_dims=False):
     """
     Calculate what proportion of each grid cell intersects a given shape.
-
     Arguments:
         cube (Cube): cube defining a grid
         geom (BaseGeometry): shape to intersect
         match_cube_dims (bool?):
             Whether to match cube shape or not:
-
             - If False (the default), the returned array will have shape (x, y)
             - If True, its shape will be compatible with the cube
-
     Returns:
         (np.array): intersection weights
     """
@@ -105,20 +135,40 @@ def get_intersection_weights(cube, geom, match_cube_dims=False):
         ndim = cube.ndim
         xdim = cube.coord_dims(xcoord)[0]
         ydim = cube.coord_dims(ycoord)[0]
+
+    # The cells must have bounds for shape intersections to have much
+    # meaning, especially for shapes that are small compared to the
+    # grid size
+    if not xcoord.has_bounds():
+        xcoord.guess_bounds()
+    if not ycoord.has_bounds():
+        ycoord.guess_bounds()
+
     shape = [1] * ndim
     shape[xdim] = len(xcoord.points)
     shape[ydim] = len(ycoord.points)
 
+    # reduce cube coords to only those near shape
+    starts = [0] * ndim
+    reduced_xcoord, starts[xdim] = _reduce_coord(xcoord, geom, 'x')
+    reduced_ycoord, starts[ydim] = _reduce_coord(ycoord, geom, 'y')
+
+    reduced_shape = shape.copy()
+    reduced_shape[xdim] = len(reduced_xcoord)
+    reduced_shape[ydim] = len(reduced_ycoord)
     # Calculate the weights
     # TODO:
-    # - consider looping over only the bounding box of the geometry.
-    #   Currently, if the cube is much larger than the shape, the loop
-    #   itself vastly outweighs any actual intersection calculations.
-    # - investigate parallelisation. Would reduce the above need for using
+    # - investigate parallelisation. Would reduce the need for using
     #   bounding boxes, and is likely the only way of achieving any speed
     #   up for large complex shapes at all.
     weights = np.zeros(shape)
-    indices = [range(n) for n in shape]
+
+    # return array of zeros if shape does not overlap data
+    if None in starts:
+        print('No intersection found, returning zero array')
+        return weights
+
+    indices = [range(starts[i], starts[i] + reduced_shape[i]) for i in range(len(starts))]
     for i in itertools.product(*indices):
         x0, x1 = xcoord.bounds[i[xdim]]
         y0, y1 = ycoord.bounds[i[ydim]]

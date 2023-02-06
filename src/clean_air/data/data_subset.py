@@ -155,15 +155,6 @@ class DataSubset:
             data_crs = cube.coord_system().as_cartopy_crs()
             shape = util.crs.transform_shape(shape, crs, data_crs)
 
-        # The cells must have bounds for shape intersections to have much
-        # meaning, especially for shapes that are small compared to the
-        # grid size
-        xcoord, ycoord = util.cubes.get_xy_coords(cube)
-        if not xcoord.has_bounds():
-            xcoord.guess_bounds()
-        if not ycoord.has_bounds():
-            ycoord.guess_bounds()
-
         # Mask points outside the actual shape
         # Note we need to do the broadcasting manually: numpy is strangely
         # reluctant to do it, no matter which of the many ways of creating
