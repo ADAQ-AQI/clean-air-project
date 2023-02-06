@@ -48,7 +48,8 @@ def tmp_output_path(tmp_path):
 
 
 def test_linear_interpolate_3d_plot(clean_data, tmp_output_path):
-    """GIVEN a 3D dataset and two coordinates to specify a point,
+    """
+    GIVEN a 3D dataset and two coordinates to specify a point,
     WHEN linearly interpolated through the TimeSeries class and then reshaped through the Renderer class,
     THEN the result is a pandas Series."""
     interpreted_data = dr.TimeSeries(clean_data, 150, 150).linear_interpolate()
@@ -57,7 +58,8 @@ def test_linear_interpolate_3d_plot(clean_data, tmp_output_path):
 
 
 def test_box_average_plot(clean_data, tmp_output_path):
-    """GIVEN a 3D dataset and a list to specify min and max x and y coords for the box,
+    """
+    GIVEN a 3D dataset and a list to specify min and max x and y coords for the box,
     WHEN spatially averaged over the box through the TimeSeries class and then reshaped through the Renderer class,
     THEN the result is a pandas Series."""
     boxed_data = dr.TimeSeries(clean_data).spatial_average(shape='box', coords=[10000, 10000, 15000, 15000])
@@ -66,7 +68,8 @@ def test_box_average_plot(clean_data, tmp_output_path):
 
 
 def test_shape_average_plot(clean_data, tmp_output_path):
-    """GIVEN a 3D dataset and a shapely Polygon,
+    """
+    GIVEN a 3D dataset and a shapely Polygon,
     WHEN spatially averaged over the Polygon through the TimeSeries class and then reshaped through the Renderer class,
     THEN the result is a pandas Series."""
     shape = Polygon([(0, 0), (100, 100), (100, 0)])
@@ -76,7 +79,8 @@ def test_shape_average_plot(clean_data, tmp_output_path):
 
 
 def test_shapes_average_plots(clean_data, tmp_output_path):
-    """GIVEN a 3D dataset and a shapely MultiPolygon, 
+    """
+    GIVEN a 3D dataset and a shapely MultiPolygon,
     WHEN spatially averaged over the MultiPolygon through the TimeSeries class and then reshaped through the Renderer 
     class,
     THEN the result is a pandas DataFrame."""

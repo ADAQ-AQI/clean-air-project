@@ -203,3 +203,9 @@ class TimeSeries:
         """Generate a mean 24hr profile for data spanning multiple days."""
 
         return self.data.average_time(aggregator)
+
+    def track(self, crs=None):
+        """Generate time series containing data along a track."""
+        track_cube = self.data.extract_track(self.data, crs=crs)
+
+        return track_cube
