@@ -51,31 +51,31 @@ def test_linear_interpolate_3d_plot(clean_data, tmp_output_path):
     """
     GIVEN a 3D dataset and two coordinates to specify a point,
     WHEN linearly interpolated through the TimeSeries class and then reshaped through the Renderer class,
-    THEN the result is a pandas DataFrame."""
+    THEN the result is a pandas Series."""
     interpreted_data = dr.TimeSeries(clean_data, 150, 150).linear_interpolate()
     interpreted_plot = dr.Renderer(interpreted_data).render()
-    assert isinstance(interpreted_plot, DataFrame)
+    assert isinstance(interpreted_plot, Series)
 
 
 def test_box_average_plot(clean_data, tmp_output_path):
     """
     GIVEN a 3D dataset and a list to specify min and max x and y coords for the box,
     WHEN spatially averaged over the box through the TimeSeries class and then reshaped through the Renderer class,
-    THEN the result is a pandas DataFrame."""
+    THEN the result is a pandas Series."""
     boxed_data = dr.TimeSeries(clean_data).spatial_average(shape='box', coords=[10000, 10000, 15000, 15000])
     boxed_plot = dr.Renderer(boxed_data).render()
-    assert isinstance(boxed_plot, DataFrame)
+    assert isinstance(boxed_plot, Series)
 
 
 def test_shape_average_plot(clean_data, tmp_output_path):
     """
     GIVEN a 3D dataset and a shapely Polygon,
     WHEN spatially averaged over the Polygon through the TimeSeries class and then reshaped through the Renderer class,
-    THEN the result is a pandas DataFrame."""
+    THEN the result is a pandas Series."""
     shape = Polygon([(0, 0), (100, 100), (100, 0)])
     shape_data = dr.TimeSeries(clean_data).spatial_average(shape)
     shape_plot = dr.Renderer(shape_data).render()
-    assert isinstance(shape_plot, DataFrame)
+    assert isinstance(shape_plot, Series)
 
 
 def test_shapes_average_plots(clean_data, tmp_output_path):
