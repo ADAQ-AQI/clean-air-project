@@ -30,7 +30,7 @@ def doubledim_cube(sampledir):
 
 @pytest.fixture(scope="class")
 def onedim_cube(sampledir):
-    path = os.path.join(sampledir, "timeseries", "aircraft_o3_timeseries.nc")
+    path = os.path.join(sampledir, "aircraft_tracks_multidim", "aircraft_o3_timeseries.nc")
     return iris.load_cube(path)
 
 
