@@ -134,8 +134,8 @@ class TestRenderPlotCall:
         """
         GIVEN a single dataset with only one dimension coordinate (time),
         WHEN dataset_renderer.Renderer(dataset).render() is called,
-        THEN the resulting dataframe is a pandas Series object."""
-        assert isinstance(self.dframe.rendered_df, pandas.Series)
+        THEN the resulting dataframe is a pandas DataFrame object."""
+        assert isinstance(self.dframe.rendered_df, pandas.DataFrame)
 
     def test_multipolygon_is_pandas(self, sampledir):
         """

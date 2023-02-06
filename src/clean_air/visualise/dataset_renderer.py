@@ -84,25 +84,19 @@ class Renderer:
         # If we have just a time coord then we can make a timeseries:
         elif self.x_coord is None and self.y_coord is None and self.t_coord is not None:
             self.img_type = 'timeseries'
-            if len(self.plot_list) == 1:        # This is a single cube in a CubeList, so convert to series:
-                cube = self.plot_list[0]
-                self.rendered_df = iris.pandas.as_series(cube)
-                self.rendered_df.columns = [f'{cube.standard_name} \n in {cube.units}']
-                self.rendered_df.index.names = ['Time']
-            elif len(self.plot_list) > 1:       # Multipolygon can return multiple cubes, so convert to dataframe:
-                for i, cube in enumerate(self.plot_list):
-                    if i == 0:
-                        self.rendered_df = iris.pandas.as_data_frame(cube)
-                        self.rendered_df.columns = [f'{cube.standard_name} \n in {cube.units}']
-                        self.rendered_df.index.names = ['Time']
-                # For subsequent cubes provided by multipolygon, add them as dataframe columns.
-                    elif i > 0:
-                        self.rendered_df.columns = ['Polygon 1']  # rename to match pattern
-                        df = iris.pandas.as_data_frame(cube)
-                        col_name = f'Polygon {i + 1}'
-                        df.columns = [col_name]
-                        extracted_col = df[col_name]
-                        self.rendered_df = self.rendered_df.join(extracted_col)
+            for i, cube in enumerate(self.plot_list):
+                if i == 0:
+                    self.rendered_df = iris.pandas.as_data_frame(cube)
+                    self.rendered_df.columns = [f'{cube.standard_name} \n in {cube.units}']
+                    self.rendered_df.index.names = ['Time']
+            # For subsequent cubes provided by multipolygon, add them as dataframe columns.
+                elif i > 0:
+                    self.rendered_df.columns = ['Polygon 1']  # rename to match pattern
+                    df = iris.pandas.as_data_frame(cube)
+                    col_name = f'Polygon {i + 1}'
+                    df.columns = [col_name]
+                    extracted_col = df[col_name]
+                    self.rendered_df = self.rendered_df.join(extracted_col)
 
         # If we don't have any coords then something's gone wrong and we can't plot anything:
         elif all(coord is None for coord in coords):
