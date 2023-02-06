@@ -1,5 +1,10 @@
 """
-Top-level module for rendering datasets.
+Top-level module for rendering datasets.  This module will determine from the number and nature of dimensions present
+whether to reshape the dataset into a format suitable for hvplot.
+
+If x and y are present no reshaping takes place, so a map can be drawn with hvplot commands.
+If only t is present, dataset will be reformed into a pandas dataset, so one or more timeseries can be drawn with
+hvplot commands.
 """
 
 import iris
@@ -10,7 +15,6 @@ import pandas as pd
 
 from clean_air import util
 from clean_air.data import DataSubset
-from clean_air.visualise import render_map, render_plot
 
 
 class Renderer:
@@ -28,73 +32,86 @@ class Renderer:
         if isinstance(dataset, pd.Series):
             self.dataset = iris.pandas.as_cube(dataset)
         if isinstance(dataset, CubeList):
-            # Here we have to collect metadata from just the first Cube in a
-            # CubeList (assuming that multiple datasets such as shapes files
-            # will contain the same coordinate data), then render to produce
-            # multiple plots on single figure:
-            self.dataset = dataset
-            self.plot_list = self.dataset
+            # Here we have to collect metadata from just the first Cube in a CubeList:
+            self.plot_list = dataset
+            # Sometimes we can have a cubelist within a cubelist, so pop a catch in here to convert inner cubelists
+            # to cubes:
             for i, cube in enumerate(self.plot_list):
-                if i == 0:
-                    self.dims = cube.dim_coords
-                else:
-                    pass
+                if isinstance(cube, CubeList):
+                    self.plot_list[i] = cube[0]
+            self.dims = self.plot_list[0].dim_coords
+
         elif isinstance(dataset, str):
-            # Use iris to read in dataset as lazy array and add to CubeList
-            # here:
-            self.path = dataset
-            self.dataset = iris.load_cube(dataset)
-            self.dims = self.dataset.dim_coords
-            self.plot_list.append(self.dataset)
+            # Use iris to read in dataset as lazy array and add to plot list here (iris will always load a CubeList
+            # using this function):
+            self.plot_list = iris.load(dataset)
+            self.dims = self.plot_list[0].dim_coords
+
         elif isinstance(dataset, Cube):
-            # Iris cube is already loaded so no advantage from loading lazily
-            # here:
-            self.dataset = dataset
-            self.dims = self.dataset.dim_coords
-            self.plot_list.append(self.dataset)
+            # Iris cube is already loaded so no advantage from loading lazily here:
+            self.dims = dataset.dim_coords
+            self.plot_list.append(dataset)
 
         # Guess all possible dim coords here using first cube in list before
         # loading dataframe (but scalar coords become None because we
         # can't make plots out of them):
         self.x_coord = self.y_coord = self.z_coord = self.t_coord = None
-        for i, cube in enumerate(self.plot_list):
-            if i == 0:
-                for coord in cube.coords():
-                    if len(coord.points) > 1:
-                        axis = iris.util.guess_coord_axis(coord)
-                        if axis == 'X' and self.x_coord is None:
-                            self.x_coord = coord.name()
-                        elif axis == 'Y' and self.y_coord is None:
-                            self.y_coord = coord.name()
-                        elif axis == 'Z' and self.z_coord is None:
-                            self.z_coord = coord.name()
-                        elif axis == 'T' and self.t_coord is None:
-                            self.t_coord = coord.name()
+        for coord in self.dims:
+            if len(coord.points) > 1:
+                axis = iris.util.guess_coord_axis(coord)
+                if axis == 'X' and self.x_coord is None:
+                    self.x_coord = coord.name()
+                elif axis == 'Y' and self.y_coord is None:
+                    self.y_coord = coord.name()
+                elif axis == 'Z' and self.z_coord is None:
+                    self.z_coord = coord.name()
+                elif axis == 'T' and self.t_coord is None:
+                    self.t_coord = coord.name()
             else:
                 pass
 
     def render(self):
         """
-        Analyses the dimensionality of the dataset and then sends to
-        appropriate renderer in render_plot.py or render_map.py.
+        Analyses the dimensionality of the dataset and then converts to appropriate pandas dataframe type.
         """
         coords = (self.x_coord, self.y_coord, self.z_coord, self.t_coord)
+        self.rendered_df = None
+
         # If we have both an x-coord and y-coord then we can draw a map:
         if self.x_coord is not None and self.y_coord is not None:
             self.img_type = 'map'
-            fig = render_map.Map(self.dataset).render(*coords)
+            # NOTE: Even if multiple cubes are passed in here, only the first cube will be converted to pandas to plot
+            # as a map.  Multiple maps cannot be plotted at once as only a single dataframe is returned.
+            self.rendered_df = iris.pandas.as_data_frame(self.plot_list[0])
+
         # If we have just a time coord then we can make a timeseries:
-        elif self.x_coord is None and self.y_coord is None and \
-                self.t_coord is not None:
+        elif self.x_coord is None and self.y_coord is None and self.t_coord is not None:
             self.img_type = 'timeseries'
-            fig = render_plot.Plot(self.plot_list).render_timeseries()
-        # If we don't have any coords then something's gone wrong and we can't
-        # plot anything:
+            if len(self.plot_list) == 1:        # This is a single cube in a CubeList, so convert to series:
+                cube = self.plot_list[0]
+                self.rendered_df = iris.pandas.as_series(cube)
+                self.rendered_df.index.names = ['Time']
+            elif len(self.plot_list) > 1:       # Multipolygon can return multiple cubes, so convert to dataframe:
+                for i, cube in enumerate(self.plot_list):
+                    if i == 0:
+                        self.rendered_df = iris.pandas.as_data_frame(cube)
+                        self.rendered_df.columns = [f'{cube.standard_name} \n in {cube.units}']
+                        self.rendered_df.index.names = ['Time']
+                # For subsequent cubes provided by multipolygon, add them as dataframe columns.
+                    elif i > 0:
+                        self.rendered_df.columns = ['Polygon 1']  # rename to match pattern
+                        df = iris.pandas.as_data_frame(cube)
+                        col_name = f'Polygon {i + 1}'
+                        df.columns = [col_name]
+                        extracted_col = df[col_name]
+                        self.rendered_df = self.rendered_df.join(extracted_col)
+
+        # If we don't have any coords then something's gone wrong and we can't plot anything:
         elif all(coord is None for coord in coords):
             raise ValueError('All dimension coordinates are either missing or '
                              'scalar, please choose a dataset with more '
                              'coordinate points.')
-        return fig
+        return self.rendered_df
 
 
 class TimeSeries:
@@ -131,7 +148,13 @@ class TimeSeries:
             interpolated data.
             """
         point_cube = self.data.extract_point((self.x, self.y))
-
+        # Identify and remove any single-point coordinates:
+        scalar_coords = []
+        for coord in point_cube.dim_coords:
+            if len(coord.points) == 1:
+                scalar_coords.append(coord)
+        for coord in scalar_coords:
+            point_cube = point_cube.collapsed(coord.standard_name, iris.analysis.MEAN)
         return point_cube
 
     def track(self, start=None, end=None):
