@@ -85,7 +85,7 @@ class TestGetIntersectionWeights:
         """
         GIVEN a cube of data and quadrilateral polygon that don't intersect
         WHEN get_intersection_weights is called
-        THEN a zero array of the correct shape is
+        THEN a zero array of the correct shape is returned
         """
         shape = Polygon([(6, 3), (8, 1), (6, 0), (5, 2)])
         expected = np.zeros([6, 6])
