@@ -134,9 +134,33 @@ class TestTrackSubset:
         WHEN the track is extracted for a specified time period
         THEN the track's time coordinate matches this period
         """
-        cube = dataset.extract_track(PartialDateTime(hour=13), PartialDateTime(hour=14))
+        cube = dataset.extract_track(start=PartialDateTime(hour=13), end=PartialDateTime(hour=14))
         # integer values are in seconds since 2021-03-30 00:00:00
         assert cube.coord('time').points[0] == int(46800)
+        assert cube.coord('time').points[-1] == int(50399)
+
+    @staticmethod
+    def test_time_bound_start_only(dataset):
+        """
+        GIVEN a cube of aircraft data
+        WHEN the track is extracted after a specified start time
+        THEN the track's time coordinate matches this period
+        """
+        cube = dataset.extract_track(start=PartialDateTime(hour=13))
+        # integer values are in seconds since 2021-03-30 00:00:00
+        assert cube.coord('time').points[0] == int(46800)
+        assert cube.coord('time').points[-1] == int(54300)
+
+    @staticmethod
+    def test_time_bound_end_only(dataset):
+        """
+        GIVEN a cube of aircraft data
+        WHEN the track is extracted before a specified end time
+        THEN the track's time coordinate matches this period
+        """
+        cube = dataset.extract_track(end=PartialDateTime(hour=14))
+        # integer values are in seconds since 2021-03-30 00:00:00
+        assert cube.coord('time').points[0] == int(43260)
         assert cube.coord('time').points[-1] == int(50399)
 
     @staticmethod
@@ -147,7 +171,7 @@ class TestTrackSubset:
         THEN the appropriate error is raised
         """
         with pytest.raises(ValueError, match='Empty cube, likely due to time bounds being out of range'):
-            dataset.extract_track(PartialDateTime(hour=20), PartialDateTime(hour=21))
+            dataset.extract_track(start=PartialDateTime(hour=20), end=PartialDateTime(hour=21))
 
     @staticmethod
     def test_multidim_data(model_dataset, capsys):

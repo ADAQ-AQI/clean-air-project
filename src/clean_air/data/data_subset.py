@@ -122,8 +122,13 @@ class DataSubset:
         """
         cube = self._load_cube()
 
-        if start and end:
-            timerange = iris.Constraint(time=lambda cell: start <= cell.point < end)
+        if start or end:
+            if start is None:
+                timerange = iris.Constraint(time=lambda cell: cell.point < end)
+            elif end is None:
+                timerange = iris.Constraint(time=lambda cell: start <= cell.point)
+            else:
+                timerange = iris.Constraint(time=lambda cell: start <= cell.point < end)
             cube = cube.extract(timerange)
             if cube is None:
                 raise ValueError('Empty cube, likely due to time bounds being out of range')

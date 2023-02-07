@@ -219,7 +219,10 @@ class TestTimeSeries:
         """
         GIVEN a cube of aircraft data
         WHEN Timeseries.track() is called for valid time bounds
-        THEN an iris cube is returned
+        THEN an iris cube of one dimension is returned
         """
-        track_data = dr.TimeSeries(aircraft_data).track(PartialDateTime(hour=13), PartialDateTime(hour=14))
+        start = PartialDateTime(hour=13)
+        end = PartialDateTime(hour=14)
+        track_data = dr.TimeSeries(aircraft_data).track(start, end)
         assert isinstance(track_data, Cube)
+        assert track_data.ndim == 1
