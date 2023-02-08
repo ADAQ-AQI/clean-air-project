@@ -4,31 +4,12 @@ import pytest
 import iris
 from iris.cube import Cube
 from iris.time import PartialDateTime
+from shapely.geometry import Polygon
+import numpy as np
 import cartopy.crs as ccrs
 
 from clean_air.data import DataSubset
 from clean_air import util
-
-
-# Define some sample points (an extremely simple representation of Exeter)
-POINTS_OSGB = [
-    (289271.9, 93197.0),
-    (289351.3, 95110.1),
-    (293405.1, 96855.0),
-    (296721.1, 94960.3),
-    (297165.1, 86966.9),
-    (294181.6, 89357.2),
-    (291388.0, 89272.6),
-]
-POINTS_LATLON = [
-    (-3.5690, 50.7273),
-    (-3.5685, 50.7445),
-    (-3.5115, 50.7609),
-    (-3.4640, 50.7445),
-    (-3.4555, 50.6727),
-    (-3.4984, 50.6936),
-    (-3.5379, 50.6924),
-]
 
 
 class TestPointSubset:
@@ -93,6 +74,7 @@ class TestBoxSubset:
 
 class TestTrackSubset:
     """Tests for data_subset.extract_track method"""
+
     @staticmethod
     @pytest.fixture
     def dataset(sampledir):
@@ -202,42 +184,59 @@ class TestAverageTime:
         assert cube.coord('time').points.shape == (24,)
 
 
-# TODO: This test currently fails due to errors in cell weight calculations.
-# TODO: FIX THIS
-# class TestPolygonSubset:
-#     @staticmethod
-#     @pytest.fixture
-#     def dataset(sampledir):
-#         path = os.path.join(
-#             sampledir,
-#             "model_full",
-#             "aqum_hourly_o3_20200520.nc"
-#         )
-#         return DataSubset({"files": path})
-#
-#     @staticmethod
-#     @pytest.mark.parametrize(
-#         "crs, points",
-#         [(None, POINTS_OSGB), (ccrs.Geodetic(), POINTS_LATLON)],
-#     )
-#     def test_as_cube(dataset, crs, points):
-#         # Extract the test polygon
-#         shape = shapely.geometry.Polygon(points)
-#         cube = dataset.extract_shape(shape, crs=crs)
-#
-#         # Check we have the right mask (on a 2d slice of this 3d cube)
-#         # Note: this "looks" upside down compared to how it would be plotted
-#         expected_mask = np.array(
-#             [[1, 1, 1, 1, 0],
-#              [1, 1, 0, 0, 0],
-#              [0, 0, 0, 0, 0],
-#              [0, 0, 0, 0, 1],
-#              [0, 0, 0, 0, 1],
-#              [0, 0, 0, 0, 1]]
-#         )
-#         subcube = next(cube.slices_over("time"))
-#         assert iris.util.array_equal(subcube.data.mask, expected_mask)
-#
-#         # Simple data check, which, as the mask is taken into account, should
-#         # be a pretty reliable test
-#         assert round(cube.data.mean(), 8) == 57.66388811
+# TODO: re-write this test to be less complicated: don't use a CRS, do use a sample of points within test file values.
+class TestPolygonSubset:
+    """Tests for DataSubset using a Polygon"""
+
+    @pytest.yield_fixture(autouse=True)
+    def setup_class(self, sampledir):
+        """Set up inputs for all tests"""
+        path = os.path.join(sampledir, "model_full", "aqum_hourly_o3_20200520.nc")
+        self.dataset = DataSubset(path)
+
+        # Define some sample points (an extremely simple representation of Exeter)
+        # self.points = [(-3.5690, 50.7273),
+        #                (-3.5685, 50.7445),
+        #                (-3.5115, 50.7609),
+        #                (-3.4640, 50.7445),
+        #                (-3.4555, 50.6727),
+        #                (-3.4984, 50.6936),
+        #                (-3.5379, 50.6924)]
+
+        # self.points_x = [-184000., -182000., -180000., -178000., -176000., -174000.]
+        # self.points_y = [-238000., -236000., -234000., -232000., -230000., -228000.]
+
+        self.points = [(289271.9, 93197.0),
+                       (289351.3, 95110.1),
+                       (293405.1, 96855.0),
+                       (296721.1, 94960.3),
+                       (297165.1, 86966.9),
+                       (294181.6, 89357.2),
+                       (291388.0, 89272.6)]
+
+        # Extract the test polygon
+        shape = Polygon(self.points)
+        self.cube = self.dataset.extract_shape(shape)
+
+    def test_is_cube(self):
+        """
+        GIVEN a dataset of gridded model points, an OSGB CRS and a set of points roughly representing Exeter,
+        WHEN these points are extracted into a subcube using DataSubset.extract_shape,
+        THEN the result is an iris cube.
+        """
+        assert isinstance(self.cube, Cube)
+
+    def test_data_masking(self):
+        """
+        GIVEN a dataset of gridded model points, an OSGB CRS and a set of points roughly representing Exeter,
+        WHEN these points are extracted into a subcube using DataSubset.extract_shape,
+        THEN the data mask is applied as we expect.
+        """
+        expected_mask = np.array([[1, 1, 1, 1, 0],
+                                  [1, 1, 0, 0, 0],
+                                  [0, 0, 0, 0, 0],
+                                  [0, 0, 0, 0, 1],
+                                  [0, 0, 0, 0, 1],
+                                  [0, 0, 0, 0, 1]])
+        subcube = next(self.cube.slices_over("time"))
+        assert iris.util.array_equal(subcube.data.mask, expected_mask)

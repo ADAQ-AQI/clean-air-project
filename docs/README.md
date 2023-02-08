@@ -33,7 +33,7 @@ Credentials must be provided by
 
 ## Deployment
 Fully setting up the environment requires some steps beyond installing the code:
-* See [Static AURN Site DataFile](src/clean_air/data/static_aurn_site_data.md)
+* See [Static AURN Site DataFile](static_aurn_site_data.md)
 
 
 # Development

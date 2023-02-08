@@ -19,9 +19,9 @@ from unittest.mock import Mock
 
 from clean_air.data.storage import AURNSiteDataStoreException, DataStoreException, AURNSite, AURNSiteDataStore, \
     create_aurn_datastore, S3FSMetadataStore, S3FSDataSetStore
-from clean_air.exceptions import CleanAirFrameworkException
-from clean_air.models import Metadata, DataSet
-from clean_air.serialisation import MetadataJsonSerialiser
+from clean_air.base.exceptions import CleanAirFrameworkException
+from clean_air.base.models import Metadata, DataSet
+from clean_air.base.serialisation import MetadataJsonSerialiser
 from edr_server.core.models.extents import Extents, SpatialExtent
 
 os.environ["MOTO_S3_CUSTOM_ENDPOINTS"] = "https://caf-o.s3-ext.jc.rl.ac.uk"
