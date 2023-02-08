@@ -89,8 +89,9 @@ class Renderer:
             self.img_type = 'timeseries'
             if len(self.plot_list) == 1:        # This is a single cube in a CubeList, so convert to series:
                 cube = self.plot_list[0]
-                self.rendered_df = iris.pandas.as_series(cube)
-                self.rendered_df.index.names = ['Time']
+                series = iris.pandas.as_series(cube)
+                series.index.names = ['Time']
+                self.rendered_df = series.rename(f'{cube.standard_name} \n in {cube.units}')
             elif len(self.plot_list) > 1:       # Multipolygon can return multiple cubes, so convert to dataframe:
                 for i, cube in enumerate(self.plot_list):
                     if i == 0:
