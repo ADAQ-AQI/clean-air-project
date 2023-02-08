@@ -215,14 +215,14 @@ class TestTimeSeries:
         diurnal_data = dr.TimeSeries(multiday_data).diurnal_average()
         assert isinstance(diurnal_data, Cube)
 
-# TODO: Refine this test to its simplest form and get it working (i.e. get all track methods working).
-    # def test_track_is_multidim(self, aircraft_data):
-    #     """
-    #     GIVEN an aircraft dataset,
-    #     WHEN passed through TimeSeries to procude a track,
-    #     THEN an iris Cube of multiple Dimension Coordinates is produced.
-    #     """
-    #     start = PartialDateTime(hour=13, minute=30)
-    #     end = PartialDateTime(hour=14, minute=30)
-    #     aircraft_track = dr.TimeSeries(aircraft_data).track(start, end)
-    #     assert len(aircraft_track.dim_coords) == 3
+    def test_track_data(self, aircraft_data):
+        """
+        GIVEN a cube of aircraft data
+        WHEN Timeseries.track() is called for valid time bounds
+        THEN an iris cube of one dimension is returned
+        """
+        start = PartialDateTime(hour=13)
+        end = PartialDateTime(hour=14)
+        track_data = dr.TimeSeries(aircraft_data).track(start, end)
+        assert isinstance(track_data, Cube)
+        assert track_data.ndim == 1

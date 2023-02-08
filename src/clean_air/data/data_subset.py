@@ -1,13 +1,11 @@
 """
 Objects representing data subsets
 """
-import os.path
 
 import numpy as np
 import iris
 import shapely.geometry
 import shapely.ops
-
 from .. import util
 
 
@@ -114,16 +112,37 @@ class DataSubset:
 
         return cube
 
-    def extract_track(self, track, crs=None):
+    def extract_track(self, start=None, end=None):
         """
         Extract a track
 
         Arguments:
-            track: timeseries of the track, as a dataframe
+            start (datetime.time or str): initial time filter limit
+            end (datetime.time or str): end time filter limit
         """
         cube = self._load_cube()
 
-        return util.cubes.extract_series(cube, track)
+        if start or end:
+            if start is None:
+                timerange = iris.Constraint(time=lambda cell: cell.point < end)
+            elif end is None:
+                timerange = iris.Constraint(time=lambda cell: start <= cell.point)
+            else:
+                timerange = iris.Constraint(time=lambda cell: start <= cell.point < end)
+            cube = cube.extract(timerange)
+            if cube is None:
+                raise ValueError('Empty cube, likely due to time bounds being out of range')
+
+        # remove all coords except for time DimCoord
+        for coord in cube.aux_coords:
+            cube.remove_coord(coord)
+        if len(cube.dim_coords) != 1:
+            print('Found extra dimensions, attempting to remove...')
+            for coord in cube.dim_coords:
+                if coord.standard_name != 'time':
+                    cube.remove_coord(coord)
+
+        return cube
 
     def extract_shape(self, shape, crs=None):
         """
@@ -140,15 +159,6 @@ class DataSubset:
         if crs is not None:
             data_crs = cube.coord_system().as_cartopy_crs()
             shape = util.crs.transform_shape(shape, crs, data_crs)
-
-        # The cells must have bounds for shape intersections to have much
-        # meaning, especially for shapes that are small compared to the
-        # grid size
-        xcoord, ycoord = util.cubes.get_xy_coords(cube)
-        if not xcoord.has_bounds():
-            xcoord.guess_bounds()
-        if not ycoord.has_bounds():
-            ycoord.guess_bounds()
 
         # Mask points outside the actual shape
         # Note we need to do the broadcasting manually: numpy is strangely
@@ -182,7 +192,7 @@ class DataSubset:
         """
         cube_list = iris.cube.CubeList([])
         cube = self._load_cube()
-        for hour in range(24):            
+        for hour in range(24):
             constraint = iris.Constraint(time=lambda cell: cell.point.hour == hour)
             transverse_cube = cube.extract(constraint)
             mean_cube = transverse_cube.collapsed('time', aggregator)

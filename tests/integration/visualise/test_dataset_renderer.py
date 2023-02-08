@@ -5,7 +5,9 @@ Integration tests for the test_dataset_renderer.py visualisations.
 import os
 import pytest
 
+import iris
 from iris.cube import Cube, CubeList
+from iris.time import PartialDateTime
 from shapely.geometry import Polygon, MultiPolygon
 from pandas import Series, DataFrame
 from clean_air.visualise import dataset_renderer as dr
@@ -93,4 +95,3 @@ def test_shapes_average_plots(clean_data, tmp_output_path):
     # One plot per shape, but side-by-side on same figure
     shapes_plot = dr.Renderer(shapes_data).render()
     assert isinstance(shapes_plot, DataFrame)
-

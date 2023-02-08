@@ -11,6 +11,7 @@ import iris
 import iris.pandas
 from iris.cube import Cube, CubeList
 from shapely.geometry import Polygon, MultiPolygon
+import pandas as pd
 
 from clean_air import util
 from clean_air.data import DataSubset
@@ -23,11 +24,13 @@ class Renderer:
         * dataset: this can be either an iris cube, a cubelist or a dataset
         path.
         """
+
     def __init__(self, dataset):
         # First we put all datasets in a cubelist so that we can plot them
         # together if necessary without too much extra coding:
         self.plot_list = CubeList()
-
+        if isinstance(dataset, pd.Series):
+            self.dataset = iris.pandas.as_cube(dataset)
         if isinstance(dataset, CubeList):
             # Here we have to collect metadata from just the first Cube in a CubeList:
             self.plot_list = dataset
@@ -119,6 +122,7 @@ class TimeSeries:
         * y: y coordinate for point of interest (if required)
         * data: full path of data file selected by user or DataSubset object
     """
+
     def __init__(self, data, x=None, y=None):
         if isinstance(data, (str, iris.cube.Cube)):
             self.dpath = data
@@ -152,6 +156,20 @@ class TimeSeries:
         for coord in scalar_coords:
             point_cube = point_cube.collapsed(coord.standard_name, iris.analysis.MEAN)
         return point_cube
+
+    def track(self, start=None, end=None):
+        """Generate time series containing data along a track.
+
+        Args:
+            * start (datetime.time or str): initial time filter limit, if needed.
+            * end (datetime.time or str): end time filter limit, if needed.
+
+        Returns:
+            * A 1-D iris cube of the data along the track.
+            """
+        track_cube = self.data.extract_track(start, end)
+
+        return track_cube
 
     def spatial_average(self, shape, coords=None, crs=None):
         """Generate time series containing spatially averaged data.
@@ -202,9 +220,3 @@ class TimeSeries:
         """Generate a mean 24hr profile for data spanning multiple days."""
 
         return self.data.average_time(aggregator)
-
-    def track(self, crs=None):
-        """Generate time series containing data along a track."""
-        track_cube = self.data.extract_track(self.data, crs=crs)
-
-        return track_cube
