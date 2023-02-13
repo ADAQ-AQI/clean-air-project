@@ -27,38 +27,19 @@ from edr_server.core.models.extents import Extents, SpatialExtent
 os.environ["MOTO_S3_CUSTOM_ENDPOINTS"] = "https://caf-o.s3-ext.jc.rl.ac.uk"
 
 
-class ExceptionsTest(unittest.TestCase):
-    """
-    Tests related to custom exception classes defined for storage.py.
-    Mainly testing they form the expected hierarchy
-    """
-
-    def test_DataStoreException_is_subclass_of_CleanAirFrameworkException(self):
-        self.assertTrue(issubclass(DataStoreException, CleanAirFrameworkException))
-
-    def test_AURNSiteDataStoreException_is_subclass_of_DataStoreException(self):
-        self.assertTrue(issubclass(AURNSiteDataStoreException, DataStoreException))
-
-
-# TODO: Get mock_s3 working so I can reinstate these tests
-# I believe this is a conda issue in that we seem to all be running on
-# different environments.  Let's get this sorted.
-
 @mock_s3
 class BaseAURNSiteDataStoreTest(unittest.TestCase):
-    """Common test setup/tear down for tests relating to the AURN data"""
+    """SETUP and TEARDOWN all tests relating to the AURN data"""
 
     AURN_BUCKET_NAME = "aurn"
     AURN_FILE_KEY = "AURN_Site_Information.csv"
     TEST_ENDPOINT_URL = "https://caf-o.s3-ext.jc.rl.ac.uk"
 
-    TEST_AURN_DATA = "\n".join([
-        'Code,Name,Type,Latitude,Longitude,Date_Opened,Date_Closed,Species',
+    TEST_AURN_DATA = "\n".join(['Code,Name,Type,Latitude,Longitude,Date_Opened,Date_Closed,Species',
         'ABD,Aberdeen,URBAN_BACKGROUND,57.15736000,-2.094278000,19990918,0,"CO,NO,NO2,NOx,O3,PM10,PM2p5,SO2,nvPM10,nvPM2p5,vPM10,vPM2p5"',
         # nopep8 - wrapping would ruin readability
         'ABD7,Aberdeen_Union_St_Roadside,URBAN_TRAFFIC,57.14455500,-2.106472000,20080101,0,"NO,NO2,NOx"',
-        'ABD8,Aberdeen_Wellington_Road,URBAN_TRAFFIC,57.13388800,-2.094198000,20160209,0,"NO,NO2,NOx"',
-    ])
+        'ABD8,Aberdeen_Wellington_Road,URBAN_TRAFFIC,57.13388800,-2.094198000,20160209,0,"NO,NO2,NOx"'])
 
     EXPECTED_AURNSITES = {
         "ABD": AURNSite(
@@ -72,8 +53,7 @@ class BaseAURNSiteDataStoreTest(unittest.TestCase):
         "ABD8": AURNSite(
             "Aberdeen_Wellington_Road", "ABD8", "URBAN_TRAFFIC", Decimal("57.13388800"), Decimal("-2.094198000"),
             date(2016, 2, 9), None, ["NO", "NO2", "NOx"]
-        ),
-    }
+        )}
 
     def setUp(self) -> None:
         self.s3 = boto3.resource('s3', endpoint_url=self.TEST_ENDPOINT_URL)
@@ -88,18 +68,48 @@ class BaseAURNSiteDataStoreTest(unittest.TestCase):
         self.test_bucket.delete()
 
 
-@mock_s3
-class CreateAURNSiteDataStoreTest(BaseAURNSiteDataStoreTest):
+class TestExceptions(unittest.TestCase):
+    """
+    Tests related to custom exception classes defined for storage.py.
+    Mainly testing they form the expected hierarchy
+    """
 
+    def test_DataStoreException_is_subclass_of_CleanAirFrameworkException(self):
+        """
+        GIVEN an instance of a DataStoreException,
+        WHEN checked for system hierarchy,
+        THEN the instance is a subclass of a CleanAirFrameworkException.
+        """
+        self.assertTrue(issubclass(DataStoreException, CleanAirFrameworkException))
+
+    def test_AURNSiteDataStoreException_is_subclass_of_DataStoreException(self):
+        """
+        GIVEN an instance of an AURNDataStoreException,
+        WHEN checked for system hierarchy,
+        THEN the instance is a subclass of a DataStoreException.
+        """
+        self.assertTrue(issubclass(AURNSiteDataStoreException, DataStoreException))
+
+
+@mock_s3
+class TestAURNSiteDataStoreCreation(BaseAURNSiteDataStoreTest):
+    """Tests to check creation of AURN Site Data Store objects"""
     def setUp(self) -> None:
+        """SETUP variables for all tests"""
         # Workaround for https://github.com/spulec/moto/issues/4797
         super().setUp()
 
     def tearDown(self) -> None:
+        """TEARDOWN variables for all tests"""
         # Workaround for https://github.com/spulec/moto/issues/4797
         super().tearDown()
 
     def test_non_default_args(self):
+        """
+        GIVEN a valid bucket name,
+        WHEN a bucket is created,
+        THEN it will have the expected bucket name, data path, endpoint URL and signature version.
+        """
         expected_bucket_name = "test_bucket"
         expected_data_file_path = "made/up/path/file.csv"
         expected_endpoint_url = self.TEST_ENDPOINT_URL
@@ -122,6 +132,11 @@ class CreateAURNSiteDataStoreTest(BaseAURNSiteDataStoreTest):
             bucket.delete()
 
     def test_default_args(self):
+        """
+        GIVEN no inputs (i.e. using only default arguments),
+        WHEN a bucket is created using create_aurn_datastore(),
+        THEN it will have the expected bucket name, data path, endpoint URL and signature version.
+        """
         actual = create_aurn_datastore()
 
         self.assertEqual("aurn", actual.data_file.bucket_name)
@@ -140,7 +155,7 @@ class CreateAURNSiteDataStoreTest(BaseAURNSiteDataStoreTest):
 
 
 @mock_s3
-class AURNSiteDataStoreTest(BaseAURNSiteDataStoreTest):
+class TestAURNSiteDataStore(BaseAURNSiteDataStoreTest):
     """Tests AURNSiteDataStore"""
 
     def setUp(self) -> None:
@@ -309,7 +324,7 @@ class AURNSiteDataStoreTest(BaseAURNSiteDataStoreTest):
         ds.data_file.get.assert_called_once()
 
 
-class DataSetStoreTest(unittest.TestCase):
+class TestDataSetStore(unittest.TestCase):
 
     def setUp(self) -> None:
         self.mock_fs = Mock(spec=S3FileSystem)
@@ -332,8 +347,9 @@ class DataSetStoreTest(unittest.TestCase):
 
     def test_available_datasets(self):
         """
-        WHEN available_datasets is called
-        THEN a list of datasets that exist in the storage bucket is returned
+        GIVEN a set of datasets readily available in the storage bucket,
+        WHEN available_datasets is called,
+        THEN a complete list of datasets that exist in the storage bucket is returned.
         """
         expected_datasets = ["dataset1", "dataset2", "dataset3"]
         self.mock_fs.ls.return_value = [f"{self.mock_storage_bucket_name}/{ds}" for ds in expected_datasets]
@@ -416,7 +432,7 @@ class DataSetStoreTest(unittest.TestCase):
         self.assertRaises(DataStoreException, self.dataset_store.put, self.test_dataset)
 
 
-class MetadataStoreTest(unittest.TestCase):
+class TestMetadataStore(unittest.TestCase):
 
     def setUp(self) -> None:
         self.mock_fs = Mock(spec=S3FileSystem)
@@ -429,9 +445,11 @@ class MetadataStoreTest(unittest.TestCase):
 
     def test_available_datasets(self):
         """
-        WHEN available_datasets is called
-        THEN a list of datasets that exist in the storage bucket is returned
+        GIVEN a set of datasets readily available in the storage bucket,
+        WHEN available_datasets is called,
+        THEN a complete list of datasets that exist in the storage bucket is returned.
         """
+
         expected_datasets = ["dataset1", "dataset2", "dataset3"]
         self.mock_fs.ls.return_value = [f"{self.mock_storage_bucket_name}/{ds}" for ds in expected_datasets]
 
