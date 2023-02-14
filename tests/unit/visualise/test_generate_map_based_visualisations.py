@@ -38,8 +38,7 @@ def aurn_savepath(tmp_output_path):
 
 @pytest.fixture()
 def aircraft_filepath(sampledir):
-    path = os.path.join(sampledir, "aircraft",
-                                     "MOCCA_M251_20190903.nc")
+    path = os.path.join(sampledir, "aircraft", "MOCCA_M251_20190903.nc")
     return path
 
 
@@ -51,8 +50,7 @@ def aircraft_savepath(tmp_output_path):
 
 @pytest.fixture()
 def boundaries_filepath(sampledir):
-    path = os.path.join(sampledir, "shapefiles",
-                                     "NUTS_Level_1_boundries500mgjsn.geojson")
+    path = os.path.join(sampledir, "shapefiles",  "NUTS_Level_1_boundries500mgjsn.geojson")
     return path
 
 
@@ -62,58 +60,86 @@ def boundaries_savepath(tmp_output_path):
     return path
 
 
-# Tests for get_AURN__sites_site_map:
-def test_aurn_site_map_is_Map(aurn_data, aurn_savepath):
-    """Test that AURN site data has been successfully converted to a folium
-    Map object."""
-    site_map = make_maps.get_aurn_sites_site_map(aurn_data, aurn_savepath)
-    assert isinstance(site_map, folium.Map)
+class TestAURNSites:
+    """Test for AURN site map functionality."""
+    @pytest.yield_fixture(autouse=True)
+    def setup_class(self, aurn_data, aurn_savepath):
+        """SET UP all inputs to tests."""
+        self.site_map = make_maps.get_aurn_sites_site_map(aurn_data, aurn_savepath)
+
+    def test_aurn_site_map_is_Map(self):
+        """
+        GIVEN a set of AURN site data,
+        WHEN the function make_maps.get_aurn_sites_site_map() is used with the data,
+        THEN the result will be a folium Map object.
+        """
+        assert isinstance(self.site_map, folium.Map)
+
+    def test_aurn_site_map_has_children(self):
+        """
+        GIVEN a set of AURN site data,
+        WHEN the function make_maps.get_aurn_sites_site_map() is used with the data,
+        THEN the resulting site map will have five markers, known as children, added during the mapping process.
+        """
+        assert len(self.site_map._children) == 5
 
 
-def test_aurn_site_map_has_children(aurn_data, aurn_savepath):
-    """Test that children (markers) added during map processing are present in
-    site_map object."""
-    site_map = make_maps.get_aurn_sites_site_map(aurn_data, aurn_savepath)
-    assert len(site_map._children) == 5
+class TestAircraftTrackMap:
+    """Tests for get_aircraft_track_map()"""
+    @pytest.yield_fixture(autouse=True)
+    def setup_class(self, aircraft_filepath, aircraft_savepath):
+        """SET UP all inputs to tests."""
+        self.aircraft_track = make_maps.get_aircraft_track_map(aircraft_filepath, aircraft_savepath)
+
+    def test_aircraft_track_map_is_Map(self):
+        """
+        GIVEN an aircraft track dataset,
+        WHEN function make_maps.get_aircraft_track_map() is used with the data,
+        THEN the result is a folium Map object.
+        """
+        assert isinstance(self.aircraft_track, folium.Map)
+
+    def test_aircraft_track_map_has_children(self):
+        """
+        GIVEN an aircraft track dataset,
+        WHEN function make_maps.get_aircraft_track_map() is used with the data,
+        THEN the resulting site map will have three lines, known as children, added during the mapping process.
+        """
+        # Again, this input file is fixed and static so the output should always produce three children.
+        assert len(self.aircraft_track._children) == 3
+
+    def test_input_filetype_error(self, boundaries_filepath, tmp_output_path):
+        """
+        GIVEN an invalid input filetype (.html in this case),
+        WHEN function make_maps.get_aircraft_track_map() is used with the data,
+        THEN a ValueError is raised.
+        """
+        save_path = os.path.join(tmp_output_path, "InvalidAircraftTrack.html")
+        with pytest.raises(ValueError):
+            make_maps.get_aircraft_track_map(boundaries_filepath, save_path)
 
 
-# Tests for get_aircraft_track_map:
-def test_input_filetype_error(boundaries_filepath, tmp_output_path):
-    """Test that an error is thrown when a non-netCDF filetype is used as
-    input data."""
-    save_path = os.path.join(tmp_output_path, "InvalidAircraftTrack.html")
-    with pytest.raises(ValueError):
-        make_maps.get_aircraft_track_map(boundaries_filepath, save_path)
+class TestGetBoundaries:
+    """Tests for get_boundaries()"""
+    @pytest.yield_fixture(autouse=True)
+    def setup_class(self, boundaries_filepath, boundaries_savepath):
+        """SET UP all inputs to tests."""
+        self.boundaries = make_maps.get_boundaries(boundaries_filepath, boundaries_savepath)
 
+    def test_boundaries_map_is_Map(self):
+        """
+        GIVEN a shapefile representing the boundaries of a dataset,
+        WHEN function make_maps.get_boundaries() is used with the dataset,
+        THEN the result will be a folium Map object.
+        """
+        assert isinstance(self.boundaries, folium.Map)
 
-def test_aircraft_track_map_is_Map(aircraft_filepath, aircraft_savepath):
-    """Test that aircraft track data has been successfully converted to a
-    folium Map object."""
-    aircraft_track = make_maps.get_aircraft_track_map(aircraft_filepath, aircraft_savepath)
-    assert isinstance(aircraft_track, folium.Map)
+    def test_boundaries_map_has_children(self):
+        """
+        GIVEN a shapefile representing the boundaries of a dataset,
+        WHEN function make_maps.get_boundaries() is used with the dataset,
+        THEN the resulting site map will have two lines, known as children, added during the mapping process.
+        """
+        # This is always the same input file, so the number of children should always be the same.
+        assert len(self.boundaries._children) == 2
 
-
-def test_aircraft_track_map_has_children(aircraft_filepath, aircraft_savepath):
-    """Test that children (lines) added during map processing are present in
-    site_map object."""
-    # Again, this input file is fixed and static so the output should always
-    # produce three children.
-    aircraft_track = make_maps.get_aircraft_track_map(aircraft_filepath, aircraft_savepath)
-    assert len(aircraft_track._children) == 3
-
-
-# Tests for get_boundaries:
-def test_boundaries_map_is_Map(boundaries_filepath, boundaries_savepath):
-    """Test that boundary data has been successfully converted to a folium
-    Map object."""
-    boundaries = make_maps.get_boundaries(boundaries_filepath, boundaries_savepath)
-    assert isinstance(boundaries, folium.Map)
-
-
-def test_boundaries_map_has_children(boundaries_filepath, boundaries_savepath):
-    """Test that children (lines) added during map processing are present in
-    site_map object."""
-    # This is always the same input file, so the number of children
-    # should always be the same.
-    boundaries = make_maps.get_boundaries(boundaries_filepath, boundaries_savepath)
-    assert len(boundaries._children) == 2

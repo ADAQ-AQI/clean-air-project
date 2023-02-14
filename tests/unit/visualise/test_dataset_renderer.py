@@ -72,14 +72,16 @@ class TestDatasetRenderer:
         """
         GIVEN a dataset with multiple coordinates,
         WHEN the dataset is loaded into an iris cube to identify coordinates,
-        THEN the iris object is lazily loaded (i.e. metadata loaded without data until needed)."""
+        THEN the iris object is lazily loaded (i.e. metadata loaded without data until needed).
+        """
         assert self.renderer.plot_list[0].has_lazy_data
 
     def test_found_dim_coords(self):
         """
         GIVEN a dataset with multiple coordinates,
         WHEN iris guesses the coordinates present,
-        THEN those coordinates are as we expected."""
+        THEN those coordinates are as we expected.
+        """
         assert self.renderer.x_coord == 'projection_x_coordinate'
         assert self.renderer.y_coord == 'projection_y_coordinate'
         # height and time are scalar coords so will not be collected:
@@ -101,12 +103,19 @@ class TestRenderMapCall:
         self.dframe.render()
 
     def test_render_map(self):
-        # Check that if the data has an x and a y coordinate, the
-        # renderer chooses to create a map rather than a plot.
+        """
+        GIVEN a dataset with non-scalar x and y coordinates,
+        WHEN dataframe is rendered using Renderer().render(),
+        THEN the image type will be 'map'.
+        """
         assert self.dframe.img_type == 'map'
 
     def test_map_dataframe_is_geopandas(self):
-        # Check that if a map is being plotted, the dataframe generated is a pandas object:
+        """
+        GIVEN a dataset with non-scalar x and y coordinates,
+        WHEN dataframe is rendered using Renderer().render(),
+        THEN the dataframe generated during the rendering process will be a pandas DataFrame.
+        """
         assert isinstance(self.dframe.rendered_df, pandas.DataFrame)
 
 
@@ -127,21 +136,24 @@ class TestRenderPlotCall:
         """
         GIVEN a dataset with only one dimension coordinate (time),
         WHEN dataset_renderer.Renderer(dataset).render() is called,
-        THEN a pandas dataframe ready for plotting a timeseries graph is produced"""
+        THEN a pandas dataframe ready for plotting a timeseries graph is produced
+        """
         assert self.dframe.img_type == 'timeseries'
 
     def test_plot_dataframe_is_pandas(self):
         """
         GIVEN a single dataset with only one dimension coordinate (time),
         WHEN dataset_renderer.Renderer(dataset).render() is called,
-        THEN the resulting dataframe is a pandas Series object."""
+        THEN the resulting dataframe is a pandas Series object.
+        """
         assert isinstance(self.dframe.rendered_df, pandas.Series)
 
     def test_multipolygon_is_pandas(self, sampledir):
         """
         GIVEN a dataset with one dimension coordinate (time) and multiple cubes in a cubelist,
         WHEN dataset_renderer.Renderer(dataset).render() is called,
-        THEN the resulting dataframe is a pandas object."""
+        THEN the resulting dataframe is a pandas object.
+        """
         # Create a cubelist to pass to Renderer:
         cube_zero = iris.load(os.path.join(sampledir, "timeseries", "aqum_hourly_no2_timeseries.nc"))
         # copy cube, add 10 to all values to distinguish copy from original.
@@ -158,7 +170,8 @@ def test_render_error():
     """
     GIVEN a null input (no cubes, no pathstring),
     WHEN the renderer is called to identify coordinates,
-    THEN an error is raised as no coordinates can be found."""
+    THEN an error is raised as no coordinates can be found.
+    """
     with pytest.raises(AttributeError):
         dr.Renderer(None).render()
 
@@ -171,7 +184,8 @@ class TestTimeSeries:
         """
         GIVEN a full dataset with multiple dimension coordinates,
         WHEN linearly interpolated through the TimeSeries class,
-        THEN the result is an iris Cube of the expected shape."""
+        THEN the result is an iris Cube of the expected shape.
+        """
         interpolated_data = dr.TimeSeries(clean_data, 150, 150).linear_interpolate()
         assert isinstance(interpolated_data, Cube)
         # Shape of interpolated cube should be (24 time, 1 lat, 1 lon), however scalar coords will be collapsed to
@@ -182,7 +196,8 @@ class TestTimeSeries:
         """
         GIVEN a full dataset with multiple dimension coordinates,
         WHEN spatially averaged as a box through the TimeSeries class,
-        THEN the result is an iris Cube of the expected shape."""
+        THEN the result is an iris Cube of the expected shape.
+        """
         boxed_data = dr.TimeSeries(clean_data).spatial_average(shape='box', coords=[10000, 10000, 15000, 15000])
         assert isinstance(boxed_data, Cube)
         assert boxed_data.shape == (24,)
@@ -191,7 +206,8 @@ class TestTimeSeries:
         """
         GIVEN a shapely Polygon,
         WHEN spatially averaged as that Polygon through the TimeSeries class,
-        THEN the result is an iris Cube of the expected shape."""
+        THEN the result is an iris Cube of the expected shape.
+        """
         shape = Polygon([(0, 0), (100, 100), (100, 0)])
         shape_data = dr.TimeSeries(clean_data).spatial_average(shape=shape)
         assert isinstance(shape_data, Cube)
@@ -200,7 +216,8 @@ class TestTimeSeries:
         """
         GIVEN a shapely MultiPolygon,
         WHEN spatially averaged as those respective Polygons through the TimeSeries class,
-        THEN the result is an iris CubeList."""
+        THEN the result is an iris CubeList.
+        """
         poly_one = Polygon([(0, 0), (100, 100), (100, 0)])
         poly_two = Polygon([(0, 0), (-100, -100), (-100, 0)])
         shapes = MultiPolygon([poly_one, poly_two])
@@ -211,7 +228,8 @@ class TestTimeSeries:
         """
         GIVEN a DataSubset object containing data from multiple days,
         WHEN diurnally averaged through the TimeSeries class,
-        THEN the result is a single iris Cube"""
+        THEN the result is a single iris Cube
+        """
         diurnal_data = dr.TimeSeries(multiday_data).diurnal_average()
         assert isinstance(diurnal_data, Cube)
 
