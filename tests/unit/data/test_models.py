@@ -1,5 +1,5 @@
 import unittest
-from clean_air.base.models import Metadata, DataSet
+from clean_air.data.models import Metadata, DataSet
 from edr_server.core.models.extents import Extents, SpatialExtent
 from shapely.geometry import box
 from pathlib import Path

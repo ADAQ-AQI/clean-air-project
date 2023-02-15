@@ -1,5 +1,5 @@
 import unittest
-from clean_air.base.serialisation import MetadataJsonSerialiser
+from clean_air.data.serialisation import MetadataJsonSerialiser
 from edr_server.core.models.metadata import CollectionMetadata
 from edr_server.core.models.extents import Extents, SpatialExtent
 from shapely.geometry import box

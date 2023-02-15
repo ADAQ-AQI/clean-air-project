@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pytest
 from dateutil.relativedelta import relativedelta
 
-from clean_air.base.models import Duration
+from clean_air.data.models import Duration
 
 
 class InitTest(unittest.TestCase):
