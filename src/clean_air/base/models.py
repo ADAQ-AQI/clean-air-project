@@ -18,7 +18,6 @@ Metadata = metadata.CollectionMetadata
 # All files are netcdf4
 @dataclass
 class DataSet:
-    """"""
 
     files: List[Path] = None
     metadata: Metadata = None
