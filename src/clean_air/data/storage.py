@@ -17,9 +17,9 @@ from pathlib import Path
 from s3fs import S3FileSystem
 from typing import TypeVar, Generic, Iterable, Callable, List, Optional, Generator
 
-from clean_air.base.exceptions import CleanAirFrameworkException
-from clean_air.base.models import DataSet, Metadata
-from clean_air.base.serialisation import MetadataSerialiser, MetadataJsonSerialiser
+from .exceptions import CleanAirFrameworkException
+from .models import DataSet, Metadata
+from .serialisation import MetadataSerialiser, MetadataJsonSerialiser
 
 LOGGER = logging.getLogger(__name__)
 T = TypeVar('T')
