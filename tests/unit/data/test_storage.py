@@ -18,7 +18,7 @@ from time import time
 from unittest.mock import Mock
 
 from clean_air.data.storage import AURNSiteDataStoreException, DataStoreException, AURNSite, AURNSiteDataStore, \
-    create_aurn_datastore, S3FSMetadataStore, S3FSDataSetStore
+    create_aurn_datastore, S3FSMetadataStore, S3FSDataSetStore, create_dataset_store, create_metadata_store
 from clean_air.data.exceptions import CleanAirFrameworkException
 from clean_air.data.models import Metadata, DataSet
 from clean_air.data.serialisation import MetadataJsonSerialiser
@@ -530,3 +530,21 @@ class TestMetadataStore(unittest.TestCase):
         """
         self.mock_fs.anon = True
         self.assertRaises(DataStoreException, self.metadata_store.put, self.test_metadata)
+
+    def test_create_dataset_store(self):
+        """
+        GIVEN a mock storage bucket name
+        WHEN create_dataset_store is called
+        THEN a S3DataSetStore object is returned
+        """
+        store = create_dataset_store(self.mock_storage_bucket_name)
+        assert isinstance(store, S3FSDataSetStore)
+
+    def test_create_metadata_store(self):
+        """
+        GIVEN a mock storage bucket name
+        WHEN create_metadata_store is called
+        THEN a S3MetadataStore object is returned
+        """
+        store = create_metadata_store(self.mock_storage_bucket_name)
+        assert isinstance(store, S3FSMetadataStore)

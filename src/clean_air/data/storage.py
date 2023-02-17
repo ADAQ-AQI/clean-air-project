@@ -398,7 +398,7 @@ def create_metadata_store(
         endpoint_url: str = JasminEndpointUrls.EXTERNAL,
         anon: bool = True) -> S3FSMetadataStore:
     """
-    Return an `S3FSDataSetStore` instance configured with the given information
+    Return an `S3FSMetadataStore` instance configured with the given information
 
     :param storage_bucket_name: Name of the bucket where datasets are stored
     :param local_storage_path: Path to a writeable directory to store local copies of dataset files
