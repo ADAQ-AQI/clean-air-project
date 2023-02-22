@@ -354,7 +354,7 @@ def create_aurn_datastore(
     :param data_file_path: Object key of the AURN site data CSV file
     :param endpoint_url: the object store service endpoint URL. Changes depending on whether accessing data from inside
         or outside JASMIN, or using data stored on another AWS S3 compatible object store
-    :param anon: Whether to use anonymous access or credentials. anon=True is required for write access
+    :param anon: Whether to use anonymous access or credentials. anon=False is required for write access
     """
 
     s3_args = {"endpoint_url": endpoint_url}
@@ -384,7 +384,7 @@ def create_dataset_store(
     :param local_storage_path: Path to a writeable directory to store local copies of dataset files
     :param endpoint_url: the object store service endpoint URL. Changes depending on whether accessing data from inside
         or outside JASMIN, or using data stored on another AWS S3 compatible object store
-    :param anon: Whether to use anonymous access or credentials. anon=True is required for write access
+    :param anon: Whether to use anonymous access or credentials. anon=False is required for write access
     """
 
     client_kwargs = {"endpoint_url": endpoint_url}

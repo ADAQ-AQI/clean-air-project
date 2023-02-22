@@ -531,20 +531,39 @@ class TestMetadataStore(unittest.TestCase):
         self.mock_fs.anon = True
         self.assertRaises(DataStoreException, self.metadata_store.put, self.test_metadata)
 
-    def test_create_dataset_store(self):
+    def test_create_dataset_store_anon(self):
         """
         GIVEN a mock storage bucket name
-        WHEN create_dataset_store is called
+        WHEN create_dataset_store is called with anon=True
         THEN a S3DataSetStore object is returned
         """
         store = create_dataset_store(self.mock_storage_bucket_name)
         assert isinstance(store, S3FSDataSetStore)
 
-    def test_create_metadata_store(self):
+    def test_create_dataset_store(self):
         """
         GIVEN a mock storage bucket name
-        WHEN create_metadata_store is called
+        WHEN create_dataset_store is called with anon=False
+        THEN a S3DataSetStore object is returned
+        """
+        store = create_dataset_store(self.mock_storage_bucket_name, anon=False)
+        assert isinstance(store, S3FSDataSetStore)
+
+    def test_create_metadata_store_anon(self):
+        """
+        GIVEN a mock storage bucket name
+        WHEN create_metadata_store is called with anon=True
         THEN a S3MetadataStore object is returned
         """
         store = create_metadata_store(self.mock_storage_bucket_name)
         assert isinstance(store, S3FSMetadataStore)
+
+    def test_create_metadata_store(self):
+        """
+        GIVEN a mock storage bucket name
+        WHEN create_metadata_store is called with anon=False
+        THEN a S3MetadataStore object is returned
+        """
+        store = create_metadata_store(self.mock_storage_bucket_name, anon=False)
+        assert isinstance(store, S3FSMetadataStore)
+
