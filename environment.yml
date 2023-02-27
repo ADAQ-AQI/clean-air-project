@@ -12,9 +12,13 @@ dependencies:
   - xarray
   - pandas
   - geopandas
+  - h5py
+  - pseudonetcdf
+  - nc-time-axis
   - cftime=1.2
   - cf-units==2.1.5
   - numpy==1.23.5
+
 
   # Plotting
   - holoviews==1.14.9
