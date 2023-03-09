@@ -160,7 +160,7 @@ class TestRenderPlotCall:
         cube_one = cube_zero[0].copy()
         for value in cube_one.data:
             value += 10
-        self.cubelist = iris.cube.CubeList([cube_zero, cube_one])
+        self.cubelist = iris.cube.CubeList([cube_zero[0], cube_one])
 
         dframe_list = dr.Renderer(self.cubelist).render()
         assert isinstance(dframe_list, pandas.DataFrame)
