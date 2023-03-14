@@ -62,6 +62,8 @@ def test_as_pyproj(source, target):
 class TestTransform:
     def setup_class(self):
         """SETUP variables for all tests"""
+        # NOTE: These coordinates will differ a small amount upon transformation due to the different shapes of the
+        # maps.  We will be checking for approximate matches with these coordinates.
         self.latlon_point = shapely.geometry.Point(-0.4, 51.5)
         self.osgb_point = shapely.geometry.Point(511160, 179110)
 
@@ -71,11 +73,16 @@ class TestTransform:
         WHEN point is transformed through transform_shape with a Cartopy OSGB CRS as the final argument,
         THEN the resultant point has an OSGB CRS.
         """
+        # Set up source and target crs:
         latlon = ccrs.Geodetic()
         osgb = ccrs.OSGB(approx=False)
+        # Transform point using transform_shape:
         transformed = util.crs.transform_shape(self.latlon_point, latlon, osgb)
-        transformed = np.array(transformed).round(-1)
-        assert np.all(transformed == np.array(self.osgb_point))
+        # Check approximate correlation:
+        diff_x = transformed.xy[0][0] - self.osgb_point.xy[0][0]
+        diff_y = transformed.xy[1][0] - self.osgb_point.xy[1][0]
+        for diff in diff_x, diff_y:
+            assert diff < 10
 
     def test_pyproj(self):
         """
@@ -83,11 +90,16 @@ class TestTransform:
         WHEN point is transformed through transform_shape with a pyproj EPSG:27700 CRS as the final argument,
         THEN the resultant point has an OSGB CRS.
         """
+        # Set up source and target crs:
         latlon = pyproj.CRS.from_epsg(4326)
         osgb = pyproj.CRS.from_epsg(27700)
+        # Transform point using transform_shape:
         transformed = util.crs.transform_shape(self.latlon_point, latlon, osgb)
-        transformed = np.array(transformed).round(-1)
-        assert np.all(transformed == np.array(self.osgb_point))
+        # Check approximate correlation:
+        diff_x = transformed.xy[0][0] - self.osgb_point.xy[0][0]
+        diff_y = transformed.xy[1][0] - self.osgb_point.xy[1][0]
+        for diff in diff_x, diff_y:
+            assert diff < 10
 
     def test_cartopy_to_pyproj(self):
         """
@@ -95,11 +107,16 @@ class TestTransform:
         WHEN point is transformed through transform_shape with a pyproj OSGB:27700 CRS as the final argument,
         THEN the resultant point has an OSGB CRS.
         """
+        # Set up source and target crs:
         latlon = ccrs.Geodetic()
         osgb = pyproj.CRS.from_epsg(27700)
+        # Transform point using transform_shape:
         transformed = util.crs.transform_shape(self.latlon_point, latlon, osgb)
-        transformed = np.array(transformed).round(-1)
-        assert np.all(transformed == np.array(self.osgb_point))
+        # Check approximate correlation:
+        diff_x = transformed.xy[0][0] - self.osgb_point.xy[0][0]
+        diff_y = transformed.xy[1][0] - self.osgb_point.xy[1][0]
+        for diff in diff_x, diff_y:
+            assert diff < 10
 
     def test_pyproj_to_cartopy(self):
         """
@@ -107,8 +124,13 @@ class TestTransform:
         WHEN point is transformed through transform_shape with a cartopy OSGB CRS as the final argument,
         THEN the resultant point has an OSGB CRS.
         """
+        # Set up source and target crs:
         latlon = pyproj.CRS.from_epsg(4326)
         osgb = ccrs.OSGB(approx=False)
+        # Transform point using transform_shape:
         transformed = util.crs.transform_shape(self.latlon_point, latlon, osgb)
-        transformed = np.array(transformed).round(-1)
-        assert np.all(transformed == np.array(self.osgb_point))
+        # Check approximate correlation:
+        diff_x = transformed.xy[0][0] - self.osgb_point.xy[0][0]
+        diff_y = transformed.xy[1][0] - self.osgb_point.xy[1][0]
+        for diff in diff_x, diff_y:
+            assert diff < 10

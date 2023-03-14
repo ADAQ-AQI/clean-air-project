@@ -186,8 +186,6 @@ class TestAverageTime:
         assert cube.coord('time').points.shape == (24,)
 
 
-# NOTE: I am temporarily commenting out these tests until I can fix the Polygon in test_polygon_subset.
-# TODO: Once test_polygon_subset is fixed, reisntate these tests.
 class TestPolygonSubset:
     """Tests for DataSubset using a Polygon"""
 
