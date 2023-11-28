@@ -17,9 +17,9 @@ from pathlib import Path
 from s3fs import S3FileSystem
 from typing import TypeVar, Generic, Iterable, Callable, List, Optional, Generator
 
-from clean_air.base.exceptions import CleanAirFrameworkException
-from clean_air.base.models import DataSet, Metadata
-from clean_air.base.serialisation import MetadataSerialiser, MetadataJsonSerialiser
+from .exceptions import CleanAirFrameworkException
+from .models import DataSet, Metadata
+from .serialisation import MetadataSerialiser, MetadataJsonSerialiser
 
 LOGGER = logging.getLogger(__name__)
 T = TypeVar('T')
@@ -354,7 +354,7 @@ def create_aurn_datastore(
     :param data_file_path: Object key of the AURN site data CSV file
     :param endpoint_url: the object store service endpoint URL. Changes depending on whether accessing data from inside
         or outside JASMIN, or using data stored on another AWS S3 compatible object store
-    :param anon: Whether to use anonymous access or credentials. anon=True is required for write access
+    :param anon: Whether to use anonymous access or credentials. anon=False is required for write access
     """
 
     s3_args = {"endpoint_url": endpoint_url}
@@ -384,7 +384,7 @@ def create_dataset_store(
     :param local_storage_path: Path to a writeable directory to store local copies of dataset files
     :param endpoint_url: the object store service endpoint URL. Changes depending on whether accessing data from inside
         or outside JASMIN, or using data stored on another AWS S3 compatible object store
-    :param anon: Whether to use anonymous access or credentials. anon=True is required for write access
+    :param anon: Whether to use anonymous access or credentials. anon=False is required for write access
     """
 
     client_kwargs = {"endpoint_url": endpoint_url}
@@ -398,7 +398,7 @@ def create_metadata_store(
         endpoint_url: str = JasminEndpointUrls.EXTERNAL,
         anon: bool = True) -> S3FSMetadataStore:
     """
-    Return an `S3FSDataSetStore` instance configured with the given information
+    Return an `S3FSMetadataStore` instance configured with the given information
 
     :param storage_bucket_name: Name of the bucket where datasets are stored
     :param local_storage_path: Path to a writeable directory to store local copies of dataset files

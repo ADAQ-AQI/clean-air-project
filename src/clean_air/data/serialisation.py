@@ -10,7 +10,7 @@ DeserialisedType = TypeVar("DeserialisedType")
 SerialisedType = TypeVar("SerialisedType")
 
 
-class Serialiser(Generic[DeserialisedType, SerialisedType], ABC):
+class _Serialiser(Generic[DeserialisedType, SerialisedType], ABC):
 
     @abstractmethod
     def serialise(self, obj: DeserialisedType) -> SerialisedType:
@@ -21,7 +21,7 @@ class Serialiser(Generic[DeserialisedType, SerialisedType], ABC):
         """Converts from the serialised form to the deserialised object"""
 
 
-class MetadataSerialiser(Serialiser[Metadata, SerialisedType], ABC):
+class MetadataSerialiser(_Serialiser[Metadata, SerialisedType], ABC):
     """
     Base class for Metadata Serialisers.
     Constrains the `DeserialisedType` to `MetaData`, whilst leaving `SerialisedType` generic.
@@ -30,7 +30,7 @@ class MetadataSerialiser(Serialiser[Metadata, SerialisedType], ABC):
     """
 
 
-class MetadataJsonSerialiser(Serialiser[Metadata, str]):
+class MetadataJsonSerialiser(_Serialiser[Metadata, str]):
 
     def __init__(self):
         self._encoder = EdrJsonEncoder()
