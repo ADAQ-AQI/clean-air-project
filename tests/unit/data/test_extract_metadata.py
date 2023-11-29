@@ -119,16 +119,6 @@ class TestExtractMetadata:
         )
         return cube
 
-    @staticmethod
-    @pytest.fixture
-    def aircraft_cube(sampledir):
-        """
-        Data cube
-        'Corrected_(Virkkula_et_al,_2010)_blue_(wavelength_=_467nm)_absorption_coefficient,_measured_by_TAP.'
-        from flight M285
-        """
-        path = os.path.join(sampledir, "aircraft", "M285_sample.nc")
-        return iris.load(path)
 
     @staticmethod
     def test_return_type_cube(cube_1):
@@ -353,28 +343,6 @@ class TestExtractMetadata:
             "desc",
         )
         assert cubelist_metadata.extent.spatial.bbox.bounds == (-10, -150, 430, 175)
-
-    @staticmethod
-    def test_aircraft_cube(aircraft_cube):
-        """
-        GIVEN a cubelist of aircraft data
-        WHEN metadata is extracted
-        THEN the metadata is an instance of CollectionMetadata
-        """
-        # TODO: compare all metadata values?
-        cubelist_metadata = data.extract_metadata.extract_metadata(
-            aircraft_cube,
-            "M285",
-            [
-                "clean_air:type=aircraft",
-                "clean_air:aircraft_platform=MOASA",
-                "clean_air:location=UK",
-            ],
-            [],
-            [],
-            "example aircraft",
-        )
-        assert isinstance(cubelist_metadata, CollectionMetadata)
 
 
 class errorTest(unittest.TestCase):

@@ -135,6 +135,7 @@ def _find_cube_vertical_extent(cube: iris.Cube) -> Union[VerticalExtent, None]:
     Returns:
         VerticalExtent, None: Z vertical extent of the cube's data, if found.
     """
+
     z_coord = None
     vertical_extent = None
 
@@ -274,4 +275,5 @@ def extract_metadata(
         "output_formats": output_formats,
         "parameters": parameters
     }
+    
     return CollectionMetadata(**kwargs)
