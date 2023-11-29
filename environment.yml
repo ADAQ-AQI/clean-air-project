@@ -2,7 +2,7 @@ name: cap_env
 channels:
   - conda-forge
 dependencies:
-  - python=3.8
+  - python==3.8
   - ipykernel
   - pip
 
@@ -11,20 +11,29 @@ dependencies:
   - iris
   - xarray
   - pandas
-  - geopandas
-  - cftime=1.2
-  - cf-units==2.1.5
+#  - geopandas>0.12.1
+  - h5py
+  - hdf5<1.12.0   # This is necessary to remove HDF5 errors with Virtual Object Layer
+  - pseudonetcdf
+#  - nc-time-axis
+#  - cftime=1.2
+#  - cf-units==2.1.5
   - numpy==1.23.5
+  - gxx_linux-64>11.1.0
+  - pyproj>3.0.0
 
   # Plotting
   - holoviews==1.14.9
   - hvplot
   - panel
+  - cartopy
+  - geos>3.7.2
 
   # Dev
   - pytest
   - flake8
   - boto3-stubs-essential
+  - pluggy
   - pip:
     - tox<4.0.0 # The conda package didn't install correctly, but using the pip package did
     - moto>=3.0.1
